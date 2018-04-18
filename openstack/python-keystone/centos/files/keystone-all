@@ -25,6 +25,7 @@ PIDFILE_PUBLIC="/var/run/$DESC_PUBLIC.pid"
 PYTHON=`which python`
 
 source /etc/keystone/keystone-extra.conf
+source /etc/platform/platform.conf
 
 if [ -n ${@:2:1} ] ; then
         if [ ${@:2:1}="--public-bind-addr" ] ; then
@@ -43,7 +44,11 @@ TIMEOUT="200"
 # Calculate the no of workers based on the number of workers retrieved by
 # Platform Eng which is retreived from the keystone-extra.conf
 
-TIS_WORKERS_FACTOR=1.5
+if [ "$system_type" = "All-in-one" ] & [ "$system_mode" = "simplex" ]; then
+    TIS_WORKERS_FACTOR=1
+else
+    TIS_WORKERS_FACTOR=1.5
+fi
 TIS_WORKERS=$(echo "${TIS_WORKERS_FACTOR}*${TIS_PUBLIC_WORKERS}"|bc )
 TIS_WORKERS=${TIS_WORKERS%.*}
 
