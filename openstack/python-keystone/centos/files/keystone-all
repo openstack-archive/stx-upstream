@@ -44,7 +44,7 @@ TIMEOUT="200"
 # Calculate the no of workers based on the number of workers retrieved by
 # Platform Eng which is retreived from the keystone-extra.conf
 
-if [ "$system_type" = "All-in-one" ] & [ "$system_mode" = "simplex" ]; then
+if [ "$system_type" == "All-in-one" ]; then
     TIS_WORKERS_FACTOR=1
 else
     TIS_WORKERS_FACTOR=1.5
