@@ -42,6 +42,7 @@ BuildRequires: python-sphinx
 BuildRequires: python-sphinxcontrib-httpdomain
 BuildRequires: pyOpenSSL
 BuildRequires: systemd
+BuildRequires: git
 # Required to compile translation files
 BuildRequires: python-babel
 
@@ -58,8 +59,14 @@ Summary: DC Manager Client
 %description dcmanagerclient
 Distributed Cloud Manager Client
 
+%package          sdk
+Summary:          SDK files for %{pypi_name}
+
+%description      sdk
+Contains SDK files for %{pypi_name} package
+
 %prep
-%autosetup -n %{pypi_name}-%{version}
+%autosetup -n %{pypi_name}-%{version} -S git
 
 # Remove the requirements file so that pbr hooks don't add it
 # to distutils requires_dist config
@@ -73,9 +80,17 @@ export PBR_VERSION=%{version}
 export PBR_VERSION=%{version}
 %{__python2} setup.py install --skip-build --root %{buildroot}
 
+# prep SDK package
+mkdir -p %{buildroot}/usr/share/remote-clients
+tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. --transform="s/%{name}-%{version}/%{pypi_name}-%{version}/" %{name}-%{version}
+
 %files dcmanagerclient
 %license LICENSE
 %{python2_sitelib}/dcmanagerclient*
 %{python2_sitelib}/distributedcloud_client-*.egg-info
 %exclude %{python2_sitelib}/dcmanagerclient/tests
 %{_bindir}/dcmanager*
+
+%files sdk
+/usr/share/remote-clients/%{pypi_name}-%{version}.tgz
+
