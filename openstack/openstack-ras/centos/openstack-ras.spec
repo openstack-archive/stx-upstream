@@ -78,3 +78,4 @@ rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-alarm-notif
 "/usr/lib/ocf/resource.d/openstack/dcorch-neutron-api-proxy"
 "/usr/lib/ocf/resource.d/openstack/dcorch-cinder-api-proxy"
 "/usr/lib/ocf/resource.d/openstack/dcorch-patch-api-proxy"
+"/usr/lib/ocf/resource.d/openstack/dcorch-identity-api-proxy"
