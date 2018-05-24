@@ -14,3 +14,4 @@
 0002-meta-US106901-Openstack-CLI-Adoption.patch
 0003-meta-US106901-Openstack-CLI-Adoption.patch
 1002-require-python-ceilometerclient.patch
+1003-meta-patch-for-endpoint-groups.patch
