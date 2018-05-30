@@ -1,0 +1,293 @@
+From 3e528e26f17593bb2c1a148768367f194adfa343 Mon Sep 17 00:00:00 2001
+From: Kam Nasim <kam.nasim@windriver.com>
+Date: Wed, 30 May 2018 11:01:33 -0400
+Subject: [PATCH] Distributed Keystone for Distributed Cloud -
+ Horizon
+
+In Distributed Cloud, Keystone is now running on each Subcloud.
+Switching to Subcloud region now requires Openstack Auth to retrieve an
+Unscoped token from the switched Region and reinitialize the django
+session and cookie data with token data retrieved from the Subcloud.
+
+Since Subcloud's Keystone doesn't contain the Identity endpoint for the
+Central Region, there was no way to go back in Horizon from a subcloud
+region to the SystemController region. We achieve this by caching the
+SystemController endpoint in the Django Session at the time of login
+---
+ openstack_auth/forms.py |  4 +--
+ openstack_auth/user.py  |  8 ++++-
+ openstack_auth/utils.py | 47 ++++++++++++++++++++++++-----
+ openstack_auth/views.py | 78 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ 4 files changed, 125 insertions(+), 12 deletions(-)
+
+diff --git a/openstack_auth/forms.py b/openstack_auth/forms.py
+index 90e281b..4834ab2 100644
+--- a/openstack_auth/forms.py
++++ b/openstack_auth/forms.py
+@@ -153,10 +153,10 @@ class Login(django_auth_forms.AuthenticationForm):
+             # since this user logged in successfully, clear its
+             # lockout status
+             utils.clear_user_lockout(username)
+-            
++
+             # handle user login
+             utils.handle_user_login(username, password)
+-            
++
+         except exceptions.KeystoneAuthException as exc:
+             if getattr(exc,"invalidCredentials", False):
+                 msg = 'Login failed for user "%(username)s", remote address '\
+diff --git a/openstack_auth/user.py b/openstack_auth/user.py
+index f486bfa..39e3e34 100644
+--- a/openstack_auth/user.py
++++ b/openstack_auth/user.py
+@@ -29,6 +29,7 @@ from openstack_auth import utils
+ 
+ LOG = logging.getLogger(__name__)
+ _TOKEN_HASH_ENABLED = getattr(settings, 'OPENSTACK_TOKEN_HASH_ENABLED', True)
++_DC_MODE = getattr(settings, 'DC_MODE', False)
+ 
+ 
+ def set_session_from_user(request, user):
+@@ -387,12 +388,17 @@ class User(models.AbstractBaseUser, models.AnonymousUser):
+         if self.service_catalog:
+             for service in self.service_catalog:
+                 service_type = service.get('type')
+-                if service_type is None or service_type == 'identity':
++                if service_type is None:
+                     continue
+                 for endpoint in service.get('endpoints', []):
+                     region = utils.get_endpoint_region(endpoint)
+                     if region not in regions:
+                         regions.append(region)
++            # If we are in Distributed Cloud mode, then ensure that
++            # SystemController region is present in the Region Selection
++            if _DC_MODE and utils.DC_SYSTEMCONTROLLER_REGION not in regions:
++                regions.append(utils.DC_SYSTEMCONTROLLER_REGION)
++           
+         return regions
+ 
+     def save(*args, **kwargs):
+diff --git a/openstack_auth/utils.py b/openstack_auth/utils.py
+index 9a55790..a2107a0 100644
+--- a/openstack_auth/utils.py
++++ b/openstack_auth/utils.py
+@@ -18,7 +18,6 @@ import keyring
+ import logging
+ import os
+ import time
+-import time
+ import re
+ 
+ from django.conf import settings
+@@ -40,6 +39,10 @@ LOG = logging.getLogger(__name__)
+ 
+ _TOKEN_TIMEOUT_MARGIN = getattr(settings, 'TOKEN_TIMEOUT_MARGIN', 0)
+ 
++# Distributed Cloud Region Definitions
++DC_SYSTEMCONTROLLER_REGION = "SystemController"
++DC_LOCAL_REGION = "RegionOne"
++
+ """
+ We need the request object to get the user, so we'll slightly modify the
+ existing django.contrib.auth.get_user method. To do so we update the
+@@ -346,7 +349,8 @@ def clean_up_auth_url(auth_url):
+         scheme, netloc, re.sub(r'/auth.*', '', path), '', ''))
+ 
+ 
+-def get_token_auth_plugin(auth_url, token, project_id=None, domain_name=None):
++def get_token_auth_plugin(auth_url, token, project_id=None, project_name=None,
++                          domain_name=None):
+     if get_keystone_version() >= 3:
+         if domain_name:
+             return v3_auth.Token(auth_url=auth_url,
+@@ -354,9 +358,13 @@ def get_token_auth_plugin(auth_url, token, project_id=None, domain_name=None):
+                                  domain_name=domain_name,
+                                  reauthenticate=False)
+         else:
++            # If project ID is defined then use that
++            # otherwise we expect the project_name
++            # to be set
+             return v3_auth.Token(auth_url=auth_url,
+                                  token=token,
+                                  project_id=project_id,
++                                 project_name=project_name,
+                                  reauthenticate=False)
+     else:
+         return v2_auth.Token(auth_url=auth_url,
+@@ -440,7 +448,7 @@ def set_response_cookie(response, cookie_name, cookie_value):
+ 
+ def delete_response_cookie(response, cookie_name):
+     """ Common function for deleting a cookie from the response.
+-    
++
+     Deletes the cookie of the given cookie_name. Fails silently
+     if cookie name doesn't exist
+     """
+@@ -459,6 +467,30 @@ def get_endpoint_region(endpoint):
+     return endpoint.get('region_id') or endpoint.get('region')
+ 
+ 
++def get_internal_identity_endpoints(service_catalog, region_filter=""):
++    """Retrieve Internal Identity endpoints organized by region
++    """
++    endpoint_dict = {}
++    for service in service_catalog:
++        service_type = service.get('type')
++        if service_type is None or service_type != 'identity':
++            continue
++        for endpoint in service.get('endpoints', []):
++            # only retrieve internal endpoints
++            if endpoint['interface'] != 'internal':
++                continue
++            region = get_endpoint_region(endpoint)
++            # If Region Filter is set then only retrieve
++            # that specific region
++            if region_filter and region != region_filter:
++                continue
++            if region not in endpoint_dict:
++                endpoint_dict[region] = endpoint['url']
++                if region_filter:
++                    break
++    return endpoint_dict
++
++
+ def using_cookie_backed_sessions():
+     engine = getattr(settings, 'SESSION_ENGINE', '')
+     return "signed_cookies" in engine
+@@ -514,7 +546,6 @@ def get_admin_permissions():
+     return {get_role_permission(role) for role in get_admin_roles()}
+ 
+ 
+-
+ def get_client_ip(request):
+     """Return client ip address using SECURE_PROXY_ADDR_HEADER variable.
+     If not present then consider using HTTP_X_FORWARDED_FOR from.
+@@ -535,10 +566,10 @@ def get_client_ip(request):
+             request.META.get('REMOTE_ADDR')
+         )
+     else:
+-         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+-         if x_forwarded_for:
+-             return (x_forwarded_for.split(',')[0])
+-         else:
++        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
++        if x_forwarded_for:
++            return (x_forwarded_for.split(',')[0])
++        else:
+             return request.META.get('REMOTE_ADDR')
+ 
+ 
+diff --git a/openstack_auth/views.py b/openstack_auth/views.py
+index a9d84df..ad339c4 100644
+--- a/openstack_auth/views.py
++++ b/openstack_auth/views.py
+@@ -48,6 +48,8 @@ except AttributeError:
+ 
+ LOG = logging.getLogger(__name__)
+ 
++_DC_MODE = getattr(settings, 'DC_MODE', False)
++
+ 
+ @sensitive_post_parameters()
+ @csrf_protect
+@@ -130,7 +132,14 @@ def login(request, template_name=None, extra_context=None, **kwargs):
+                      ' in %s minutes') %
+                    expiration_time).replace(':', ' Hours and ')
+             messages.warning(request, msg)
+-        
++
++        # If we are in Distributed Cloud mode, and System Controller
++        # region, then also store the Region Endpoint, as this will
++        # be used by Subcloud Region Selector (switch_region()) to go
++        # back to the Central Region
++        if _DC_MODE:
++            request.session['SystemController_endpoint'] = login_region
++
+         # WRS: add login user name to handle HORIZON session timeout
+         utils.set_response_cookie(res, 'login_user',
+                                   request.user.username)
+@@ -270,6 +279,60 @@ def switch_region(request, region_name,
+         LOG.debug('Switching services region to %s for user "%s".'
+                   % (region_name, request.user.username))
+ 
++    # If this is a Distributed Cloud deployment then the Region may
++    # correspond to a Subcloud, and we need to invalidate the existing
++    # token as it will no longer be valid in this Subcloud
++    if _DC_MODE:
++        region_auth_url = None
++        request.session['region_name'] = region_name
++        request.session['login_region'] = region_name
++        endpoint_dict = utils.get_internal_identity_endpoints(
++            request.user.service_catalog, region_filter=region_name)
++
++        try:
++            region_auth_url = endpoint_dict[region_name]
++        except KeyError as e:
++            # If we were on a subcloud, then the SystemController Identity
++            # endpoint will not be available, therefore retrieve it from
++            # the session (cached at login)
++            if region_name == utils.DC_SYSTEMCONTROLLER_REGION:
++                region_auth_url = request.session.get(
++                        'SystemController_endpoint', None)
++
++        if not region_auth_url:
++            msg = _('Cannot switch to subcloud %s, no Identity available '
++                    'for subcloud with the provided credentials(%s)' %
++                    (region_name, request.user.username))
++            raise exceptions.KeystoneAuthException(msg)
++
++        passwordPlugin = plugin.PasswordPlugin()
++        unscoped_auth = passwordPlugin.get_plugin(
++                auth_url=region_auth_url,
++                username=request.user.username,
++                password=utils.get_user_password(request.user.username),
++                user_domain_name=request.user.user_domain_name)
++        if not unscoped_auth:
++            msg = _('Cannot switch to subcloud %s authentication backend %s '
++                    'with the provided credentials(%s)' %
++                    (region_name, region_auth_url, request.user.username))
++            raise exceptions.KeystoneAuthException(msg)
++        unscoped_auth_ref = passwordPlugin.get_access_info(unscoped_auth)
++        try:
++            request.user = auth.authenticate(
++                request=request, auth_url=unscoped_auth.auth_url,
++                token=unscoped_auth_ref.auth_token)
++        except exceptions.KeystoneAuthException as exc:
++            msg = 'Switching to Subcloud failed: %s' % six.text_type(exc)
++            res = django_http.HttpResponseRedirect(settings.LOGIN_URL)
++            res.set_cookie('logout_reason', msg, max_age=10)
++            return res
++        auth_user.set_session_from_user(request, request.user)
++        request.session['_auth_user_id'] = request.user.id
++        message = (
++            _('Switch to Subcloud "%(region_name)s"'
++              'successful.') % {'region_name': region_name})
++        messages.success(request, message)
++
+     redirect_to = request.GET.get(redirect_field_name, '')
+     if not is_safe_url(url=redirect_to, host=request.get_host()):
+         redirect_to = settings.LOGIN_REDIRECT_URL
+@@ -277,6 +340,19 @@ def switch_region(request, region_name,
+     response = shortcuts.redirect(redirect_to)
+     utils.set_response_cookie(response, 'services_region',
+                               request.session['services_region'])
++
++    # If we were in Distributed Cloud mode then we need to refresh the
++    # Project list as well since Identity Service provider has changed
++    if _DC_MODE:
++        # Refresh the project list stored in the cookie, along with
++        # the project switch event
++        utils.set_response_cookie(response, 'recent_project',
++                              request.user.project_id)
++        tenants = request.user.authorized_tenants
++        tenants = map(lambda x: x.to_dict(), tenants)
++        utils.delete_response_cookie(response, 'authorized_tenants')
++        utils.set_response_cookie(response, 'authorized_tenants', tenants)
++
+     return response
+ 
+ 
+-- 
+1.8.3.1
+
