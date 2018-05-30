@@ -1,0 +1,11 @@
+[Unit]
+Description=Combined Openstack Heat Engine/API Service
+After=syslog.target network.target qpidd.service mysqld.service openstack-keystone.service tgtd.service openstack-glance-api.service openstack-glance-registry.service openstack-nova-api.service openstack-nova-objectstore.service openstack-nova.compute.service openstack-nova-network.service openstack-nova-volume.service openstack-nova-scheduler.service openstack-cinder-volume.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/heat-all --config-file /usr/share/heat/heat-dist.conf --config-file /etc/heat/heat.conf
+
+[Install]
+WantedBy=multi-user.target

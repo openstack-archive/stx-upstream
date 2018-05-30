@@ -1,0 +1,12 @@
+[Unit]
+Description=OpenStack Ironic API service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=ironic
+ExecStart=/usr/bin/ironic-api
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenStack Nova Console Proxy Server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+#NotifyAccess=all
+TimeoutStartSec=0
+#Restart=always
+User=root
+ExecStart=/usr/bin/nova-console
+
+[Install]
+WantedBy=multi-user.target
+

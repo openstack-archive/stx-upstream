@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenStack Neutron Server
+After=syslog.target network.target
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+ExecStart=/etc/rc.d/init.d/neutron-server start
+ExecStop=/etc/rc.d/init.d/neutron-server stop
+ExecReload=/etc/rc.d/init.d/neutron-server reload
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,80 @@
+From 9ab2fc77ed85aee4c6b63b0113e309136de419f0 Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Thu, 1 Feb 2018 10:20:53 -0500
+Subject: [PATCH 1/1] US106901 Openstack CLI Adoption:
+ Neutron/Cinder/Glance/Ceilometer
+
+    CI partI - OSC cli support of "--cache-raw" and "--wait" i
+               options for "nova image-create"
+---
+ openstackclient/image/v2/image.py | 33 +++++++++++++++++++++++++++++++++
+ 1 file changed, 33 insertions(+)
+
+diff --git a/openstackclient/image/v2/image.py b/openstackclient/image/v2/image.py
+index c2c5c59..f5d4acf 100644
+--- a/openstackclient/image/v2/image.py
++++ b/openstackclient/image/v2/image.py
+@@ -12,6 +12,12 @@
+ #   License for the specific language governing permissions and limitations
+ #   under the License.
+ #
++#   Copyright (c) 2013-2018 Wind River Systems, Inc.
++# SPDX-License-Identifier: Apache-2.0
++#
++#
++#
++#
+ 
+ """Image V2 Action Implementations"""
+ 
+@@ -253,6 +259,25 @@ class CreateImage(command.ShowOne):
+                 dest=deadopt.replace('-', '_'),
+                 help=argparse.SUPPRESS,
+             )
++        #WRS extension
++        parser.add_argument(
++            "--cache-raw",
++            default=False,
++            action="store_true",
++            help=_("Convert the image to RAW in the background"
++                   " and store it for fast access."),
++        )
++        #WRS extension
++        parser.add_argument(
++            "--wait",
++            metavar="<WAIT>",
++            nargs='?',
++            type=int,
++            default=None,
++            const=0,
++            help=_("Wait for the convertion of the image to RAW"
++                    " to finish before returning the image."),
++        )
+         return parser
+ 
+     def take_action(self, parsed_args):
+@@ -302,6 +327,9 @@ class CreateImage(command.ShowOne):
+             kwargs['visibility'] = 'community'
+         if parsed_args.shared:
+             kwargs['visibility'] = 'shared'
++        #WRS extension
++        if parsed_args.cache_raw:
++            kwargs['cache_raw'] = 'True'
+         # Handle deprecated --owner option
+         project_arg = parsed_args.project
+         if parsed_args.owner:
+@@ -361,6 +389,11 @@ class CreateImage(command.ShowOne):
+             with fp:
+                 try:
+                     image_client.images.upload(image.id, fp)
++                    #WRS extension
++                    # If cache_raw and wait options were chosen, wait until
++                    # image is cached.
++                    if parsed_args.cache_raw is True and parsed_args.wait is not None:
++                        gc_utils.wait_for_caching(parsed_args.wait, image_client, image.id)
+                 except Exception:
+                     # If the upload fails for some reason attempt to remove the
+                     # dangling queued image made by the create() call above but
+-- 
+1.8.3.1
+

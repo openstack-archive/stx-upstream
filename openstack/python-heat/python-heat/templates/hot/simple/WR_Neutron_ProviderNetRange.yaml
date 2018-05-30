@@ -1,0 +1,121 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource WR::Neutron::ProviderNetRange
+#
+# Pre-Reqs:
+#    None
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    Admin activity
+#
+# Sample CLI syntax:
+#    heat stack-create -f WR_Neutron_ProviderNetRange.yaml STACK
+#
+# Expected Outcome:
+#  A new provider network range called: physnetX-R1
+#    neutron providernet-range-list
+#  A fake provider network called: physnetX
+#    neutron providernet-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the WR::Neutron::ProviderNetRange heat resource
+
+parameters:
+
+    NAME:
+        description: Name of the provider network range
+        type: string
+        default: physnetX-R1
+
+    TENANT:
+        description: NAME or ID for tenant of unshared provider network range
+        type: string
+        default: admin
+        constraints:
+            - custom_constraint: keystone.project
+
+    SHARED:
+        description: Whether provider network range is shared for all tenants
+        type: boolean
+        default: false
+
+    DESCRIPTION:
+        description: Description of the provider network range
+        type: string
+        default: 'physnetX-R1 sample range'
+
+    MINIMUM:
+        description: Min range for this provider network range
+        type: number
+        default: '10'
+
+    MAXIMUM:
+        description: Max range for this provider network range
+        type: number
+        default: '10'
+
+    TTL:
+        description: TTL for this vxlan provider network range
+        type: number
+        default: '44'
+
+    PORT:
+        description: PORT for this vxlan provider network range
+        type: number
+        default: '8472'
+
+    GROUP:
+        description: Multicast IP for this vxlan provider network range
+        type: string
+        default: '224.0.0.255'
+
+resources:
+
+    WR_Neutron_ProviderNetRange:
+        type: WR::Neutron::ProviderNetRange
+        properties:
+            # required properties
+            providernet_id: { get_resource: ProviderNet1 }
+            name: { get_param: NAME }
+            minimum: { get_param: MINIMUM}
+            maximum: { get_param: MAXIMUM}
+
+            # optional properties
+            description: { get_param: DESCRIPTION }
+            shared: { get_param: SHARED}
+            # tenant_id is ignored if this is a shared range
+            tenant_id: { get_param: TENANT }
+            # group (ie: multicast IP) is only set if provider net is vxlan
+            group: { get_param: GROUP }
+            # ttl is only set if provider net is vxlan
+            ttl: { get_param: TTL }
+            # port is only set if provider net is vxlan.
+            port: { get_param: PORT}
+
+    ProviderNet1:
+        type: WR::Neutron::ProviderNet
+        properties:
+            name: sample_physnet_X
+            type: vxlan
+            vlan_transparent: true
+            mtu: 1500
+            description: fake physet
+
+outputs:
+
+    pnr_show:
+        description: All attributes of the provider net range
+        value: { get_attr: [ WR_Neutron_ProviderNetRange, show] }

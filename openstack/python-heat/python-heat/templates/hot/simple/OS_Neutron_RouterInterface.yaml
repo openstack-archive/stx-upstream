@@ -1,0 +1,107 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Neutron::RouterInterface
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#    external network named: external-net0 (neutron net-list)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    The tenant (or admin) needs access to the network selected
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Neutron_RouterInterface.yaml  STACK
+#
+# Expected Outcome:
+#   Creates a router called sample_if_router
+#     neutron router-list
+#   Creates a net called sample_if_net
+#      neutron net-list
+#   Creates a subnet called sample_if_subnet
+#      neutron subnet-list
+#   A new port for the interface corresponding to the subnet
+#      neutron router-port-list sample_if_router
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Neutron::RouterInterface heat resource
+
+parameters:
+
+    NETWORK:
+        description: external network used when creating the router and subnet
+        type: string
+        default: external-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    NET_NAME:
+        description: the network to use when creating the subnet
+        type: string
+        default: sample_if_net
+
+    ROUTER_NAME:
+        description: name of the new router
+        type: string
+        default: sample_if_router
+
+    SUBNET_NAME:
+        description: name of the new subnet
+        type: string
+        default: sample_if_subnet
+
+    CIDR:
+        description: cidr for the sample subnet
+        type: string
+        default: 192.168.12.0/24
+
+resources:
+
+    OS_Neutron_RouterInterface:
+        type: OS::Neutron::RouterInterface
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+
+            # router_id: {required: true, type: string}
+            router_id: {get_resource: some_router}
+
+            # subnet_id: {required: true, type: string}
+            subnet_id: {get_resource: some_subnet}
+
+            #################################################
+            # Optional properties: None
+            #################################################
+
+    some_router:
+        type: OS::Neutron::Router
+        properties:
+            name: { get_param: ROUTER_NAME }
+            external_gateway_info:
+                network: {get_param: NETWORK }
+                enable_snat: true
+
+    some_net:
+        type: OS::Neutron::Net
+        properties:
+            name: { get_param: NET_NAME }
+
+    some_subnet:
+        type: OS::Neutron::Subnet
+        properties:
+            name: { get_param: SUBNET_NAME }
+            cidr: { get_param: CIDR }
+            network: { get_resource: some_net }

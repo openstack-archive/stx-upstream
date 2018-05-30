@@ -1,0 +1,24 @@
+From d6ed4a9b31a25ae7b803b99f49bb88bb9648ce06 Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Tue, 24 Jan 2017 12:16:38 -0500
+Subject: [PATCH 5/5] WRS: Set-root-home-for-rabbitmqctl.patch
+
+---
+ SOURCES/rabbitmq-script-wrapper | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/SOURCES/rabbitmq-script-wrapper b/SOURCES/rabbitmq-script-wrapper
+index d039b23..6f7450e 100644
+--- a/SOURCES/rabbitmq-script-wrapper
++++ b/SOURCES/rabbitmq-script-wrapper
+@@ -44,6 +44,7 @@ elif [ `id -u` = `id -u rabbitmq` -o "$SCRIPT" = "rabbitmq-plugins" ] ; then
+ elif [ `id -u` = 0 ] ; then
+     # WRS. Allow to run as root
+     # su rabbitmq -s /bin/sh -c "/usr/lib/rabbitmq/bin/${SCRIPT} ${CMDLINE}"
++    export HOME=${HOME:-/root}
+     /bin/sh -c "/usr/lib/rabbitmq/bin/${SCRIPT} ${CMDLINE}"
+ else
+     /usr/lib/rabbitmq/bin/${SCRIPT}
+-- 
+1.8.3.1
+

@@ -1,0 +1,232 @@
+From 47122b746e16ffb3d35d14aa4f51f0f759400b71 Mon Sep 17 00:00:00 2001
+From: Sen Yang <sen.yang@windriver.com>
+Date: Mon, 18 Dec 2017 10:08:08 -0500
+Subject: [PATCH 1/1] US101470 Openstackclient implementation of novaclient cli
+ with wrs extension
+
+   In this commit the following OSC equivalence of novaclient cli with
+   wrs extension is implemented:
+      openstack pcidevice list       -  nova device-list
+      openstack pcidevice show       -  nova device-show
+      openstack providernet pci show -  nova providernet-show
+---
+ openstackclient/compute/v2/wrs_pci.py            | 88 ++++++++++++++++++++++++
+ openstackclient/compute/v2/wrs_providernets.py   | 46 +++++++++++++
+ python_openstackclient.egg-info/SOURCES.txt      |  4 +-
+ python_openstackclient.egg-info/entry_points.txt |  3 +
+ setup.cfg                                        |  3 +
+ 5 files changed, 143 insertions(+), 1 deletion(-)
+ create mode 100644 openstackclient/compute/v2/wrs_pci.py
+ create mode 100644 openstackclient/compute/v2/wrs_providernets.py
+
+diff --git a/openstackclient/compute/v2/wrs_pci.py b/openstackclient/compute/v2/wrs_pci.py
+new file mode 100644
+index 0000000..c3fba81
+--- /dev/null
++++ b/openstackclient/compute/v2/wrs_pci.py
+@@ -0,0 +1,88 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#       http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2015-2017 Wind River Systems, Inc.
++#
++#
++#
++#
++
++
++"""Compute v2 wrs_pci action implementations"""
++
++from osc_lib.cli import parseractions
++from osc_lib.command import command
++from osc_lib import utils
++import six
++
++from openstackclient.i18n import _
++
++
++class ListPciDevices(command.Lister):
++    """List pci device"""
++
++    def get_parser(self, prog_name):
++        parser = super(ListPciDevices, self).get_parser(prog_name)
++        parser.add_argument(
++            "--device",
++            metavar="<device>",
++            help=_("PCI devices matching a particular device id or alias.")
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        compute_client = self.app.client_manager.compute
++
++        columns = (
++            "PCI Alias", 
++            "Device Id", 
++            "Vendor Id", 
++            "Class Id",
++            "pci_pfs_configured", 
++            "pci_pfs_used", 
++            "pci_vfs_configured",
++            "pci_vfs_used"
++        )
++
++        data = compute_client.wrs_pci.list(parsed_args.device)
++  
++        return (columns, 
++                (utils.get_item_properties(
++                    s, columns, 
++                ) for s in data))
++
++      
++class ShowPciDevices(command.ShowOne):
++    """Show details of a given PCI device."""
++
++    def get_parser(self, prog_name):
++        parser = super(ShowPciDevices, self).get_parser(prog_name)
++        parser.add_argument(
++            "device",
++            metavar="<device>",
++            help=_("Device alias or device id of the PCI device.")
++        )
++        parser.add_argument(
++            "--host",
++            metavar="<hostname>",
++            help=_("Limit matches to PCI devices from a particular host")
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        compute_client = self.app.client_manager.compute
++        deviceInfo = compute_client.wrs_pci.get(parsed_args.device, 
++                                             parsed_args.host)
++    
++        data = deviceInfo._info.copy()
++        return zip(*sorted(six.iteritems(data)))
++
+diff --git a/openstackclient/compute/v2/wrs_providernets.py b/openstackclient/compute/v2/wrs_providernets.py
+new file mode 100644
+index 0000000..b487fb6
+--- /dev/null
++++ b/openstackclient/compute/v2/wrs_providernets.py
+@@ -0,0 +1,46 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#       http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2015-2017 Wind River Systems, Inc.
++#
++#
++#
++#
++
++
++"""Compute v2 wrs_providernet action implementations"""
++
++from osc_lib.cli import parseractions
++from osc_lib.command import command
++import six
++
++from openstackclient.i18n import _
++
++      
++class ShowProvidernetPci(command.ShowOne):
++    """Show details of a given provider network"""
++
++    def get_parser(self, prog_name):
++        parser = super(ShowProvidernetPci, self).get_parser(prog_name)
++        parser.add_argument(
++            "providernet",
++            metavar="<providernet_id>",
++            help=_("Id of the provider network")
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        compute_client = self.app.client_manager.compute
++
++        providernet = compute_client.wrs_providernets.get(parsed_args.providernet)
++        stats = providernet._info.copy() 
++        return zip(*sorted(six.iteritems(stats)))
+diff --git a/python_openstackclient.egg-info/SOURCES.txt b/python_openstackclient.egg-info/SOURCES.txt
+index 82dae1c..66b9513 100644
+--- a/python_openstackclient.egg-info/SOURCES.txt
++++ b/python_openstackclient.egg-info/SOURCES.txt
+@@ -187,6 +187,8 @@ openstackclient/compute/v2/server_group.py
+ openstackclient/compute/v2/server_image.py
+ openstackclient/compute/v2/service.py
+ openstackclient/compute/v2/usage.py
++openstackclient/compute/v2/wrs_pci.py
++openstackclient/compute/v2/wrs_providernets.py
+ openstackclient/identity/__init__.py
+ openstackclient/identity/client.py
+ openstackclient/identity/common.py
+@@ -894,4 +896,4 @@ releasenotes/source/unreleased.rst
+ releasenotes/source/_static/.placeholder
+ releasenotes/source/_templates/.placeholder
+ tools/fast8.sh
+-tools/tox_install.sh
+\ No newline at end of file
++tools/tox_install.sh
+diff --git a/python_openstackclient.egg-info/entry_points.txt b/python_openstackclient.egg-info/entry_points.txt
+index 99aaf5e..9a717b8 100644
+--- a/python_openstackclient.egg-info/entry_points.txt
++++ b/python_openstackclient.egg-info/entry_points.txt
+@@ -45,6 +45,8 @@ compute_service_list = openstackclient.compute.v2.service:ListService
+ compute_service_set = openstackclient.compute.v2.service:SetService
+ console_log_show = openstackclient.compute.v2.console:ShowConsoleLog
+ console_url_show = openstackclient.compute.v2.console:ShowConsoleURL
++pcidevice_list = openstackclient.compute.v2.wrs_pci:ListPciDevices
++pcidevice_show = openstackclient.compute.v2.wrs_pci:ShowPciDevices
+ flavor_create = openstackclient.compute.v2.flavor:CreateFlavor
+ flavor_delete = openstackclient.compute.v2.flavor:DeleteFlavor
+ flavor_list = openstackclient.compute.v2.flavor:ListFlavor
+@@ -65,6 +67,7 @@ keypair_create = openstackclient.compute.v2.keypair:CreateKeypair
+ keypair_delete = openstackclient.compute.v2.keypair:DeleteKeypair
+ keypair_list = openstackclient.compute.v2.keypair:ListKeypair
+ keypair_show = openstackclient.compute.v2.keypair:ShowKeypair
++providernet_pci_show = openstackclient.compute.v2.wrs_providernets:ShowProvidernetPci
+ server_add_fixed_ip = openstackclient.compute.v2.server:AddFixedIP
+ server_add_floating_ip = openstackclient.compute.v2.server:AddFloatingIP
+ server_add_port = openstackclient.compute.v2.server:AddPort
+diff --git a/setup.cfg b/setup.cfg
+index 1bff735..f162417 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -71,6 +71,8 @@ openstack.compute.v2 =
+ 	flavor_show = openstackclient.compute.v2.flavor:ShowFlavor
+ 	flavor_set = openstackclient.compute.v2.flavor:SetFlavor
+ 	flavor_unset = openstackclient.compute.v2.flavor:UnsetFlavor
++        pcidevice_list = openstackclient.compute.v2.wrs_pci:ListPciDevices
++        pcidevice_show = openstackclient.compute.v2.wrs_pci:ShowPciDevices
+ 	host_list = openstackclient.compute.v2.host:ListHost
+ 	host_set = openstackclient.compute.v2.host:SetHost
+ 	host_show = openstackclient.compute.v2.host:ShowHost
+@@ -85,6 +87,7 @@ openstack.compute.v2 =
+ 	keypair_delete = openstackclient.compute.v2.keypair:DeleteKeypair
+ 	keypair_list = openstackclient.compute.v2.keypair:ListKeypair
+ 	keypair_show = openstackclient.compute.v2.keypair:ShowKeypair
++        providernet_pci_show = openstackclient.compute.v2.wrs_providernets:ShowProvidernetPci
+ 	server_add_fixed_ip = openstackclient.compute.v2.server:AddFixedIP
+ 	server_add_floating_ip = openstackclient.compute.v2.server:AddFloatingIP
+ 	server_add_port = openstackclient.compute.v2.server:AddPort
+-- 
+1.8.3.1
+

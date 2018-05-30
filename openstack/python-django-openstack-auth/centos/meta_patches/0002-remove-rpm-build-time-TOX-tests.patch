@@ -1,0 +1,36 @@
+From 70ecee3d9c45b338a03e32cf59485ada4804f24d Mon Sep 17 00:00:00 2001
+From: Kam Nasim <kam.nasim@windriver.com>
+Date: Wed, 8 Nov 2017 14:14:54 -0500
+Subject: [PATCH] remove rpm build-time TOX tests
+
+---
+ SPECS/python-django-openstack-auth.spec | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/SPECS/python-django-openstack-auth.spec b/SPECS/python-django-openstack-auth.spec
+index fd06bbc..2ab88bc 100644
+--- a/SPECS/python-django-openstack-auth.spec
++++ b/SPECS/python-django-openstack-auth.spec
+@@ -129,7 +129,7 @@ find . -name "django.po" -exec rm -f '{}' \;
+ %endif
+ 
+ # generate html docs
+-PYTHONPATH=.:$PYTHONPATH sphinx-build doc/source html
++#PYTHONPATH=.:$PYTHONPATH sphinx-build doc/source html
+ 
+ %install
+ %{__python2} setup.py install --skip-build --root %{buildroot}
+@@ -150,10 +150,6 @@ rm -rf %{buildroot}/%{python3_sitelib}/openstack_auth/tests
+ %endif
+ 
+ 
+-%check
+-export PYTHONPATH=$PYTHONPATH
+-%{__python} openstack_auth/tests/run_tests.py
+-
+ %files -n python2-django-openstack-auth -f django.lang
+ %license LICENSE
+ %dir %{python_sitelib}/openstack_auth
+-- 
+1.8.3.1
+

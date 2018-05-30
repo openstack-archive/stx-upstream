@@ -1,0 +1,83 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Neutron::FloatingIP
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#    external neutron network named: external-net0 (neutron net-list)
+#
+# Mandatory Template Parameters:
+#   None
+#
+# Tenant Considerations:
+#    The tenant (or admin) needs access to the network selected
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Neutron_FloatingIP.yaml STACK
+#
+# Expected Outcome:
+#   A new floating IP address
+#      neutron floatingip-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+    Demonstrate the OS::Neutron::FloatingIP heat resource
+
+parameters:
+
+    NETWORK:
+        description: External network to allocate floatingIP (neutron net-list)
+        type: string
+        default: external-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+resources:
+
+    OS_Neutron_FloatingIP:
+        type: OS::Neutron::FloatingIP
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+            # Mandatory. either:
+            #   floating_network (name or uuid)
+            #  or
+            #   floating_network_id (uuid)
+            #
+            # floating_network_id: {description: ID of network to allocate
+            #  floating IP from., required: true, type: string}
+            floating_network: { get_param: NETWORK }
+
+            #################################################
+            # Optional properties
+            #################################################
+            #  fixed_ip_address: {description: IP address to use if the port
+            #  has multiple addresses., required: false, type: string}
+
+            #  port_id: {description: ID of an existing port with at least one
+            #  IP address to associate with this floating IP.
+            #  , required: false, type: string}
+            #   This needs to be a port on the external SUBNET associated with
+            #   the network
+
+            # value_specs:
+            #   default: {}
+            #   description: Extra parameters to include in the "floatingip"
+            #   object in the creation request. Parameters are often specific
+            #   to installed hardware or extensions.
+            #   required: false
+            #   type: map
+            #
+            # Passing an invalid key will cause heat creation to fail.
+            # Some keys that may be valid are:  tenant_id,
+            # value_specs: {'tenant_id': 'some_uuid' }

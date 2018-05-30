@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenStack Nova Compute API Server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+#NotifyAccess=all
+TimeoutStartSec=0
+#Restart=always
+User=root
+ExecStart=/usr/bin/nova-api-os-compute
+
+[Install]
+WantedBy=multi-user.target

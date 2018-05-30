@@ -1,0 +1,16 @@
+diff --git a/SPECS/python-keystoneclient.spec b/SPECS/python-keystoneclient.spec
+index e68bc6f..c71629d 100644
+--- a/SPECS/python-keystoneclient.spec
++++ b/SPECS/python-keystoneclient.spec
+@@ -14,6 +14,11 @@ License:    ASL 2.0
+ URL:        https://launchpad.net/python-keystoneclient
+ Source0:    https://tarballs.openstack.org/%{name}/%{name}-%{version}.tar.gz
+ 
++# WRS
++Patch0001:  internal-keystone-client-public-adminURL-detection.patch
++
++# BuildArch needs to be located below patches in the spec file
++
+ BuildArch:  noarch
+ 
+ BuildRequires: /usr/bin/openssl

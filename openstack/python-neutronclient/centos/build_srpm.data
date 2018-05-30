@@ -1,0 +1,4 @@
+TAR_NAME=python-neutronclient
+SRC_DIR="$CGCS_BASE/git/python-neutronclient"
+TIS_BASE_SRCREV=e145c4ef8a0e8390f0468df422a757760e77f823
+TIS_PATCH_VER=GITREVCOUNT

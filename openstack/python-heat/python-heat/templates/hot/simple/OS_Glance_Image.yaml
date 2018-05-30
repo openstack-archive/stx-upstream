@@ -1,0 +1,91 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Glance::Image
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#    guest image file located and accessible at
+#       /home/wrsroot/images/tis-centos-guest.img
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    Only admin can create a public glance image
+#    None
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Glance_Image.yaml STACK
+#
+# Expected Outcome:
+#    A new glance image called  sample_image.
+#        glance image-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Glance::Image heat resource
+
+parameters:
+
+    NAME:
+        description: Glance image name
+        type: string
+        default: sample_image
+
+    CONTAINER_FORMAT:
+        description: Container format for glance image
+        type: string
+        default: bare
+
+    DISK_FORMAT:
+        description: Disk format for glance image
+        type: string
+        default: qcow2
+
+    LOCATION:
+        description: Location to directly load the file from disk
+        type: string
+        default: file:///home/wrsroot/images/tis-centos-guest.img
+
+    IS_PUBLIC:
+        description: Whether this is a public glance image. Admin only.
+        type: boolean
+        default: true
+
+    MIN_RAM:
+        description: Minimum amount of ram for image
+        type: number
+        default: 0
+
+    MIN_DISK:
+        description: Minimum amount of disk for image
+        type: number
+        default: 0
+
+resources:
+
+    OS_Glance_Image:
+        type: OS::Glance::Image
+        properties:
+            # Required
+            container_format: {get_param: CONTAINER_FORMAT}
+            disk_format: {get_param: DISK_FORMAT}
+            location: {get_param: LOCATION}
+
+            # Optional
+            name: {get_param: NAME}
+            min_ram: {get_param: MIN_RAM}
+            min_disk: {get_param: MIN_DISK}
+            protected: false
+            is_public: {get_param: IS_PUBLIC}
+            # When ID is not specified, a UUID is generated
+            # id

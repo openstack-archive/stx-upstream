@@ -1,0 +1,12 @@
+#
+# This file is used by horizon to prevent specific regions from being
+# populated in the region selector.  The contents of this file are a single
+# CSV list containing the region names meant to be ignored,
+# as shown in the example below (currently commented out).
+#
+# After modifying this file on the active controller, run the ‘sudo service horizon restart’ 
+# command and then lock/unlock the inactive controller
+#
+# Note: ignoring this system's region is not supported
+
+#regionSeven,externalRegion,region_to_ignore

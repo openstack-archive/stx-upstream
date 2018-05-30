@@ -1,0 +1,25 @@
+From 001aa3b51766fb3b2cbb0c9a0c715650ef394f8c Mon Sep 17 00:00:00 2001
+From: Al Bailey <al.bailey@windriver.com>
+Date: Mon, 30 Jan 2017 12:24:46 -0500
+Subject: [PATCH 1/2] Update package versioning format for Titanium Cloud format
+
+---
+ SPECS/python-heatclient.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/python-heatclient.spec b/SPECS/python-heatclient.spec
+index 73a1c6f..7d6d32f 100644
+--- a/SPECS/python-heatclient.spec
++++ b/SPECS/python-heatclient.spec
+@@ -8,7 +8,7 @@
+ 
+ Name:    python-heatclient
+ Version: 1.11.0
+-Release: 1%{?dist}
++Release: 1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary: Python API and CLI for OpenStack Heat
+ 
+ License: ASL 2.0
+-- 
+1.8.3.1
+

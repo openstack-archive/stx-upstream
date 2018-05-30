@@ -1,0 +1,25 @@
+From bb0de73901801c5919041fa73699d6cc5e14495a Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Wed, 8 Nov 2017 13:52:34 -0500
+Subject: [PATCH] Update package versioning for TIS format
+
+---
+ SPECS/python-django-openstack-auth.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/python-django-openstack-auth.spec b/SPECS/python-django-openstack-auth.spec
+index 7ac6008..fd06bbc 100644
+--- a/SPECS/python-django-openstack-auth.spec
++++ b/SPECS/python-django-openstack-auth.spec
+@@ -7,7 +7,7 @@
+ 
+ Name:           python-django-openstack-auth
+ Version:        3.5.0
+-Release:        1%{?dist}
++Release:        1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:        Django authentication backend for OpenStack Keystone
+ 
+ License:        BSD
+-- 
+1.8.3.1
+

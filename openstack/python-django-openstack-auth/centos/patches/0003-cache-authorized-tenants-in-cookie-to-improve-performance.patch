@@ -1,0 +1,69 @@
+From b6724faf6f485f08584a7965bcd881d1f3b78f7c Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Wed, 14 Feb 2018 16:55:29 -0500
+Subject: [PATCH] cache authorized tenants list in cookie to improve
+ performance
+
+---
+ openstack_auth/utils.py |  9 +++++++++
+ openstack_auth/views.py | 17 +++++++++++++++++
+ 2 files changed, 26 insertions(+)
+
+diff --git a/openstack_auth/utils.py b/openstack_auth/utils.py
+index 1b35592..9a55790 100644
+--- a/openstack_auth/utils.py
++++ b/openstack_auth/utils.py
+@@ -438,6 +438,15 @@ def set_response_cookie(response, cookie_name, cookie_value):
+     response.set_cookie(cookie_name, cookie_value, expires=expire_date)
+ 
+ 
++def delete_response_cookie(response, cookie_name):
++    """ Common function for deleting a cookie from the response.
++    
++    Deletes the cookie of the given cookie_name. Fails silently
++    if cookie name doesn't exist
++    """
++    response.delete_cookie(cookie_name)
++
++
+ def get_endpoint_region(endpoint):
+     """Common function for getting the region from endpoint.
+ 
+diff --git a/openstack_auth/views.py b/openstack_auth/views.py
+index bf4aa99..a9d84df 100644
+--- a/openstack_auth/views.py
++++ b/openstack_auth/views.py
+@@ -134,6 +134,15 @@ def login(request, template_name=None, extra_context=None, **kwargs):
+         # WRS: add login user name to handle HORIZON session timeout
+         utils.set_response_cookie(res, 'login_user',
+                                   request.user.username)
++
++        # WRS: Store project list to handle frequent requests to
++        # Keystone. Since the cookie is not removed on logout, we will
++        # do it here.
++        tenants = request.user.authorized_tenants
++        tenants = map(lambda x: x.to_dict(), tenants)
++        utils.delete_response_cookie(res, 'authorized_tenants')
++        utils.set_response_cookie(res, 'authorized_tenants', tenants)
++
+     return res
+ 
+ 
+@@ -237,6 +246,14 @@ def switch(request, tenant_id, redirect_field_name=auth.REDIRECT_FIELD_NAME):
+     response = shortcuts.redirect(redirect_to)
+     utils.set_response_cookie(response, 'recent_project',
+                               request.user.project_id)
++
++    # WRS: Refresh the project list stored in the cookie, along with
++    # the project switch event
++    tenants = request.user.authorized_tenants
++    tenants = map(lambda x: x.to_dict(), tenants)
++    utils.delete_response_cookie(response, 'authorized_tenants')
++    utils.set_response_cookie(response, 'authorized_tenants', tenants)
++
+     return response
+ 
+ 
+-- 
+1.8.3.1
+

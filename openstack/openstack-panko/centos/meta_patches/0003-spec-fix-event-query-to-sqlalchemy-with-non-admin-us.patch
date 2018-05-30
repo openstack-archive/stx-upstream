@@ -1,0 +1,32 @@
+From aad89aa79de1e9f0b35afa1ba587c10591a889e0 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Mon, 11 Dec 2017 16:29:23 -0500
+Subject: [PATCH 1/1] spec fix event query to sqlalchemy with non admin user
+
+---
+ SPECS/openstack-panko.spec | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/SPECS/openstack-panko.spec b/SPECS/openstack-panko.spec
+index 95497b4..87a6a5a 100644
+--- a/SPECS/openstack-panko.spec
++++ b/SPECS/openstack-panko.spec
+@@ -17,6 +17,7 @@ Source2:        panko-expirer-active
+ # WRS: Include patches here
+ Patch1:         0001-modify-panko-api.patch
+ Patch2:         0002-Change-event-list-descending.patch
++Patch3:         0003-Fix-event-query-to-sqlalchemy-with-non-admin-user.patch
+ 
+ BuildArch:      noarch
+ 
+@@ -126,6 +127,7 @@ This package contains documentation files for panko.
+ # WRS: Apply patches here
+ %patch1 -p1
+ %patch2 -p1
++%patch3 -p1
+ 
+ find . \( -name .gitignore -o -name .placeholder \) -delete
+ 
+-- 
+1.8.3.1
+

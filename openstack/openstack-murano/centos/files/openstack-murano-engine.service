@@ -1,0 +1,12 @@
+[Unit]
+Description=Openstack Murano Engine Service
+After=syslog.target network.target mysqld.service openstack-keystone.service
+
+[Service]
+Type=simple
+User=murano
+ExecStart=/usr/bin/murano-engine --config-file /etc/murano/murano.conf
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

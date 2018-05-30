@@ -1,0 +1,25 @@
+From 0934088d588521e4f2ac2dbd28ae2de919368d71 Mon Sep 17 00:00:00 2001
+From: Don Penney <don.penney@windriver.com>
+Date: Wed, 7 Feb 2018 13:34:44 -0500
+Subject: [PATCH] Update rabbitmq-server.logrotate
+
+---
+ SOURCES/rabbitmq-server.logrotate | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/SOURCES/rabbitmq-server.logrotate b/SOURCES/rabbitmq-server.logrotate
+index 832cdcf..8de4c84 100644
+--- a/SOURCES/rabbitmq-server.logrotate
++++ b/SOURCES/rabbitmq-server.logrotate
+@@ -7,6 +7,7 @@
+         notifempty
+         sharedscripts
+         postrotate
+-            /usr/sbin/rabbitmqctl -q rotate_logs
++            pgrep beam.smp >/dev/null && /usr/sbin/rabbitmqctl -q rotate_logs
++            true
+         endscript
+ }
+-- 
+1.8.3.1
+

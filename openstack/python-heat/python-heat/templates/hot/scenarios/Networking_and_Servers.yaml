@@ -1,0 +1,217 @@
+################################################################################
+# Copyright (c) 2013 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing a server using a newly created subnet
+#    Shows two scenarios
+#      Scenario A: network, subnets and ports are created explicitly for the
+#        servers. This scenario supports selecting a subnet through the use of
+#        a port
+#      Scenario B: network and subnets are created and only network is
+#       specified for the server. This scenario does not support selecting
+#       which subnet is selected but will not allow booting unless at least one
+#       subnet exists.
+#
+# Pre-Reqs:
+#    A glance image called: wrl6
+#    A nova flavor called:  m1.small
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    An admin only activity
+#
+# Sample CLI syntax:
+#    heat stack-create -f Networking_and_Servers.yaml STACK
+#
+# Expected Outcome:
+#  new networks, subnets, ports and servers
+#     neutron net-list
+#     neutron subnet-list
+#     neutron port-list
+#     nova list
+# servers A1 and A2 will be on separate subnets
+# servers B1 and B2 will typically be on the same subnet
+#
+################################################################################
+heat_template_version: 2015-04-30
+
+description: >
+    Demonstrate creating a network and subnetwork to launch a server
+
+parameters:
+
+    NETWORK_PREFIX:
+        type: string
+        description: "The prefix for each newly created network"
+        default: "network"
+
+    SERVER_PREFIX:
+        type: string
+        description: "The prefix for each newly created server"
+        default: "server"
+
+    IMAGE:
+        type: string
+        description: "The name of the glance image"
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    FLAVOR:
+        type: string
+        description: "The name of the flavor to use"
+        default: m1.small
+        constraints:
+            - custom_constraint: nova.flavor
+
+    CIDR1:
+        type: string
+        description: "CIDR of subnet A1"
+        default: "192.168.110.0/24"
+
+    CIDR2:
+        type: string
+        description: "CIDR of subnet A2"
+        default: "192.168.120.0/24"
+
+    CIDR3:
+        type: string
+        description: "CIDR of subnet B1"
+        default: "192.168.130.0/24"
+
+    CIDR4:
+        type: string
+        description: "CIDR of subnet B2"
+        default: "192.168.140.0/24"
+
+resources:
+
+    ################
+    # Scenario 1   #
+    ################
+    A_Network:
+        type: "OS::Neutron::Net"
+        properties:
+            name:
+                list_join: [ "-", [{ get_param: NETWORK_PREFIX}, "A"]]
+
+    A_Subnet_1:
+        type: "OS::Neutron::Subnet"
+        properties:
+            name:
+                list_join:
+                    - "-"
+                    - [{ get_param: NETWORK_PREFIX }, "subnet", "A", "1"]
+
+            network_id: { get_resource: A_Network }
+            cidr: { get_param: CIDR1 }
+            enable_dhcp: "True"
+
+    A_Subnet_2:
+        type: "OS::Neutron::Subnet"
+        properties:
+            name:
+                list_join:
+                    - "-"
+                    - [{ get_param: NETWORK_PREFIX }, "subnet", "A", "2"]
+            network_id: { get_resource: A_Network }
+            cidr: { get_param: CIDR2 }
+            enable_dhcp: "True"
+
+    A_Port_1:
+        type: OS::Neutron::Port
+        properties:
+            network_id: { get_resource: A_Network }
+            fixed_ips:
+                - subnet_id: { get_resource: A_Subnet_1 }
+
+    A_Port_2:
+        type: OS::Neutron::Port
+        properties:
+            network_id: { get_resource: A_Network }
+            fixed_ips:
+                - subnet_id: { get_resource: A_Subnet_2 }
+
+    A_Server_1:
+        type: "OS::Nova::Server"
+        properties:
+            name:
+                list_join: [ "-", [{ get_param: SERVER_PREFIX}, "A", "1"]]
+            image: { get_param: IMAGE }
+            flavor: { get_param: FLAVOR }
+            networks:
+                - port: { get_resource: A_Port_1 }
+
+    A_Server_2:
+        type: "OS::Nova::Server"
+        properties:
+            name:
+                list_join: [ "-", [{ get_param: SERVER_PREFIX}, "A", "2"]]
+            image: { get_param: IMAGE }
+            flavor: { get_param: FLAVOR }
+            networks:
+                - port: { get_resource: A_Port_2 }
+
+    ################
+    # Scenario 2   #
+    ################
+    B_Network:
+        type: "OS::Neutron::Net"
+        properties:
+            name: { list_join: [ "-", [{ get_param: NETWORK_PREFIX}, "B"]]}
+
+    B_Subnet_1:
+        type: "OS::Neutron::Subnet"
+        properties:
+            name:
+                list_join:
+                    - "-"
+                    - [{ get_param: NETWORK_PREFIX }, "subnet", "B", "1"]
+            network_id: { get_resource: B_Network }
+            cidr: { get_param: CIDR3 }
+            enable_dhcp: "True"
+
+    B_Subnet_2:
+        type: "OS::Neutron::Subnet"
+        properties:
+            name:
+                list_join:
+                    - "-"
+                    - [{ get_param: NETWORK_PREFIX }, "subnet", "B", "2"]
+            network_id: { get_resource: B_Network }
+            cidr: { get_param: CIDR4 }
+            enable_dhcp: "True"
+
+    # This server will use whichever B_Network subnet exists.
+    # It delays creation until B_Subnet_1 exists
+    # If B_Subnet_2 also exists, it may choose it
+    B_Server_1:
+        type: "OS::Nova::Server"
+        depends_on: B_Subnet_1
+        properties:
+            name:
+                list_join: [ "-", [{ get_param: SERVER_PREFIX}, "B", "1"]]
+            image: { get_param: IMAGE }
+            flavor: { get_param: FLAVOR }
+            networks:
+                - network: { get_resource: B_Network }
+
+    # This server will use whichever B_Network subnet exists.
+    # It delays creation until B_Subnet_2 exists
+    # If B_Subnet_1 also exists, it may choose it
+    B_Server_2:
+        type: "OS::Nova::Server"
+        depends_on: B_Subnet_2
+        properties:
+            name:
+                list_join: [ "-", [{ get_param: SERVER_PREFIX}, "B", "2"]]
+            image: { get_param: IMAGE }
+            flavor: { get_param: FLAVOR }
+            networks:
+                - network: { get_resource: B_Network }

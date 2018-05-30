@@ -1,0 +1,13 @@
+diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
+index 874e8a4..8cea3b8 100644
+--- a/SPECS/python-openstackclient.spec
++++ b/SPECS/python-openstackclient.spec
+@@ -173,7 +173,7 @@ Contains SDK files for %{name} package
+ %autosetup -n %{name}-%{upstream_version} -S git
+ 
+ # We handle requirements ourselves, pkg_resources only bring pain
+-rm -rf requirements.txt test-requirements.txt
++rm -rf test-requirements.txt
+ 
+ %build
+ %py2_build

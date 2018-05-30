@@ -1,0 +1,42 @@
+diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
+index 2c25c75..874e8a4 100644
+--- a/SPECS/python-openstackclient.spec
++++ b/SPECS/python-openstackclient.spec
+@@ -162,6 +162,13 @@ It is a thin wrapper to the stock python-*client modules that implement the
+ actual REST API client actions.
+ %endif
+ 
++%package          sdk
++Summary:          SDK files for %{name}
++
++%description      sdk
++Contains SDK files for %{name} package
++
++
+ %prep
+ %autosetup -n %{name}-%{upstream_version} -S git
+ 
+@@ -206,6 +213,12 @@ mv %{buildroot}%{python2_sitelib}/openstackclient/locale %{buildroot}%{_datadir}
+ rm -rf %{buildroot}%{python3_sitelib}/openstackclient/locale
+ %endif
+ 
++
++# prep SDK package
++mkdir -p %{buildroot}/usr/share/remote-clients/%{name}
++tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
++
++
+ # Find language files
+ %find_lang openstackclient --all-name
+ 
+@@ -242,6 +255,10 @@ rm -rf .testrepository
+ %{python3_sitelib}/openstackclient
+ %{python3_sitelib}/*.egg-info
+ %endif
++
++%files sdk
++/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
++
+ %changelog
+ * Mon Aug 21 2017 Alfredo Moralejo <amoralej@redhat.com> 3.12.0-1
+ - Update to 3.12.0

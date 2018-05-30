@@ -1,0 +1,25 @@
+From b7378bf717a0930e2e57be89572b05a5da7cd2f2 Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Mon, 20 Mar 2017 09:21:36 -0400
+Subject: [PATCH 3/4] WRS: meta-dont-remove-requirements-txt.patch
+
+---
+ SPECS/python-keystoneauth1.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/python-keystoneauth1.spec b/SPECS/python-keystoneauth1.spec
+index dad6758..b97182b 100644
+--- a/SPECS/python-keystoneauth1.spec
++++ b/SPECS/python-keystoneauth1.spec
+@@ -128,7 +128,7 @@ Contains SDK files for %{name} package
+ sed -i '/sphinx.ext.intersphinx.*$/d'  doc/source/conf.py
+ 
+ # Let RPM handle the dependencies
+-rm -rf {test-,}requirements.txt
++rm -rf test-requirements.txt
+ # Remove bundled egg-info
+ rm -rf %{pypi_name}.egg-info
+ 
+-- 
+1.8.3.1
+

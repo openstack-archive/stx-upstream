@@ -1,0 +1,69 @@
+#!/bin/bash
+
+#
+# Wrapper script to run heat-manage purge_deleted on active controller only
+#
+HEAT_PURGE_INFO="/var/run/heat-purge.info"
+HEAT_STACK_PURGE_CMD="/usr/bin/nice -n 2 /usr/bin/heat-manage --config-file=/etc/heat/heat.conf purge_deleted -g hours 1"
+HEAT_EVENT_PURGE_CMD="/usr/bin/nice -n 2 /usr/bin/heat-manage --config-file=/etc/heat/heat.conf expire_events"
+
+function is_active_pgserver()
+{
+    # Determine whether we're running on the same controller as the service.
+    local service=postgres
+    local enabledactive=$(/usr/bin/sm-query service $service| grep enabled-active)
+    if [ "x$enabledactive" == "x" ]
+    then
+        # enabled-active not found for that service on this controller
+        return 1
+    else
+        # enabled-active found for that resource
+        return 0
+    fi
+}
+
+if is_active_pgserver
+then
+    if [ ! -f ${HEAT_PURGE_INFO} ]
+    then
+        echo delay_count=0 > ${HEAT_PURGE_INFO}
+    fi
+
+    source ${HEAT_PURGE_INFO}
+    sudo -u postgres psql -d sysinv -c "SELECT alarm_id, entity_instance_id from i_alarm;" | grep -P "^(?=.*100.101)(?=.*${HOSTNAME})" &>/dev/null
+    if [ $? -eq 0 ]
+    then
+        source /etc/platform/platform.conf
+        if [ "${system_type}" = "All-in-one" ]
+        then
+            source /etc/init.d/task_affinity_functions.sh
+            idle_core=$(get_most_idle_core)
+            if [ "$idle_core" -ne "0" ]
+            then
+                # Purge soft deleted records that are older than one hour and events based on 
+		# max_events in config from heat database.
+                sh -c "exec taskset -c $idle_core ${HEAT_STACK_PURGE_CMD}"
+                sh -c "exec taskset -c $idle_core ${HEAT_EVENT_PURGE_CMD}"
+		sed -i "/delay_count/s/=.*/=0/" ${HEAT_PURGE_INFO}
+                exit 0
+            fi
+        fi
+
+        if [ "$delay_count" -lt "3" ]
+        then
+            newval=$(($delay_count+1))
+            sed -i "/delay_count/s/=.*/=$newval/" ${HEAT_PURGE_INFO}
+            (sleep 3600; /usr/bin/heat-purge-deleted-active) &
+            exit 0
+        fi
+
+    fi
+
+    # Purge soft deleted records that are older than one hour and events based on max_events
+    # in config from heat database.
+    eval ${HEAT_STACK_PURGE_CMD}
+    eval ${HEAT_EVENT_PURGE_CMD}
+    sed -i "/delay_count/s/=.*/=0/" ${HEAT_PURGE_INFO}
+fi
+
+exit 0

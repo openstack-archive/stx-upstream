@@ -1,0 +1,32 @@
+From ec249641ede0728731c263a51fdf44d5f97d596a Mon Sep 17 00:00:00 2001
+From: Stefan Dinescu <stefan.dinescu@windriver.com>
+Date: Thu, 16 Nov 2017 17:44:10 +0000
+Subject: [PATCH 1/1] Meta Glance Driver
+
+---
+ SPECS/python-glance-store.spec | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/SPECS/python-glance-store.spec b/SPECS/python-glance-store.spec
+index f001803..be60094 100644
+--- a/SPECS/python-glance-store.spec
++++ b/SPECS/python-glance-store.spec
+@@ -12,6 +12,7 @@ Source0:        https://tarballs.openstack.org/%{upstream_name}/%{upstream_name}
+ 
+ # WRS
+ Patch0001: 0001-Check-ceph-cluster-free-space-before-creating-image.patch
++Patch0002: 0002-Add-glance-driver.patch
+ 
+ BuildArch:      noarch
+ BuildRequires:  python2-devel
+@@ -44,6 +45,7 @@ OpenStack image service store library
+ 
+ # Apply WRS patches
+ %patch0001 -p1
++%patch0002 -p1
+ 
+ %build
+ %{__python2} setup.py build
+-- 
+1.8.3.1
+

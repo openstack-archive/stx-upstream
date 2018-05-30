@@ -1,0 +1,59 @@
+################################################################################
+## Copyright (c) 2017 Wind River Systems, Inc.
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+#################################################################################
+##
+## Objectives:
+##   Create a wrs-qos policy and a new network with it attached
+##
+##
+## Mandatory Template Parameters:
+##   None
+##
+## Tenant Considerations:
+##    None
+##
+## Sample CLI syntax:
+##    heat stack-create -f WRSQoSPolicy.yaml  STACK
+##
+## Expected Outcome:
+##   A new WRS_qos policy and network are created
+##   The new wrs_qos policy is attached to the network
+##
+#################################################################################
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate creating a wrs-qos policy and a new network with it attached
+
+parameters:
+
+    QOS_NAME:
+        description: name for the new wrs_qos
+        type: string
+        default: example_qos
+
+    NET_NAME:
+        description: name for the new network
+        type: string
+        default: example_net
+
+resources:
+
+    ex-qos:
+        type: WR::Neutron::QoSPolicy
+        properties:
+            description: 'Example Network Policy'
+            name: { get_param: QOS_NAME }
+            policies:
+                scheduler:
+                    weight: 16
+
+    ex-net:
+        type: OS::Neutron::Net
+        properties:
+            name: { get_param: NET_NAME }
+            shared: true
+            wrs_qos: {get_resource: ex-qos }

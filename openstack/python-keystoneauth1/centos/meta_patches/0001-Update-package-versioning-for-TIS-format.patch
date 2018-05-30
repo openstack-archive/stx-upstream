@@ -1,0 +1,27 @@
+From 6326d77cf992363766099fc4a8405ec1deac082e Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Mon, 20 Mar 2017 09:21:36 -0400
+Subject: [PATCH 4/4] WRS: 0001-Update-package-versioning-for-TIS-format.patch
+
+Conflicts:
+	SPECS/python-keystoneauth1.spec
+---
+ SPECS/python-keystoneauth1.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/python-keystoneauth1.spec b/SPECS/python-keystoneauth1.spec
+index b97182b..d0c26a0 100644
+--- a/SPECS/python-keystoneauth1.spec
++++ b/SPECS/python-keystoneauth1.spec
+@@ -8,7 +8,7 @@
+ 
+ Name:       python-%{pypi_name}
+ Version:    3.1.0
+-Release:    1%{?dist}
++Release:    1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:    Authentication Library for OpenStack Clients
+ License:    ASL 2.0
+ URL:        https://pypi.io/pypi/%{pypi_name}
+-- 
+1.8.3.1
+

@@ -1,0 +1,11 @@
+SRC_DIR="$CGCS_BASE/git/ceilometer"
+TAR_NAME=ceilometer
+COPY_LIST="$FILES_BASE/* \
+    python-ceilometer/static/ceilometer-expirer-active \
+    python-ceilometer/static/ceilometer-polling \
+    python-ceilometer/static/ceilometer-polling.conf \
+    python-ceilometer/static/ceilometer-polling.conf.pmon.centos \
+    python-ceilometer/static/ceilometer-polling-compute.conf.pmon.centos \
+    python-ceilometer/static/ceilometer-agent-compute"
+TIS_BASE_SRCREV=105788514dadcd881fc86d4b9a03d0d10e2e0874
+TIS_PATCH_VER=GITREVCOUNT

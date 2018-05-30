@@ -1,0 +1,226 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Nova::Server
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#      A glance image named: wrl6  (glance image-list)
+#      A nova flavor named: small (nova flavor-list)
+#      A neutron network named: private-net0 (neutron net-list)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    The tenant (or admin) needs access to the network selected
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Nova_Server.yaml   STACK
+#
+# Expected Outcome:
+#   A newly launched nova instance
+#     nova list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Nova::Server heat resource
+
+parameters:
+
+    SERVER_NAME:
+        description: network to use (neutron net-list)
+        type: string
+        default: nova_server
+
+    NETWORK:
+        description: network to use (neutron net-list)
+        type: string
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    IMAGE:
+        description: Glance image to use (glance image-list)
+        type: string
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    FLAVOR:
+        description: Nova flavor to use. (nova flavor-list)
+        type: string
+        default: small
+        constraints:
+            - custom_constraint: nova.flavor
+
+resources:
+
+    r_string:
+        type: OS::Heat::RandomString
+        properties:
+            length: 4
+            sequence: digits
+
+    OS_Nova_Server:
+        type: OS::Nova::Server
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+            # flavor: {description: The ID or name of the flavor to boot
+            # onto, required: true,  type: string}
+            flavor: { get_param: FLAVOR }
+
+            # Either image or  block_device_mapping with device_name='vda'
+            # MUST be specified
+            # image: {description: The ID or name of the image to boot with,
+            # required: false, type: string}
+            image: { get_param: IMAGE }
+
+            #################################################
+            # Optional properties
+            #################################################
+            # availability_zone: {description: Name of the availability zone
+            # for server placement, required: false, type: string}
+
+            # block_device_mapping:
+            #   description: Block device mappings for this server
+            #     required: false
+            #     schema:
+            #       '*':
+            #         required: false
+            #         schema:
+            #           delete_on_termination: {description: Indicate whether
+            #               the volume should  be deleted when the server is
+            #               terminated, required: false, type: boolean}
+            #           device_name: {description: A device name where the
+            #               volume will be attached in the system at
+            #               /dev/device_name. This value is typically vda,
+            #               required: true, type: string}
+            #           snapshot_id: {description: The ID of the snapshot to
+            #               create a volume from, required: false, type: string}
+            #           volume_id: {description: The ID of the volume to boot
+            #               from. Only one of volume_id or snapshot_id should
+            #               be provided, required: false, type: string}
+            #           volume_size: {description: 'The size of the volume, in
+            #                GB. It is safe to leave this blank and have the
+            #                Compute service infer the size',
+            #                required: false,type: string}
+            #         type: map
+            #     type: list
+
+            #   config_drive: {description: 'value for config drive either
+            #       boolean, or volume-id', required: false, type: string}
+
+            #   diskConfig:
+            #     constraints:
+            #     - allowed_values: [AUTO, MANUAL]
+            #     description: Control how the disk is partitioned when the
+            #          server is created
+            #     required: false
+            #     type: string
+
+            #   flavor_update_policy:
+            #     constraints:
+            #     - allowed_values: [RESIZE, REPLACE]
+            #     default: RESIZE
+            #     description: Policy on how to apply a flavor update; either
+            #        by requesting a server resize or by replacing the entire
+            #        server
+            #     required: false
+            #     type: string
+            flavor_update_policy: REPLACE
+
+
+            # key_name: {description: Name of keypair to inject into server,
+            # required: false, type: string}
+
+            # metadata: {description: 'Arbitrary key/value metadata to store
+            # for this server. A maximum of five entries is allowed, and both
+            # keys and values must be 255 charactersor less',
+            # required: false, type: map}
+
+            # name: {description: Optional server name,
+            # required: false, type: string}
+            name:
+                list_join:
+                    - "-"
+                    - [{ get_param: SERVER_NAME}, { get_resource: r_string }]
+
+
+            # networks:
+            #     description: An ordered list of nics to be added to this
+            #       server, with information
+            #       about connected networks, fixed ips, port etc
+            #     required: false
+            #     schema:
+            #       '*':
+            #         required: false
+            #         schema:
+            #           fixed_ip: {description: Fixed IP address to specify for
+            #             the port created on the requested network,
+            #             required: false, type: string}
+            #           port: {description: ID of an existing port to associate
+            #              with this server, required: false, type: string}
+            #           uuid: {description: ID of network to create a port on,
+            #              required: false, type: string}
+            #         type: map
+            #     type: list
+            networks:
+                - network: { get_param: NETWORK }
+
+            # reservation_id: {description: A UUID for the set of servers being
+            #   requested, required: false,  type: string}
+
+            # scheduler_hints: {description: Arbitrary key-value pairs
+            # specified by the clientto help boot a server,
+            # required: false, type: map}
+
+            # security_groups: {description: List of security group names,
+            # required: false, type: list}
+            # Note: networks and security_groups cannot BOTH be specified
+
+            # user_data: {description: User data script to be executed by
+            #  cloud-init, required: false, type: string}
+
+            # user_data_format: {description: RAW will bypass MIME formatting
+            #  user data., required: false, type: string}
+            user_data_format: RAW
+
+outputs:
+    srv_accessIPv4:
+        description: Manually assigned alt public IPv4 address of server
+        value: { get_attr: [ OS_Nova_Server, accessIPv4] }
+
+    srv_accessIPv6:
+        description: Manually assigned alt public IPv6 address of the server
+        value: { get_attr: [ OS_Nova_Server, accessIPv6] }
+
+    srv_addresses:
+        description: A dict of all network addresses as returned by the API
+        value: { get_attr: [ OS_Nova_Server, addresses] }
+
+    srv_first_address:
+        description: the first assigned network address, or empty string
+        value: { get_attr: [ OS_Nova_Server, first_address] }
+
+    srv_instance_name:
+        description: AWS compatible instance name
+        value: { get_attr: [ OS_Nova_Server, instance_name] }
+
+    srv_networks:
+        description: A dict of assigned network addresses
+        value: { get_attr: [ OS_Nova_Server, networks] }
+
+    srv_show:
+        description: A dict of all server details as returned by the API
+        value: { get_attr: [ OS_Nova_Server, show] }

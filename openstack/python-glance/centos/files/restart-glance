@@ -1,0 +1,150 @@
+#!/bin/bash
+#
+# Copyright (c) 2016 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+#
+# The patching subsystem provides a patch-functions bash source file
+# with useful function and variable definitions.
+#
+. /etc/patching/patch-functions
+
+#
+# We can now check to see what type of node we're on, if it's locked, etc,
+# and act accordingly
+#
+
+#
+# Declare an overall script return code
+#
+declare -i GLOBAL_RC=$PATCH_STATUS_OK
+
+#
+# Handle restarting Glance services
+#
+
+# Syntax:("<service_name>   <timeout>     <behavior after timeout>"\)
+SERVICES=("glance-api       30            kill"\
+          "glance-registry  30            kill")
+# where:
+#   <service_name> = name of executable file reported by ps
+#   <timeout> = how much to wait for the process to gracefully shutdown
+#   <behavior after timeout> = either 'kill' the process with SIGKILL or 'leave' it running
+#            the idea is to avoid leaving behind processes that are degraded, better have 
+#            new ones re-spawned
+
+
+function get_pid {
+    local service=$1
+    PID=$(cat /var/run/resource-agents/$service.pid)
+    echo "$PID"
+}
+
+if is_controller
+then
+    # Glance services only run on the controller
+
+    if [ ! -f $PATCH_FLAGDIR/glance.restarted ]
+    then
+        touch $PATCH_FLAGDIR/glance.restarted
+        for s in "${SERVICES[@]}"; do
+            set -- $s
+            service="$1"
+            timeout="$2"
+            after_timeout="$3"
+            new_process="false"
+
+           # Check SM to see if Horizon is running
+            sm-query service $service | grep -q 'enabled-active'
+            if [ $? -eq 0 ]
+            then
+                loginfo "$0: Restarting $service"
+
+                # Get  PID
+                PID=$(get_pid $service)
+
+                # Send restart signal to process
+                kill -s USR1 $PID
+
+                # Wait up to $timeout seconds for service to gracefully recover
+                let -i UNTIL=$SECONDS+$timeout
+                while [ $UNTIL -ge $SECONDS ]
+                do
+                    # Check to see if we have a new process
+                    NEW_PID=$(get_pid $service)
+                    if [[ "$PID" != "$NEW_PID" ]]
+                    then
+                        new_process="true"
+                        break
+                    fi
+
+                    # Still old process? Let's wait 5 seconds and check again
+                    sleep 5
+                done
+
+                # Do a hard restart of the process if we still have the old one
+                NEW_PID=$(get_pid $service)
+                if [[ "$PID" == "$NEW_PID" ]]
+                then
+                    # we have the old process still running!
+                    if [[ "$after_timeout" == "kill" ]]
+                    then
+                        loginfo "$0: Old process of $service failed to gracefully terminate in $timeout, killing it!"
+                        # kill the old process
+                        kill -s KILL -- -$PID
+                        # wait for a new process to be restarted by sm
+                        let -i UNTIL=$SECONDS+10
+                        while [ $UNTIL -ge $SECONDS ]
+                        do
+                            # Check to see if we have a new process
+                            NEW_PID=$(get_pid $service)
+                            if [[ !  -z  "$NEW_PID"  ]] && [[ "$PID" != "$NEW_PID" ]]
+                            then
+                                loginfo "$0: New process of $service started"
+                                new_process="true"
+                                break
+                            fi
+                        done
+                    fi
+                fi
+
+                # Wait for the new process to complete initialisation
+                if [[ "$new_process" == "true" ]]
+                then
+                    let -i UNTIL=$SECONDS+20
+                    while [ $UNTIL -ge $SECONDS ]
+                    do
+                        # Note: Services are restarted by sm which runs the ocf start script.
+                        # Sm reports enabled-active only *after* those scripts return success
+                        sm-query service $service | grep -q 'enabled-active'
+                        if [ $? -eq 0 ]
+                        then
+                            loginfo "$0: New process of $service started correctly"
+                            break
+                        fi
+                        sleep 1
+                    done
+                fi
+ 
+                sm-query service $service | grep -q 'enabled-active'
+                if [ $? -ne 0 ]
+                then
+                    # Still not running! Clear the flag and mark the RC as failed
+                    loginfo "$0: Failed to restart $service"
+                    rm -f $PATCH_FLAGDIR/$service.restarted
+                    GLOBAL_RC=$PATCH_STATUS_FAILED
+                    sm-query service $service
+                    break
+                    # Note: break if any process in the SERVICES list fails
+                fi
+           fi
+        done
+    fi
+fi
+#
+# Exit the script with the overall return code
+#
+exit $GLOBAL_RC
+

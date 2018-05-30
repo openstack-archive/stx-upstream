@@ -1,0 +1,14 @@
+diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
+index dbb1daa..3ef7f0d 100644
+--- a/SPECS/python-openstackclient.spec
++++ b/SPECS/python-openstackclient.spec
+@@ -17,6 +17,9 @@ License:          ASL 2.0
+ URL:              http://github.com/openstack/%{name}
+ Source0:          https://tarballs.openstack.org/%{name}/%{name}-%{upstream_version}.tar.gz
+ 
++# WRS patches
++Patch0001:        0001-neutron-extensions.patch
++
+ BuildArch:        noarch
+ 
+ %description

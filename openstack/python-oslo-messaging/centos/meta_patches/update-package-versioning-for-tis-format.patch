@@ -1,0 +1,26 @@
+From 76a1a25bbd4e50e46b9ab4c0601e8f3ba9c7dc9e Mon Sep 17 00:00:00 2001
+From: Allain Legacy <allain.legacy@windriver.com>
+Date: Fri, 2 Jun 2017 14:57:47 -0400
+Subject: [PATCH 1/2] update package versioning for tis format
+
+Signed-off-by: Allain Legacy <allain.legacy@windriver.com>
+---
+ SPECS/python-oslo-messaging.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/python-oslo-messaging.spec b/SPECS/python-oslo-messaging.spec
+index 59562ac..929e8e0 100644
+--- a/SPECS/python-oslo-messaging.spec
++++ b/SPECS/python-oslo-messaging.spec
+@@ -8,7 +8,7 @@
+ 
+ Name:       python-oslo-messaging
+ Version:    5.30.0
+-Release:    1%{?dist}
++Release:    1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:    OpenStack common messaging library
+ 
+ License:    ASL 2.0
+-- 
+2.12.1
+

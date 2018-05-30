@@ -1,0 +1,29 @@
+From 559c134057501228adb585cc85ae0cac84cc450b Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Wed, 13 Dec 2017 18:53:18 -0500
+Subject: [PATCH] ignore unexpected arguments to token auth plugin
+
+When creating the token auth plugin, for authentication via token, extra
+arguments might get passed in by the application that the auth plugin
+doesn't care about. This will cause a TypeError due to unexpected
+keyword arguments. These extra arguments should just be ignored instead
+---
+ keystoneauth1/token_endpoint.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/keystoneauth1/token_endpoint.py b/keystoneauth1/token_endpoint.py
+index 675d4c1..0a2f160 100644
+--- a/keystoneauth1/token_endpoint.py
++++ b/keystoneauth1/token_endpoint.py
+@@ -20,7 +20,7 @@ class Token(plugin.BaseAuthPlugin):
+     have a known endpoint and admin token that you want to use.
+     """
+ 
+-    def __init__(self, endpoint, token):
++    def __init__(self, endpoint, token, **kwargs):
+         # NOTE(jamielennox): endpoint is reserved for when plugins
+         # can be used to provide that information
+         self.endpoint = endpoint
+-- 
+1.8.3.1
+

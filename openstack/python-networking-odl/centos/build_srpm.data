@@ -1,0 +1,4 @@
+TAR_NAME=python-networking-odl
+SRC_DIR="$CGCS_BASE/git/networking-odl"
+TIS_BASE_SRCREV=77cbc291fb689ce01e88963ce8e34e4df3dfe2bf
+TIS_PATCH_VER=GITREVCOUNT

@@ -1,0 +1,55 @@
+From e9d61bd41cfbe8cf424d13052c35f298f5beb1e2 Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Tue, 24 Jan 2017 15:19:33 -0500
+Subject: [PATCH] TiS-remote-client-sdk-patch
+
+---
+ keystoneclient/v2_0/client.py | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/keystoneclient/v2_0/client.py b/keystoneclient/v2_0/client.py
+index 904f769..003c5b1 100644
+--- a/keystoneclient/v2_0/client.py
++++ b/keystoneclient/v2_0/client.py
+@@ -13,6 +13,7 @@
+ #    License for the specific language governing permissions and limitations
+ #    under the License.
+ 
++import os
+ import logging
+ import warnings
+ 
+@@ -30,6 +31,9 @@ from keystoneclient.v2_0 import tenants
+ from keystoneclient.v2_0 import tokens
+ from keystoneclient.v2_0 import users
+ 
++import requests
++from requests.packages.urllib3.exceptions import InsecureRequestWarning
++from requests.packages.urllib3 import disable_warnings as urllib3_disable_warnings
+ 
+ _logger = logging.getLogger(__name__)
+ 
+@@ -154,6 +158,20 @@ class Client(httpclient.HTTPClient):
+                 'deprecated as of the 1.7.0 release and may be removed in '
+                 'the 2.0.0 release.', DeprecationWarning)
+ 
++        # NOTE(knasim-wrs): As per US76645, the Keystone adminURL
++        # is no longer an internal address since it needs to be
++        # accessible via remote Openstack client. Things get
++        # complicated with HTTPS where the internal keystone client
++        # gets this adminURL and cannot connect to Keystone server
++        # as it cannot verify the SSL certificate.
++        # We will check for this condition here, if OS_ENDPOINT_TYPE
++        # is not publicURL then this is an internal access scenario and
++        # Keystone client will be set to SSL insecure mode
++        if os.environ.get('OS_ENDPOINT_TYPE') == 'internalURL':
++            kwargs['insecure'] = True
++            # disable verbose insecurity warnings
++            urllib3_disable_warnings(InsecureRequestWarning)
++
+         super(Client, self).__init__(**kwargs)
+ 
+         self.certificates = certificates.CertificatesManager(self._adapter)
+-- 
+1.8.3.1
+

@@ -1,0 +1,298 @@
+From 8dbde864bbdd4302918e91ac696b0ae95f698b36 Mon Sep 17 00:00:00 2001
+From: Daniel Badea <daniel.badea@windriver.com>
+Date: Thu, 2 Nov 2017 21:07:24 +0200
+Subject: [PATCH] Check available ceph space before creating image
+
+---
+ glance_store/_drivers/rbd.py              | 159 +++++++++++++++++++++++++++++-
+ glance_store/tests/unit/test_rbd_store.py |  17 +++-
+ tox.ini                                   |   2 +-
+ 3 files changed, 170 insertions(+), 8 deletions(-)
+
+diff --git a/glance_store/_drivers/rbd.py b/glance_store/_drivers/rbd.py
+index 7b803bc..9895472 100644
+--- a/glance_store/_drivers/rbd.py
++++ b/glance_store/_drivers/rbd.py
+@@ -18,11 +18,15 @@
+ from __future__ import absolute_import
+ from __future__ import with_statement
+ 
++import ast
+ import contextlib
+ import hashlib
++import json
+ import logging
+ import math
+ 
++from oslo_concurrency import lockutils
++from oslo_concurrency import processutils
+ from oslo_config import cfg
+ from oslo_utils import units
+ from six.moves import urllib
+@@ -46,6 +50,10 @@ DEFAULT_CONFFILE = '/etc/ceph/ceph.conf'
+ DEFAULT_USER = None    # let librados decide based on the Ceph conf file
+ DEFAULT_CHUNKSIZE = 8  # in MiB
+ DEFAULT_SNAPNAME = 'snap'
++DEFAULT_POOL_RESERVATION_FILE = '/var/run/glance-space-reservations'
++LOCK_DIR = "/tmp"
++LOCK_PREFIX = "glance_"
++LOCK_RBD_USAGE = "rbd_cluster_usage"
+ 
+ LOG = logging.getLogger(__name__)
+ 
+@@ -344,8 +352,117 @@ class Store(driver.Store):
+                     LOG.debug(msg)
+                     raise exceptions.NotFound(msg)
+ 
++    def validate_available_space(self, ioctx, image_name,
++                                 image_size, total_space=0,
++                                 reserved=0, ignore=[]):
++        """
++        Checks if there is sufficient free space in the
++        ceph cluster to put the whole image in
++
++        :param image_size: the size of the new image
++        :param total_space: total cluster guaranteed space for images
++        :param reserved: space reserved for other uses
++        :param ignore: list of image names to ignore in space computation
++
++        Raises exception in case not enough space is found
++        """
++
++        pool_name = ioctx.name
++
++        # Get free space if there is no space guarantee (e.g. no quota set)
++        if total_space == 0:
++            cmd = ('env', 'LC_ALL=C', 'ceph', 'df',
++                   '--format', 'json')
++            out, err = processutils.execute(*cmd)
++            ceph_df_pools = json.loads(out).get('pools', [])
++            for pool in ceph_df_pools:
++                if pool_name == pool.get("name", "") and 'stats' in pool:
++                    # Leave space to avoid cluster filling up as some
++                    # other processes can write at the same time we import
++                    # our image.
++                    total_space = pool['stats'].get("max_avail", 0) * 0.99
++                    break
++            else:
++                msg = ("Query of max available space in %(pool) failed."
++                       "cmd: %(cmd)s, stdout: %(stdout)s, "
++                       "stderr: %(stderr)s" %
++                       {"pool": pool_name, "cmd": cmd,
++                        "stdout": out, "stderr": err})
++                LOG.error(msg)
++                raise exceptions.GlanceStoreException(message=msg)
++
++        # Get used space by all images in pool
++        # NOTE: There is no librbd python API for getting real space usage
++        cmd = ('env', 'LC_ALL=C', 'rbd', 'du', '-p', pool_name,
++               '--format', 'json')
++        out, err = processutils.execute(*cmd, check_exit_code=[0, 2])
++        if out:
++            image_list = json.loads(out).get("images", [])
++        else:
++            image_list = []
++
++        # Compute occupied space
++        # NOTE: RBD images can be sparse, in this case real disk usage is
++        # lower than provisioned. All glance images real size equals
++        # provisioned space while raw cache are sparse. Moreover, delta
++        # between RAW caching provisioned and real sizes usually is high.
++        # For e.g. a CentOS cloud image that uses approx. 900MB of real
++        # space yet provisions for 8GB. Therefore, we want the real usage
++        # not waste space with provisions that are never going to be used.
++        occupied_space = 0
++        image_id = ""
++        for image in image_list:
++            image_id = image.get("name", "")
++            # Process ignores
++            for img in ignore:
++                if img == image_id:
++                    continue
++            # Sanitize input
++            if "used_size" not in image or "provisioned_size" not in image:
++                LOG.error("Image disk usage query failure for "
++                          "image: %(id)s. cmd: %(cmd)s, "
++                          "stdout: %(stdout)s, stderr: %(stderr)s" %
++                          {"id": image_id, "cmd": cmd,
++                           "stdout": out, "stderr": err})
++            # Get image usage
++            if "_raw" in image_id:
++                if image.get("snapshot", None) != "snap":
++                    # Each image is listed twice, after import, only snapshots
++                    # display 'used_size' correctly
++                    continue
++                # Get raw cached images real used space
++                size = image["used_size"]
++            else:
++                if image.get("snapshot", None) == "snap":
++                    # Before import, there is no snapshot and we also need
++                    # reserved space during glance image creation
++                    continue
++                # Get glance images provisioned space
++                size = image["provisioned_size"]
++            occupied_space += size
++            LOG.debug("Image %(id)s used RBD space is: %(used_size)s" %
++                      {"id": image_id, "used_size": image_size})
++
++        # Verify if there is enough space to proceed
++        data = {"image": image_id,
++                "pool": pool_name,
++                "used": occupied_space // 2 ** 20,
++                "needed": image_size // 2 ** 20,
++                "available": (total_space - occupied_space) // 2 ** 20,
++                "reserved": reserved // 2 ** 20}
++        LOG.info("Requesting %(needed)s MB for image %(image)s in "
++                 "Ceph %(pool)s pool. Used: %(used)s MB. Available: "
++                 "%(available)s MB (where %(reserved)s reserved)" % data)
++        if (total_space and image_size and
++                occupied_space + image_size + reserved > total_space):
++            msg = (_('Not enough cluster free space for image %s.') %
++                   image_name)
++            LOG.error(msg)
++            raise exceptions.StorageFull(message=msg)
++
++    @lockutils.synchronized(LOCK_RBD_USAGE, LOCK_PREFIX, True, LOCK_DIR)
+     def _create_image(self, fsid, conn, ioctx, image_name,
+-                      size, order, context=None):
++                      size, order, total_available_space, context=None):
+         """
+         Create an rbd image. If librbd supports it,
+         make it a cloneable snapshot, so that copy-on-write
+@@ -356,6 +473,34 @@ class Store(driver.Store):
+         :retval: `glance_store.rbd.StoreLocation` object
+         """
+         librbd = rbd.RBD()
++
++        # Get space reserved by RAW Caching feature
++        # NOTE: Real space is updated on the fly while an image is added to
++        # RBD (i.e. with 'rbd import') so we will know how big an image is
++        # only after its imported. Also, due to sparse mode provisioned RBD
++        # space is higher than real usage. Therefore we need to get a better
++        # value closer to what we will have as real usage in RBD, and this
++        # has to come from raw caching itself.
++        try:
++            out = None
++            with open(DEFAULT_POOL_RESERVATION_FILE, "r") as f:
++                out = f.read()
++                data = ast.literal_eval(out)
++                reserved = data.get("reserved", 0)
++                img_under_caching = ([data["image_id"]] if
++                                     "image_id" in data else [])
++        except IOError:
++            # In case reservation file does not exist
++            reserved, img_under_caching = (0, [])
++        except Exception:
++            # In case of any other error ignore reservations
++            LOG.error("Failed parsing: %s" % out)
++            reserved, img_under_caching = (0, [])
++
++        self.validate_available_space(
++            ioctx, image_name, size, total_available_space,
++            reserved, img_under_caching)
++
+         features = conn.conf_get('rbd_default_features')
+         if ((features is None) or (int(features) == 0)):
+             features = rbd.RBD_FEATURE_LAYERING
+@@ -464,9 +609,19 @@ class Store(driver.Store):
+                                   "resize-before-write for each chunk which "
+                                   "will be considerably slower than normal"))
+ 
++                ceph_quota_output = json.loads(
++                    conn.mon_command(
++                        json.dumps({
++                            "prefix": "osd pool get-quota",
++                            "pool": self.pool,
++                            "format": "json-pretty"}), "")[1])
++
++                glance_ceph_quota = ceph_quota_output.get("quota_max_bytes", 0)
++
+                 try:
+                     loc = self._create_image(fsid, conn, ioctx, image_name,
+-                                             image_size, order)
++                                             image_size, order,
++                                             glance_ceph_quota)
+                 except rbd.ImageExists:
+                     msg = _('RBD image %s already exists') % image_id
+                     raise exceptions.Duplicate(message=msg)
+diff --git a/glance_store/tests/unit/test_rbd_store.py b/glance_store/tests/unit/test_rbd_store.py
+index 9765aa3..34ab7b4 100644
+--- a/glance_store/tests/unit/test_rbd_store.py
++++ b/glance_store/tests/unit/test_rbd_store.py
+@@ -69,6 +69,9 @@ class MockRados(object):
+         def conf_get(self, *args, **kwargs):
+             pass
+ 
++        def mon_command(self, *args, **kwargs):
++            return ["{}", "{}"]
++
+ 
+ class MockRBD(object):
+ 
+@@ -152,7 +155,7 @@ class MockRBD(object):
+             pass
+ 
+         def list(self, *args, **kwargs):
+-            raise NotImplementedError()
++            return []
+ 
+         def clone(self, *args, **kwargs):
+             raise NotImplementedError()
+@@ -184,7 +187,8 @@ class TestStore(base.StoreBaseTest,
+         self.data_len = 3 * units.Ki
+         self.data_iter = six.BytesIO(b'*' * self.data_len)
+ 
+-    def test_add_w_image_size_zero(self):
++    @mock.patch.object(rbd_store.Store, 'validate_available_space')
++    def test_add_w_image_size_zero(self, validate_available_space):
+         """Assert that correct size is returned even though 0 was provided."""
+         self.store.chunk_size = units.Ki
+         with mock.patch.object(rbd_store.rbd.Image, 'resize') as resize:
+@@ -234,7 +238,8 @@ class TestStore(base.StoreBaseTest,
+                               'fake_image_id', self.data_iter, self.data_len)
+             self.called_commands_expected = ['create']
+ 
+-    def test_add_with_verifier(self):
++    @mock.patch.object(rbd_store.Store, 'validate_available_space')
++    def test_add_with_verifier(self, validate_available_space):
+         """Assert 'verifier.update' is called when verifier is provided."""
+         self.store.chunk_size = units.Ki
+         verifier = mock.MagicMock(name='mock_verifier')
+@@ -403,7 +408,8 @@ class TestStore(base.StoreBaseTest,
+                 pass
+         self.assertRaises(exceptions.BackendException, test)
+ 
+-    def test_create_image_conf_features(self):
++    @mock.patch.object(rbd_store.Store, 'validate_available_space')
++    def test_create_image_conf_features(self, validate_available_space):
+         # Tests that we use non-0 features from ceph.conf and cast to int.
+         fsid = 'fake'
+         features = '3'
+@@ -413,9 +419,10 @@ class TestStore(base.StoreBaseTest,
+         name = '1'
+         size = 1024
+         order = 3
++        ceph_size = 0
+         with mock.patch.object(rbd_store.rbd.RBD, 'create') as create_mock:
+             location = self.store._create_image(
+-                fsid, conn, ioctxt, name, size, order)
++                fsid, conn, ioctxt, name, size, order, ceph_size)
+             self.assertEqual(fsid, location.specs['fsid'])
+             self.assertEqual(rbd_store.DEFAULT_POOL, location.specs['pool'])
+             self.assertEqual(name, location.specs['image'])
+diff --git a/tox.ini b/tox.ini
+index 2e5a2f8..426c024 100644
+--- a/tox.ini
++++ b/tox.ini
+@@ -27,7 +27,7 @@ commands =
+   # B101 - Use of assert detected.
+   # B110 - Try, Except, Pass detected.
+   # B303 - Use of insecure MD2, MD4, or MD5 hash function.
+-  bandit -r glance_store -x tests --skip B101,B110,B303
++  bandit -r glance_store -x tests --skip B101,B110,B303,B108
+ 
+ [testenv:bandit]
+ # NOTE(browne): This is required for the integration test job of the bandit
+-- 
+2.7.4
+

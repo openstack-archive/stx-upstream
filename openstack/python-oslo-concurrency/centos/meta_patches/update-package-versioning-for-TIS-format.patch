@@ -1,0 +1,13 @@
+diff --git a/SPECS/python-oslo-concurrency.spec b/SPECS/python-oslo-concurrency.spec
+index dee2b71..a4a3883 100644
+--- a/SPECS/python-oslo-concurrency.spec
++++ b/SPECS/python-oslo-concurrency.spec
+@@ -10,7 +10,7 @@
+ 
+ Name:           python-oslo-concurrency
+ Version:        3.21.0
+-Release:        1%{?dist}
++Release:        1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:        OpenStack Oslo concurrency library
+ 
+ License:        ASL 2.0

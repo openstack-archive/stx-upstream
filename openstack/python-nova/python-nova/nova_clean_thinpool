@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+# Copyright (c) 2016 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+
+# This script is intended to clean up the LVM thin pool used by
+# nova-compute.  This is required so that packstack is free to resize the
+# instances_lv volume or to switch between volume-backed or image-backed
+# instance storage.
+#
+# It should only run on compute nodes, and it must be run before packstack.
+
+errlog()
+{
+    logger -t nova_clean_thinpool -p daemon.err "$@"
+}
+
+
+start()
+{
+    # We expect this as the volume group
+    VOL_GROUP="nova-local"
+
+    # We expect this as the thin pool
+    THIN_POOL="nova-local-pool"
+
+    # Test if any volume is the thin pool
+    lvs -o lv_name --noheadings | grep -e $THIN_POOL
+    if [ $? -eq 0 ] ; then
+        # Now test if any volumes are in the thin pool
+        lvs -o pool_lv --noheadings | grep -e $THIN_POOL
+        if [ $? -ne 0 ] ; then
+            # Thin pool is present and empty, delete it.
+            lvremove -f ${VOL_GROUP}/$THIN_POOL
+            if [ $? -ne 0 ] ; then
+                errlog "Problem deleting ${VOL_GROUP}/$THIN_POOL"
+            fi
+        else
+            errlog "Not deleting $THIN_POOL because it's not empty."
+        fi
+    fi
+}
+
+stop ()
+{
+    return
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0
+

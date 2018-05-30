@@ -1,0 +1,281 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import re
+import time
+import copy
+import uuid
+
+from oslo_utils import uuidutils
+
+from itertools import groupby
+from operator import itemgetter
+
+import logging
+
+
+# logger
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s') 
+logging.getLogger('multiprocessing').setLevel(logging.DEBUG)
+LOG = logging.getLogger(__name__)
+
+# L3 CAT Support
+_L3_RESCTRL_SUPPORT = None
+_L3_CACHE = None
+RESCTRL_BASE = '/sys/fs/resctrl'
+
+
+def get_l3_cache_allocation_info():
+    """Get resctrl L3 cache allocation technology information.
+
+    :param: None
+    :return info[cache][field]: dictionary of fields, per cache type,
+     defined fields:
+       'cbm_mask'     - hexidecimal bitmask of allocatable cache lanes
+       'min_cbm_bits' - minimum granularity of bits that can be specified
+       'num_cbm_bits' - number of allocatable cache lanes
+       'num_closids'  - number of allocatable CLOS ids, eg, COS<x>
+     where cache is <L3|L3CODE|L3DATA>.
+
+    If resctrl is not available, this will return empty dictionary.
+    """
+    global _L3_RESCTRL_SUPPORT
+    global _L3_CACHE
+    if _L3_CACHE is not None:
+        return _L3_CACHE
+
+    info_dir = RESCTRL_BASE + '/info'
+    if _L3_RESCTRL_SUPPORT is None:
+        _L3_CACHE = {}
+        if not os.path.isdir(info_dir):
+            LOG.info('L3 cache allocation technology not available')
+            _L3_RESCTRL_SUPPORT = False
+            return _L3_CACHE
+        else:
+            _L3_RESCTRL_SUPPORT = True
+    if not _L3_RESCTRL_SUPPORT:
+        _L3_CACHE = {}
+        return _L3_CACHE
+
+    known_types = {'int': int, 'str': str}
+    fields = [('cbm_mask', 'str'),
+              ('min_cbm_bits', 'int'),
+              ('num_closids', 'int')]
+    info_dirs = [name for name in os.listdir(info_dir)]
+    for cache in info_dirs:
+        _L3_CACHE[cache] = {}
+        for field, type_ in fields:
+            filename = RESCTRL_BASE + '/info/' + cache + '/' + field
+            try:
+                with open(filename, 'r') as f:
+                    value = f.readline().strip()
+                    _L3_CACHE[cache][field] = known_types[type_](value)
+            except Exception as e:
+                _L3_CACHE[cache][field] = None
+                LOG.error('Cannot parse file=%(file)s, error=%(err)s',
+                          {'file': filename, 'err': e})
+        if _L3_CACHE[cache]['cbm_mask'] is not None:
+            _L3_CACHE[cache]['num_cbm_bits'] = \
+                int(_L3_CACHE[cache]['cbm_mask'], 16).bit_length()
+        else:
+            _L3_CACHE[cache]['num_cbm_bits'] = None
+    return _L3_CACHE
+
+def get_l3_cache_allocation_schemata(uuid=None):
+    """Get resctrl L3 cache allocation technology schemata CBM corresponding
+       to instance uuid, or the default schemata if uuid not provided.
+       The CBM is a hexedecimal bitmask representing allocated cache lanes.
+
+    The contents of schemata has the following line-pattern:
+     <L3|L3CODE|L3DATA>:<bank i>=<cbm i>; ... <bank j>=<cbm j>
+
+    Example: L3 with cache type 'both', with two banks:
+     L3:0=ffffe;1=fffff
+
+    Example: L3 with cache type 'code' and 'data', i.e., CDP enabled
+     L3CODE:0=ffffe;1=fffff
+     L3DATA:0=ffffe;1=fffff
+
+    :param: uuid string
+    :return schemata[cache][bank]: dictionary of CBM per cache type, per bank
+    """
+    global _L3_RESCTRL_SUPPORT
+    re_schemata = re.compile(r"^\s*(\S+):(\d+=\w+;?.*)$")
+    schemata = {}
+
+    info_dir = RESCTRL_BASE + '/info'
+    if _L3_RESCTRL_SUPPORT is None:
+        if not os.path.isdir(info_dir):
+            LOG.info('L3 cache allocation technology not available')
+            _L3_RESCTRL_SUPPORT = False
+            return schemata
+        else:
+            _L3_RESCTRL_SUPPORT = True
+    if not _L3_RESCTRL_SUPPORT:
+        return schemata
+
+    if uuid is None:
+        filename = RESCTRL_BASE + '/schemata'
+    else:
+        filename = RESCTRL_BASE + '/' + uuid + '/schemata'
+    try:
+        with open(filename, 'r') as f:
+            for line in f:
+                m = re.search(re_schemata, line)
+                if m:
+                    cache_type = m.group(1)
+                    cache_cbm = m.group(2).split(';')
+                    schemata[cache_type] = {}
+                    for scheme in cache_cbm:
+                        bank, cbm = scheme.split('=')
+                        schemata[cache_type][int(bank)] = cbm
+    except Exception as e:
+        LOG.error('Cannot parse file=%(file)s, error=%(err)s',
+                  {'file': filename, 'err': e})
+
+    return schemata
+
+def get_all_l3_schemata():
+    """Get L3 CLOS schemata CBM for all resctrl uuids.
+    :param: None
+    :return schematas[uuid][cache][bank]: dictionary of CBM per uuid,
+                                          per cache type, per bank
+    """
+    global _L3_RESCTRL_SUPPORT
+    schematas = {}
+
+    info_dir = RESCTRL_BASE + '/info'
+    if _L3_RESCTRL_SUPPORT is None:
+        if not os.path.isdir(info_dir):
+            LOG.info('L3 cache allocation technology not available')
+            _L3_RESCTRL_SUPPORT = False
+            return schematas
+        else:
+            _L3_RESCTRL_SUPPORT = True
+    if not _L3_RESCTRL_SUPPORT:
+        return schematas
+
+    for name in os.listdir(RESCTRL_BASE):
+        path = os.path.join(name, RESCTRL_BASE)
+        if os.path.isdir(path) and uuidutils.is_uuid_like(name):
+            schemata = get_l3_cache_allocation_schemata(uuid=name)
+            schematas[name] = copy.deepcopy(schemata)
+    return schematas
+
+
+def hextoset(mask=None):
+    """Convert hex string to equivalent set of enabled bits.
+
+    :param: mask: hex string representing enabled bits
+    :return: set of enabled bits
+    """
+    s = set([])
+    if not mask:
+        return s
+    bits = '{0:b}'.format(int(mask, 16))
+    for i, c in enumerate(bits[::-1]):
+        if int(c):
+            s.add(i)
+    return s
+
+
+def settohex(setbits=None):
+    """Convert set of enabled bits to equivalent hex string.
+
+    :param: setbits: set of enabled bits
+    :return: hex string representing enabled bits
+    """
+    if setbits is None:
+        return ''
+    mask = 0
+    for i in setbits:
+        mask += (1 << i)
+    s = '{0:x}'.format(mask)
+    return s
+
+
+def msb(x):
+    """Position of Most Significant Bit.
+    :param: x: integer
+    :return integer position of most significant bit
+    """
+    return x.bit_length() - 1
+
+
+def list_to_range(input_list=None):
+    """Convert a list into a string of comma separate ranges.
+       E.g.,  [1,2,3,8,9,15] is converted to '1-3,8-9,15'
+    """
+    if input_list is None:
+        return ''
+    if len(input_list) < 3:
+        return ','.join(str(x) for x in input_list)
+    else:
+        G = (list(x) for _, x in groupby(enumerate(input_list),
+                                         lambda (i, x): i - x))
+        return ','.join(
+            '-'.join(map(str, (g[0][1], g[-1][1])[:len(g)])) for g in G)
+
+
+def print_all_instance_schematas(l3_info=None, default_schemata=None, schematas=None):
+    if l3_info is None:
+        return
+    if default_schemata is None:
+        return
+    if schematas is None:
+        return
+
+    cache_types = sorted(default_schemata.keys())
+    cache_type0 = cache_types[0]
+    banks = sorted(default_schemata[cache_type0].keys())
+
+    cbm_mask = l3_info[cache_type0]['cbm_mask']
+    closids_total = l3_info[cache_type0]['num_closids']
+    num_cbm_bits = l3_info[cache_type0]['num_cbm_bits']
+    uuid_len = len(str(uuid.uuid4()))
+    dum_name = "".ljust(uuid_len)[:uuid_len]
+    closids_used = 1 + len(schematas)
+
+    print('%6s %4s : %*s : %8s : %20s : %4s : %s'
+        % ('cache', 'bank', uuid_len, 'uuid',
+           'CBM', 'bitarray', 'size', 'setbits'))
+    for cache_type in cache_types:
+        for bank in banks:
+            default_s = hextoset(mask=default_schemata[cache_type][bank])
+            default_h = settohex(setbits=default_s)
+            default_d = int(default_h, 16)
+            name = 'default'
+            print('%6s %4d : %*s : %08x : %s : %4d : %s'
+                % (cache_type, bank, uuid_len, name, default_d,
+                   format(default_d, '020b'), bin(default_d).count('1'),
+                   list_to_range(input_list=default_s)))
+
+            for name, schemata in sorted(schematas.items(),
+                    key=lambda x: msb(int(x[1][cache_type][bank], 16))):
+
+                if schemata[cache_type][bank] == cbm_mask:
+                    cbm_s = set()
+                else:
+                    cbm_s = hextoset(mask=schemata[cache_type][bank])
+                cbm_h = settohex(setbits=cbm_s)
+                cbm_d = int(cbm_h, 16)
+                print('%6s %4d : %s : %08x : %s : %4d : %s'
+                    % (cache_type, bank, name, cbm_d,
+                       format(cbm_d, '020b'), bin(cbm_d).count('1'),
+                       list_to_range(input_list=cbm_s) or '-'))
+    print('CLOSIDS/type: %d total, %d used' % (closids_total, closids_used))
+
+def main():
+    l3_info = get_l3_cache_allocation_info()
+    if not _L3_RESCTRL_SUPPORT:
+        return
+    default_schemata = get_l3_cache_allocation_schemata()
+    schematas = get_all_l3_schemata()
+    print_all_instance_schematas(l3_info=l3_info,
+                                 default_schemata=default_schemata,
+                                 schematas=schematas)
+
+if __name__ == '__main__':
+    main()
+    sys.exit(0)

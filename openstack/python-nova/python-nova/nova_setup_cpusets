@@ -1,0 +1,188 @@
+#!/bin/bash
+#
+# Copyright (c) 2013-2017 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+
+# This script is intended to set up the cpusets for use by nova-compute.
+# It should only run on compute nodes, and it must be run after the
+# /etc/nova/nova.conf file has been modified by packstack since it
+# extracts the "vcpu_pin_set" value from that file.
+#
+# The intent of the script is to create a top-level "floating" cpuset which
+# has access to all the nova CPUs and all NUMA nodes.  For each NUMA node X
+# on the host a child cpuset called "nodeX" will be created which has access
+# to the CPUs/memory from that specific NUMA node.
+
+# Platform paths and flags
+. /usr/bin/tsconfig
+
+# This is a bit hackish, but we already have the python helper functions
+# available for nova, so we may as well use them.  Also python has
+# built-in support for set intersections.
+#
+# Arg 1 is the full range of CPUs assigned to nova
+# Arg 2 is the range of CPUs on this numa node
+#
+# We want to print the intersection of the two ranges in range
+# notation.
+#
+# Note: the py_script can't be indented otherwise python complains.
+get_float_node_cpus()
+{
+py_script="
+from nova import utils
+float_cpurange = \"${1}\"
+node_cpurange = \"${2}\"
+float_cpus = utils.range_to_list(float_cpurange)
+node_cpus = utils.range_to_list(node_cpurange)
+float_node_cpus = list(set(float_cpus) & set(node_cpus))
+float_node_cpus.sort()
+print utils.list_to_range(float_node_cpus)
+"
+    python -c "$py_script"
+}
+
+log()
+{
+    logger -t nova_setup_cpusets -p daemon.info "$@"
+}
+
+errlog()
+{
+    logger -t nova_setup_cpusets -p daemon.err "$@"
+}
+
+
+start()
+{
+    # Do not continue if the host has not been configured. We can't do
+    # anything until the nova.conf file has been updated.
+    if [ ! -f ${INITIAL_COMPUTE_CONFIG_COMPLETE} ]
+    then
+        log "Initial compute configuration is not complete, nothing to do"
+        exit 0
+    fi
+
+    mkdir -p /dev/cpuset
+    if [ $? -ne 0 ]; then
+        errlog "unable to create /dev/cpuset"
+        exit 1
+    fi
+
+    if ! mountpoint -q /dev/cpuset
+    then
+        mount -t cpuset none /dev/cpuset
+        if [ $? -ne 0 ]; then
+            errlog "unable to mount /dev/cpuset"
+            exit 1
+        fi
+            
+    fi
+
+    # Figure out whether to use WRL or CentOS naming
+    if [ -f /dev/cpuset/cpuset.cpus ]
+    then
+        CPUS='cpuset.cpus'
+        MEMS='cpuset.mems'
+    else
+        CPUS='cpus'
+        MEMS='mems'
+    fi
+
+    # Make the global "floating" cpuset
+    mkdir -p /dev/cpuset/floating
+    if [ $? -ne 0 ]; then
+        errlog "unable to create 'floating' cpuset"
+        exit 1
+    fi
+
+    # Assign the full set of NUMA nodes to the global floating nodeset
+    MEMNODES=$(cat /dev/cpuset/${MEMS})
+    log "Assign nodes ${MEMNODES} to floating/${MEMS}"
+    cp /dev/cpuset/${MEMS} /dev/cpuset/floating/${MEMS}
+    if [ $? -ne 0 ]; then
+        errlog "unable to write to floating/${MEMS}"
+    fi
+
+    # Assign the full set of nova CPUs to the global floating cpuset
+    VCPU_PIN_STR=$(grep vcpu_pin_set /etc/nova/nova.conf)
+    VCPU_PIN_STR=${VCPU_PIN_STR//\"/}
+    FLOAT_CPUS=${VCPU_PIN_STR##*=}
+    log "Assign cpus ${FLOAT_CPUS} to floating/${CPUS}"
+    /bin/echo $FLOAT_CPUS > /dev/cpuset/floating/${CPUS}
+    if [ $? -ne 0 ]; then
+        errlog "unable to write to floating/${CPUS}"
+    fi
+
+    # Set ownership/permissions on the cpus/tasks files
+    chown nova.nova /dev/cpuset/floating/${CPUS} /dev/cpuset/floating/tasks
+    chmod 644 /dev/cpuset/floating/${CPUS} /dev/cpuset/floating/tasks
+
+    # Now set up the per-NUMA-node cpusets
+    cd /sys/devices/system/node/
+    NODES=`ls -d node*`
+    cd /dev/cpuset/floating
+    for NODE in $NODES
+    do
+        NODENUM=${NODE#node}
+        mkdir -p $NODE
+        if [ $? -ne 0 ]; then
+            errlog "unable to create ${NODE} cpuset"
+            continue
+        fi
+        
+        # Assign the full set of NUMA nodes to the cpuset so that VM memory
+        # may span numa nodes. Default linux memory allocation policy is to
+        # use the same node(s) where the task is affined if that is possible.
+        log "Assign nodes ${MEMNODES} to floating/${NODE}/${MEMS}"
+        cp /dev/cpuset/${MEMS} ${NODE}/${MEMS}
+        if [ $? -ne 0 ]; then
+            errlog "unable to write to ${NODE}/${MEMS}"
+            continue
+        fi
+
+        # Now assign the subset of FLOAT_CPUS that are part of this
+        # NUMA node to this cpuset
+        NODE_CPUS=$(cat /sys/devices/system/node/${NODE}/cpulist)
+        FLOAT_NODE_CPUS=$(get_float_node_cpus $FLOAT_CPUS $NODE_CPUS)
+        if [ $? -ne 0 ]; then
+            errlog "unable to calculate FLOAT_NODE_CPUS for ${NODE}"
+            continue
+        fi
+
+        log "Assign cpus ${FLOAT_NODE_CPUS} to floating/${NODE}/${CPUS}"
+        /bin/echo $FLOAT_NODE_CPUS > $NODE/${CPUS}
+        if [ $? -ne 0 ]; then
+            errlog "unable to write to ${NODE}/${CPUS}"
+            continue
+        fi
+
+        # Set ownership/permissions on the cpus/tasks files
+        chown nova.nova ${NODE}/${CPUS} ${NODE}/tasks
+        chmod 644 ${NODE}/${CPUS} ${NODE}/tasks
+    done
+}
+
+stop ()
+{
+    return
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0
+

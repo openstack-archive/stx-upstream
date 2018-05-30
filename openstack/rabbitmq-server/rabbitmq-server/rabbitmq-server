@@ -1,0 +1,251 @@
+#!/bin/sh
+#
+# rabbitmq-server RabbitMQ broker
+#
+# chkconfig: - 80 05
+# description: Enable AMQP service provided by RabbitMQ
+#
+
+### BEGIN INIT INFO
+# Provides:          rabbitmq-server
+# Required-Start:    $remote_fs $network
+# Required-Stop:     $remote_fs $network
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Description:       RabbitMQ broker
+# Short-Description: Enable AMQP service provided by RabbitMQ broker
+### END INIT INFO
+
+DAEMON=/usr/bin/rabbitmq-server
+CONTROL=/usr/bin/rabbitmqctl
+USER=root
+ROTATE_SUFFIX=
+INIT_LOG_DIR=/var/log/rabbitmq
+PID_FILE=/var/run/rabbitmq/pid
+HOME=/root
+export HOME
+
+LOCK_FILE=
+
+test -x $DAEMON || exit 0
+test -x $CONTROL || exit 0
+
+RETVAL=0
+
+. /lib/lsb/init-functions
+
+status_of_proc () {
+    local pidfile daemon name retval pid pidfromfile
+
+    pidfile=
+    daemon=_x_
+    name=_x_
+    while [ $# -gt 0 ]; do
+	case $1 in
+	    -p) shift ; pidfile=$1 ;;
+	    *)
+		if [ "$daemon" = "_x_" ]; then
+		    daemon="$1"
+		elif [ "$name" = "_x_" ]; then
+		    name="$1"
+		fi
+		;;
+	esac
+	shift
+    done
+
+    if [ ! -e $pidfile ]; then
+	for d in $daemon; do
+		rc=`pidof $d > /dev/null`
+		if [ $? = 0 ] ; then
+			return 0
+		fi
+	done
+	return 1
+    fi
+
+    pidfromfile=`cat $pidfile`
+    kill -0 $pidfromfile 2> /dev/null
+    retval=$_
+    if [ "$daemon" = "_x_" ]; then
+	# only the pid from the file is used
+	if [ $retval = 0 ]; then
+	    log_success_msg "$name is running"
+	else
+            log_failure_msg "$name is not running"
+	fi
+    fi
+
+    for pid in `pidof $daemon` ; do
+	if test "$pidfromfile" -eq "$pid" 2> /dev/null; then
+	    log_success_msg "$name is running"
+	    return 0
+	fi
+    done
+    log_failure_msg "$name is not running"
+    return 1
+}
+
+ensure_pid_dir () {
+    PID_DIR=`dirname ${PID_FILE}`
+    if [ ! -d ${PID_DIR} ] ; then
+        mkdir -p ${PID_DIR}
+        chown -R ${USER}:${USER} ${PID_DIR}
+        chmod 755 ${PID_DIR}
+    fi
+}
+
+remove_pid () {
+    rm -f ${PID_FILE}
+    rmdir `dirname ${PID_FILE}` || :
+}
+
+start_rabbitmq () {
+    status_rabbitmq quiet || true
+    if [ $RETVAL = 0 ] ; then
+        echo RabbitMQ is currently running
+    else
+        RETVAL=0
+        ensure_pid_dir
+
+        # There seems to be a race condition around the creation of the Erlang cookie file,
+        # where both the rabbitmq-server launch and the subsequent "rabbitmqctl wait" will
+        # both try to create the file if it doesn't exist. This can result in a rare failure during
+        # initial configuration that reports the cookie file does not have the correct
+        # permissions. To avoid any possible race condition, we'll make a call to 
+        # "rabbitmqctl status" first, which will create the cookie for us.
+        /sbin/rabbitmqctl status >/dev/null 2>&1
+
+        # RabbitMQ is using Erlang timers. It appears the Erlang module will abort if it detects discrepencies
+        # in timers, which it is believed to occur sometimes if the process is switched to a different processor
+        # (it compares a time value against an earlier value retrieved from a possibly different processor).
+        # To avoid this potential issue, we'll restrict rabbitmq-server to a single CPU for this instance.
+        # Note: Since SM does not use this script for launch rabbitmq-server, this will only affect the initial
+        # launching by packstack/puppet for configuration purposes.
+        RABBITMQ_PID_FILE=$PID_FILE start-stop-daemon \
+            --pidfile=$PID_FILE \
+            --background \
+            --start \
+            --startas /bin/bash -- \
+                -c "exec taskset -c 0 $DAEMON >> ${INIT_LOG_DIR}/startup_log 2>> ${INIT_LOG_DIR}/startup_err"
+
+        # Wait a second to give rabbit a chance to get started, then check it
+        sleep 1
+        taskset -c 0 $CONTROL wait $PID_FILE >> ${INIT_LOG_DIR}/wait_log 2>&1
+        RETVAL=$?
+        case "$RETVAL" in
+            0)
+                echo SUCCESS
+                if [ -n "$LOCK_FILE" ] ; then
+                    touch $LOCK_FILE
+                fi
+                echo "`date` - rabbitmq successfully started" >> ${INIT_LOG_DIR}/startup_log
+                # only emit the event on boot
+                [ -n "$UPSTART_JOB" ] && initctl emit --no-wait rabbitmq-server-running || true
+                ;;
+            *)
+                remove_pid
+                echo FAILED - check ${INIT_LOG_DIR}/startup_\{log, _err\}
+                echo "`date` - rabbitmq failed to start" >> ${INIT_LOG_DIR}/startup_err
+                RETVAL=1
+                ;;
+        esac
+    fi
+}
+
+stop_rabbitmq () {
+    status_rabbitmq quiet || true
+    if [ $RETVAL = 0 ] ; then
+	if [ ! -e $PID_FILE ] ; then
+		for d in beam beam.smp; do
+			rc=`pidof $d 2> /dev/null`
+			if [ $? = 0 ] ; then
+				kill $rc
+				return
+			fi
+		done
+	fi
+        start-stop-daemon --pidfile=$PID_FILE --stop
+        RETVAL=$?
+        if [ $RETVAL = 0 ] ; then
+            remove_pid
+            if [ -n "$LOCK_FILE" ] ; then
+                rm -f $LOCK_FILE
+            fi
+            echo "`date` - rabbitmq successfully stopped" >> ${INIT_LOG_DIR}/shutdown_log
+        else
+            echo FAILED - check ${INIT_LOG_DIR}/shutdown_log, _err
+            echo "`date` - rabbitmq failed to stop" >> ${INIT_LOG_DIR}/shutdown_err
+        fi
+    else
+        echo RabbitMQ is not running
+        RETVAL=0
+    fi
+}
+
+status_rabbitmq() {
+    if [ "$1" = "quiet" ] ; then
+	status_of_proc -p $PID_FILE "beam beam.smp" rabbitmq-server > /dev/null
+    else
+	status_of_proc -p $PID_FILE "beam beam.smp" rabbitmq-server || exit 1
+    fi
+    RETVAL=$?
+}
+
+rotate_logs_rabbitmq() {
+    $CONTROL rotate_logs ${ROTATE_SUFFIX}
+    if [ $? != 0 ] ; then
+        RETVAL=1
+    fi
+}
+
+restart_running_rabbitmq () {
+    status_rabbitmq quiet
+    if [ $RETVAL = 0 ] ; then
+        restart_rabbitmq
+    else
+        echo RabbitMQ is not runnning
+        RETVAL=0
+    fi
+}
+
+restart_rabbitmq() {
+    stop_rabbitmq
+    start_rabbitmq
+}
+
+case "$1" in
+    start)
+        echo -n "Starting $DESC: "
+        start_rabbitmq
+        echo "$NAME."
+        ;;
+    stop)
+        echo -n "Stopping $DESC: "
+        stop_rabbitmq
+        echo "$NAME."
+        ;;
+    status)
+        status_rabbitmq
+        ;;
+    rotate-logs)
+        echo -n "Rotating log files for $DESC: "
+        rotate_logs_rabbitmq
+        ;;
+    force-reload|reload|restart)
+        echo -n "Restarting $DESC: "
+        restart_rabbitmq
+        echo "$NAME."
+        ;;
+    try-restart)
+        echo -n "Restarting $DESC: "
+        restart_running_rabbitmq
+        echo "$NAME."
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|rotate-logs|restart|condrestart|try-restart|reload|force-reload}" >&2
+        RETVAL=1
+        ;;
+esac
+
+exit $RETVAL

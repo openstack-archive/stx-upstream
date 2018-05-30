@@ -1,0 +1,61 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Neutron::SecurityGroup
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    An admin action
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Neutron_SecurityGroup.yaml STACK
+#
+# Expected Outcome:
+#   A new neutron security group  called  SecurityGroupDeluxe
+#     neutron security-group-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Neutron::SecurityGroup heat resource
+
+parameters:
+
+    NAME:
+        description: Name for the new neutron security group
+        type: string
+        default: SecurityGroupDeluxe
+
+    DESCRIPTION:
+        description: Description for the new neutron security group
+        type: string
+        default: A sample neutron security group
+
+resources:
+
+    OS_Neutron_SecurityGroup:
+        type: OS::Neutron::SecurityGroup
+        properties:
+            name: { get_param: NAME }
+            description: { get_param: DESCRIPTION }
+            rules:
+                - direction: ingress
+                  protocol: tcp
+                  port_range_min: 80
+                  port_range_max: 80
+                - direction: ingress
+                  protocol: udp
+                  port_range_min: 81
+                  port_range_max: 81

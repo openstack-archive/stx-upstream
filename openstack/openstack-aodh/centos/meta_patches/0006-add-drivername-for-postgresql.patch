@@ -1,0 +1,32 @@
+From 0563ba710bf274a50ee16df75017dd0092cd2d31 Mon Sep 17 00:00:00 2001
+From: Al Bailey <Al.Bailey@windriver.com>
+Date: Thu, 21 Dec 2017 14:15:48 -0600
+Subject: [PATCH] add drivername for postgresql
+
+---
+ SPECS/openstack-aodh.spec | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/SPECS/openstack-aodh.spec b/SPECS/openstack-aodh.spec
+index 217dd14..2fa77d0 100644
+--- a/SPECS/openstack-aodh.spec
++++ b/SPECS/openstack-aodh.spec
+@@ -22,6 +22,7 @@ Source20:         aodh-expirer-active
+ 
+ #WRS: Include patches here: 
+ Patch1:           0001-modify-aodh-api.patch
++Patch2:           0002-Add-drivername-support-for-postgresql-connection-set.patch
+ 
+ BuildArch:        noarch
+ 
+@@ -224,6 +225,7 @@ This package contains the Aodh test files.
+ 
+ #WRS: Apply patches here
+ %patch1 -p1
++%patch2 -p1
+ 
+ find . \( -name .gitignore -o -name .placeholder \) -delete
+ 
+-- 
+1.8.3.1
+

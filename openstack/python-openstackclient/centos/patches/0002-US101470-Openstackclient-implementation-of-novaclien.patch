@@ -1,0 +1,273 @@
+From 8fe2869469d3b853e24140e4ffb487d672232b1b Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Fri, 5 Jan 2018 15:01:24 -0500
+Subject: [PATCH] US101470 OSC equivalence of nova cli with WRS extension
+
+CI part2
+---
+ openstackclient/compute/v2/server.py       | 37 +++++++++++
+ openstackclient/compute/v2/server_group.py | 99 ++++++++++++++++++++++++++++--
+ setup.cfg                                  |  2 +
+ 3 files changed, 132 insertions(+), 6 deletions(-)
+
+diff --git a/openstackclient/compute/v2/server.py b/openstackclient/compute/v2/server.py
+index 151c678..c7ffab9 100644
+--- a/openstackclient/compute/v2/server.py
++++ b/openstackclient/compute/v2/server.py
+@@ -12,6 +12,13 @@
+ #   License for the specific language governing permissions and limitations
+ #   under the License.
+ #
++#  Copyright (c) 2013-2018 Wind River Systems, Inc.
++# SPDX-License-Identifier: Apache-2.0
++#
++#
++#
++#
++
+ 
+ """Compute v2 Server action implementations"""
+ 
+@@ -1714,6 +1721,36 @@ class ResumeServer(command.Command):
+             ).resume()
+ 
+ 
++# WRS:extension
++class ScaleServer(command.Command):
++    _description = _("Scale server properties")
++
++    def get_parser(self, prog_name):
++        parser = super(ScaleServer, self).get_parser(prog_name)
++        parser.add_argument(
++            'server',
++            metavar='<server>',
++            help=_('Name or ID of server'),
++        )
++        parser.add_argument(
++            'resource',
++            metavar='<resource>',
++            help=_('Resource to scale. Currently only "cpu"'),
++        )
++        parser.add_argument(
++            'direction',
++            metavar='<direction>',
++            help=_('Direction to scale ("up" or "down")'),
++        )    
++        return parser
++
++    def take_action(self, parsed_args):
++        compute_client = self.app.client_manager.compute
++        compute_client.servers.scale(parsed_args.server,
++                                    parsed_args.resource, 
++                                    parsed_args.direction)
++
++
+ class SetServer(command.Command):
+     _description = _("Set server properties")
+ 
+diff --git a/openstackclient/compute/v2/server_group.py b/openstackclient/compute/v2/server_group.py
+index c6e2161..551ed8e 100644
+--- a/openstackclient/compute/v2/server_group.py
++++ b/openstackclient/compute/v2/server_group.py
+@@ -12,6 +12,12 @@
+ #   License for the specific language governing permissions and limitations
+ #   under the License.
+ #
++#  Copyright (c) 2013-2018 Wind River Systems, Inc.
++# SPDX-License-Identifier: Apache-2.0
++#
++#
++#
++#
+ 
+ """Compute v2 Server Group action implementations"""
+ 
+@@ -22,6 +28,7 @@ from osc_lib import exceptions
+ from osc_lib import utils
+ 
+ from openstackclient.i18n import _
++from novaclient import api_versions
+ 
+ 
+ LOG = logging.getLogger(__name__)
+@@ -35,12 +42,40 @@ _formatters = {
+ 
+ def _get_columns(info):
+     columns = list(info.keys())
+-    if 'metadata' in columns:
+-        # NOTE(RuiChen): The metadata of server group is always empty since API
+-        #                compatible, so hide it in order to avoid confusion.
+-        columns.remove('metadata')
+     return tuple(sorted(columns))
+ 
++#WRS:extension
++def _extract_metadata(args):
++    metadata = {}
++    for server_group in args.metadata:
++        for metadatum in server_group:
++            if metadatum.find('=') > -1:
++                (key, value) = metadatum.split('=', 1)
++            else:
++                key = metadatum
++                value = None
++            metadata[key] = value
++    return metadata
++
++# WRS:extension - type checking for key-value pair
++# returns text instead of tuple like above
++def _key_value_type(text):
++    try:
++        (k, v) = text.split('=', 1)
++        return text
++    except ValueError:
++        msg = "%r is not in the format of key=value" % text
++        raise argparse.ArgumentTypeError(msg)
++
++
++# WRS:extension - type checking for CSV key-value pairs
++def _csv_key_value_type(text):
++    try:
++        return map(_key_value_type, text.split(','))
++    except Exception as e:
++        raise exceptions.CommandError(
++            "Invalid csv key-value argument '%s'. %s" % (text, unicode(e)))
++
+ 
+ class CreateServerGroup(command.ShowOne):
+     _description = _("Create a new server group.")
+@@ -52,6 +87,15 @@ class CreateServerGroup(command.ShowOne):
+             metavar='<name>',
+             help=_("New server group name")
+         )
++        # WRS:extension
++        parser.add_argument(
++            '--metadata',
++            metavar='<key1=value1[,key2=value2...>',
++            action='append',
++            default=[],
++            type=_csv_key_value_type,
++            help=_("Metadata for this server group")
++        )
+         parser.add_argument(
+             '--policy',
+             metavar='<policy>',
+@@ -66,17 +110,21 @@ class CreateServerGroup(command.ShowOne):
+     def take_action(self, parsed_args):
+         compute_client = self.app.client_manager.compute
+         info = {}
++
++        #WRS:extension
++        meta = _extract_metadata(parsed_args)
++        compute_client.api_version = api_versions.APIVersion("2.53")
+         server_group = compute_client.server_groups.create(
+             name=parsed_args.name,
++            metadata=meta,
+             policies=[parsed_args.policy])
+-        info.update(server_group._info)
+ 
++        info.update(server_group._info)
+         columns = _get_columns(info)
+         data = utils.get_dict_properties(info, columns,
+                                          formatters=_formatters)
+         return columns, data
+ 
+-
+ class DeleteServerGroup(command.Command):
+     _description = _("Delete existing server group(s).")
+ 
+@@ -133,8 +181,13 @@ class ListServerGroup(command.Lister):
+ 
+     def take_action(self, parsed_args):
+         compute_client = self.app.client_manager.compute
++
++        #WRS:extension
++        compute_client.api_version = api_versions.APIVersion("2.53")
++
+         data = compute_client.server_groups.list(parsed_args.all_projects)
+ 
++        #WRS:extension list project_id, user_id fields and metadata fields
+         if parsed_args.long:
+             column_headers = columns = (
+                 'ID',
+@@ -143,12 +196,14 @@ class ListServerGroup(command.Lister):
+                 'Members',
+                 'Project Id',
+                 'User Id',
++                'Metadata',
+             )
+         else:
+             column_headers = columns = (
+                 'ID',
+                 'Name',
+                 'Policies',
++                'Metadata',
+             )
+ 
+         return (column_headers,
+@@ -175,11 +230,43 @@ class ShowServerGroup(command.ShowOne):
+ 
+     def take_action(self, parsed_args):
+         compute_client = self.app.client_manager.compute
++        #WRS:extension
++        compute_client.api_version = api_versions.APIVersion("2.53")
++
+         group = utils.find_resource(compute_client.server_groups,
+                                     parsed_args.server_group)
++
+         info = {}
+         info.update(group._info)
+         columns = _get_columns(info)
+         data = utils.get_dict_properties(info, columns,
+                                          formatters=_formatters)
+         return columns, data
++
++#WRS:extension
++class SetServerGroupMetadata(command.Command):
++    _description = _("Set metadata of a server group")
++
++    def get_parser(self, prog_name):
++        parser = super(SetServerGroupMetadata, self).get_parser(prog_name)
++        parser.add_argument(
++            'id',
++            metavar='<id>',
++            help=_("Unique ID of the server group")
++        )
++        parser.add_argument(
++            'metadata',
++            metavar='<key1=value1[,key2=value2...]>',
++            action='append',
++            default=[],
++            type=_csv_key_value_type,
++            help=_("Metadata to set/unset")
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        compute_client = self.app.client_manager.compute
++        metadata = _extract_metadata(parsed_args)
++        compute_client.api_version = api_versions.APIVersion("2.53")       
++        compute_client.server_groups.set_metadata(parsed_args.id, metadata)
++
+diff --git a/setup.cfg b/setup.cfg
+index f162417..627ff87 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -110,6 +110,7 @@ openstack.compute.v2 =
+ 	server_resize = openstackclient.compute.v2.server:ResizeServer
+ 	server_restore = openstackclient.compute.v2.server:RestoreServer
+ 	server_resume = openstackclient.compute.v2.server:ResumeServer
++        server_scale = openstackclient.compute.v2.server:ScaleServer
+ 	server_set = openstackclient.compute.v2.server:SetServer
+ 	server_shelve = openstackclient.compute.v2.server:ShelveServer
+ 	server_show = openstackclient.compute.v2.server:ShowServer
+@@ -129,6 +130,7 @@ openstack.compute.v2 =
+ 	server_group_create = openstackclient.compute.v2.server_group:CreateServerGroup
+ 	server_group_delete = openstackclient.compute.v2.server_group:DeleteServerGroup
+ 	server_group_list = openstackclient.compute.v2.server_group:ListServerGroup
++        server_group_set_metadata = openstackclient.compute.v2.server_group:SetServerGroupMetadata
+ 	server_group_show = openstackclient.compute.v2.server_group:ShowServerGroup
+ 	server_image_create = openstackclient.compute.v2.server_image:CreateServerImage
+ 	usage_list = openstackclient.compute.v2.usage:ListUsage
+-- 
+1.8.3.1
+

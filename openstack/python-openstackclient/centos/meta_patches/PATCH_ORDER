@@ -1,0 +1,16 @@
+0001-Update-package-versioning-for-TIS-format.patch
+0002-spec-remote-clients-sdk.patch
+0003-meta-dont-remove-requirements-txt.patch
+0004-added-missing-build-require-dateutil.patch
+0005-meta-patch-for-neutron-extensions.patch
+0006-openstackClient_Passwordchange_warning.patch
+0007-CGTS-7814-warning-only-when-the-admin-password-chang.patch
+0008-CGTS-7947-add-os-keystone-region-name-to-identity-cl.patch
+1000-remove-version-requirements.patch
+1001-Turn-off-openstackclient-check.patch
+0001-meta-us101470.patch
+0002-meta-us101470.patch
+0001-meta-US106901-Openstack-CLI-Adoption.patch
+0002-meta-US106901-Openstack-CLI-Adoption.patch
+0003-meta-US106901-Openstack-CLI-Adoption.patch
+1002-require-python-ceilometerclient.patch

@@ -1,0 +1,118 @@
+################################################################################
+# Copyright (c) 2013 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objectives:
+#   Create a cinder volume from a glance image
+#   Boot a nova server from the glance image
+#
+# Pre-Reqs:
+#   A keypair called:  controller-0  (nova keypair-list)
+#   A nova flavor called: m1.tiny (nova flavor-list)
+#   A glance image called: wrl6  (glance image-list)
+#   2 networks called: private-net0 and internal-net0 (neutron net-list)
+#
+# Mandatory Template Parameters:
+#   None
+#
+# Tenant Considerations:
+#    None
+#
+# Sample CLI syntax:
+#    heat stack-create -f BootFromCinder.yaml  STACK
+#
+# Expected Outcome:
+#   A new 1GB cinder volume called: cinder-volume
+#      cinder list
+#   A new nova instance called:  cinder-vm
+#      nova list
+#
+################################################################################
+heat_template_version: 2015-04-30
+
+description: >
+    Demonstrate launching an instance from a cinder volume
+
+parameters:
+
+    VOLUME_NAME:
+        description: name for the new cinder volume
+        type: string
+        default: cinder-volume
+
+    VOLUME_SIZE:
+        description: size for the new cinder volume
+        type: number
+        default: 2
+
+    VM_NAME:
+        description: name for the new VM
+        type: string
+        default: cinder-vm
+
+    KEYPAIR:
+        description: keypair to use. (nova keypair-list)
+        type: string
+        default: controller-0
+        constraints:
+            - custom_constraint: nova.keypair
+
+    KEYPAIR_ADMIN_USER:
+        type: string
+        description: Name of user account to inject ssh keys from keypair
+        default: 'ec2-user'
+
+    FLAVOR:
+        description: Nova flavor to use.   (nova flavor-list)
+        type: string
+        default: m1.tiny
+        constraints:
+            - custom_constraint: nova.flavor
+
+    IMAGE:
+        description: Glance image to create cinder volume (glance image-list)
+        type: string
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    PRIVATE_NET:
+        description: private network to use (neutron net-list)
+        type: string
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    INTERNAL_NET:
+        description: internal network to use (neutron net-list)
+        type: string
+        default: internal-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+resources:
+
+    Cinder_Volume:
+        type: OS::Cinder::Volume
+        properties:
+            description: A bootable cinder image
+            name: { get_param: VOLUME_NAME }
+            image: { get_param: IMAGE}
+            size: { get_param: VOLUME_SIZE }
+
+    Nova_Server:
+        type: OS::Nova::Server
+        properties:
+            name: { get_param: VM_NAME }
+            key_name: { get_param: KEYPAIR }
+            admin_user: { get_param: KEYPAIR_ADMIN_USER }
+            flavor: { get_param: FLAVOR }
+            block_device_mapping:
+                - device_name: vda
+                  volume_id: { get_resource: Cinder_Volume }
+            networks:
+                - network: { get_param: PRIVATE_NET}
+                - network: { get_param: INTERNAL_NET}

@@ -1,0 +1,5 @@
+TAR_NAME=python-neutron-dynamic-routing
+SRC_DIR="$CGCS_BASE/git/neutron-dynamic-routing"
+COPY_LIST="$FILES_BASE/*"
+TIS_BASE_SRCREV=9098d4447581117e857d2f86fb4a0508b5ffbb6a
+TIS_PATCH_VER=GITREVCOUNT

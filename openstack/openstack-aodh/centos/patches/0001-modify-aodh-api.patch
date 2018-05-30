@@ -1,0 +1,65 @@
+From ea7f6013ffd1eb525943f4d7ae1bfdef6ecf6c22 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Wed, 15 Feb 2017 15:59:26 -0500
+Subject: [PATCH 1/1] modify-aodh-api
+
+---
+ aodh/api/aodh-api.py |  7 +++++++
+ aodh/api/app.py      | 14 ++++++++++----
+ 2 files changed, 17 insertions(+), 4 deletions(-)
+ create mode 100644 aodh/api/aodh-api.py
+
+diff --git a/aodh/api/aodh-api.py b/aodh/api/aodh-api.py
+new file mode 100644
+index 0000000..565f2e3
+--- /dev/null
++++ b/aodh/api/aodh-api.py
+@@ -0,0 +1,7 @@
++from aodh.api import app as build_wsgi_app
++import sys
++
++sys.argv = sys.argv[:1]
++args = {'config_file' : 'etc/aodh/aodh.conf', }
++application = build_wsgi_app.build_wsgi_app(None, args)
++
+diff --git a/aodh/api/app.py b/aodh/api/app.py
+index 5cecb83..652856e 100644
+--- a/aodh/api/app.py
++++ b/aodh/api/app.py
+@@ -60,7 +60,7 @@ def setup_app(pecan_config=PECAN_CONFIG, conf=None):
+     return app
+ 
+ 
+-def load_app(conf):
++def load_app(conf, args):
+     # Build the WSGI app
+     cfg_file = None
+     cfg_path = conf.api.paste_config
+@@ -68,15 +68,21 @@ def load_app(conf):
+         cfg_file = conf.find_file(cfg_path)
+     elif os.path.exists(cfg_path):
+         cfg_file = cfg_path
+-
+     if not cfg_file:
+         raise cfg.ConfigFilesNotFoundError([conf.api.paste_config])
++
++    config = dict([(key, value) for key, value in args.iteritems()
++                   if key in conf and value is not None])
++    for key, value in config.iteritems():
++        if key == 'config_file':
++            conf.config_file = value
++
+     LOG.info(_LI("Full WSGI config used: %s"), cfg_file)
+     return deploy.loadapp("config:" + cfg_file)
+ 
+ 
+-def build_wsgi_app(argv=None):
+-    return load_app(service.prepare_service(argv=argv))
++def build_wsgi_app(argv=None, args=None):
++    return load_app(service.prepare_service(argv=argv), args)
+ 
+ 
+ def _app():
+-- 
+1.8.3.1
+

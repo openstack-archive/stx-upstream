@@ -1,0 +1,92 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource WR::Neutron::ProviderNet
+#
+# Pre-Reqs:
+#   None
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    This is an admin activity
+#
+# Sample CLI syntax:
+#    heat stack-create -f  WR_Neutron_ProviderNet.yaml  STACK
+#
+# Expected Outcome:
+#  A new provider network called physnetX
+#     neutron providernet-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the WR::Neutron::ProviderNet heat resource
+
+parameters:
+
+    NAME:
+        description: Name of the provider network
+        type: string
+        default: physnetX
+
+    TYPE:
+        description: Provider network type for the network
+        type: string
+        default: vlan
+        constraints:
+            - allowed_values: [ vlan, vxlan, flat ]
+
+    MTU:
+        description: MTU for the provider network
+        type: number
+        default: 1500
+
+    VLANTRANSPARENT:
+        description: vlan_transparent tenant networks for provider network
+        type: boolean
+        default: false
+
+    DESCRIPTION:
+        description: Description for the provider network
+        type: string
+        default: A sample provider network
+
+resources:
+
+    WR_Neutron_ProviderNet:
+        type: WR::Neutron::ProviderNet
+        properties:
+            # required properties
+            name: { get_param: NAME }
+            type: { get_param: TYPE }
+
+            # optional properties
+            mtu: { get_param: MTU }
+            vlan_transparent: { get_param: VLANTRANSPARENT }
+            description: { get_param: DESCRIPTION }
+
+outputs:
+    pn_status:
+        description: The status of the provider network
+        value: { get_attr: [ WR_Neutron_ProviderNet, status] }
+
+    pn_mtu:
+        description: The mtu of the provider network
+        value: { get_attr: [ WR_Neutron_ProviderNet, mtu] }
+
+    pn_show:
+        description: All attributes of the provider network
+        value: { get_attr: [ WR_Neutron_ProviderNet, show] }
+
+    pn_name:
+        description: Name of the provider network
+        value: { get_attr: [ WR_Neutron_ProviderNet, name] }

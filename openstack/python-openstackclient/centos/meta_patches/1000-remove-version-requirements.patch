@@ -1,0 +1,33 @@
+diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
+index 4791547..1db72f9 100644
+--- a/SPECS/python-openstackclient.spec
++++ b/SPECS/python-openstackclient.spec
+@@ -69,17 +69,17 @@ BuildRequires:    python-dateutil
+ Requires:         python-pbr
+ Requires:         python-babel
+ Requires:         python-cliff
+-Requires:         python-openstacksdk >= 0.9.17
+-Requires:         python-oslo-i18n >= 2.1.0
+-Requires:         python-oslo-utils >= 3.20.0
+-Requires:         python-glanceclient >= 1:2.8.0
+-Requires:         python-keystoneauth1 >= 3.1.0
+-Requires:         python-keystoneclient >= 1:3.8.0
+-Requires:         python-novaclient >= 1:9.0.0
+-Requires:         python-cinderclient >= 3.1.0
+-Requires:         python-neutronclient >= 6.3.0
+-Requires:         python-six >= 1.9.0
+-Requires:         python-osc-lib >= 1.7.0
++Requires:         python-openstacksdk
++Requires:         python-oslo-i18n
++Requires:         python-oslo-utils
++Requires:         python-glanceclient
++Requires:         python-keystoneauth1
++Requires:         python-keystoneclient
++Requires:         python-novaclient
++Requires:         python-cinderclient
++Requires:         python-neutronclient
++Requires:         python-six 
++Requires:         python-osc-lib
+ Requires:         python-%{client}-lang = %{version}-%{release}
+ 
+ 

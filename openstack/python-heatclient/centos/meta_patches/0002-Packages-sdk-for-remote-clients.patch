@@ -1,0 +1,51 @@
+From cdb41db222215b7d4576b53d042cf342d9ff6b29 Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Mon, 2 Oct 2017 14:32:49 -0400
+Subject: [PATCH 2/3] WRS: 0002-Packages-sdk-for-remote-clients.patch
+
+---
+ SPECS/python-heatclient.spec | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/SPECS/python-heatclient.spec b/SPECS/python-heatclient.spec
+index 8b36981..3060a3f 100644
+--- a/SPECS/python-heatclient.spec
++++ b/SPECS/python-heatclient.spec
+@@ -93,6 +93,13 @@ the OpenStack Heat API.
+ 
+ This package contains auto-generated documentation.
+ 
++%package          sdk
++Summary:          SDK files for %{name}
++
++%description      sdk
++Contains SDK files for %{name} package
++
++
+ %prep
+ %setup -q -n %{name}-%{upstream_version}
+ 
+@@ -129,6 +136,10 @@ install -pm 644 tools/heat.bash_completion \
+ # Delete tests
+ rm -fr %{buildroot}%{python2_sitelib}/heatclient/tests
+ 
++# prep SDK package
++mkdir -p %{buildroot}/usr/share/remote-clients/%{name}
++tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
++
+ 
+ export PYTHONPATH="$( pwd ):$PYTHONPATH"
+ sphinx-build -b html doc/source html
+@@ -167,6 +178,9 @@ rm -fr html/.doctrees html/.buildinfo
+ %doc html
+ %license LICENSE
+ 
++%files sdk
++/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
++
+ %changelog
+ * Fri Jul 21 2017 rdo-trunk <javier.pena@redhat.com> 1.5.2-1
+ - Update to 1.5.2
+-- 
+1.9.1
+

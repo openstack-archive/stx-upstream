@@ -1,0 +1,18 @@
+[Unit]
+Description=OpenStack Cinder API Server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+# WRS - use root user
+#User=cinder
+User=root
+ExecStart=/usr/bin/cinder-api --config-file /usr/share/cinder/cinder-dist.conf --config-file /etc/cinder/cinder.conf --logfile /var/log/cinder/cinder-api.log
+# WRS - Managed by sm/OCF scripts
+#Restart=on-failure
+#KillMode=process
+PIDFile=/var/run/resource-agents/cinder-api.pid
+
+[Install]
+WantedBy=multi-user.target
+

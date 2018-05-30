@@ -1,0 +1,106 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Nova::Flavor
+#    Shows setting cpu_model and cpu_policy
+#
+# Pre-Reqs:
+#    None
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    Only admin can create a flavor
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Nova_Flavor.yaml STACK
+#
+# Expected Outcome:
+#  A new flavor
+#    nova flavor-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Nova::Flavor heat resource
+
+parameters:
+
+    FLAVOR_NAME:
+        description: Name for the flavor
+        type: string
+        default: sample-flavor
+    RAM:
+        description: How much RAM
+        type: number
+        default: 256
+    VCPUS:
+        description: Num vcpus
+        type: number
+        default: 1
+    DISK:
+        description: Disk. 0 means no limit
+        type: number
+        default: 0
+    EPHEMERAL:
+        description: Ephemeral
+        type: number
+        default: 0
+    SWAP:
+        description: Swap space in MB
+        type: number
+        default: 0
+    RXTX_FACTOR:
+        description: RX TX Factor
+        type: string
+        constraints:
+            - allowed_pattern: "[0-9]+[.][0-9]+"
+        default: "1.0"
+    CPU_MODEL:
+        description: Cpu model of the new Flavor
+        type: string
+        constraints:
+            - allowed_values:
+                  - Conroe
+                  - Penryn
+                  - Nehalem
+                  - Westmere
+                  - SandyBridge
+                  - Haswell
+        default: SandyBridge
+    CPU_POLICY:
+        description: Cpu policy of the new Flavor
+        type: string
+        constraints:
+            - allowed_values:
+                  - dedicated
+                  - shared
+        default: shared
+
+resources:
+
+    OS_Nova_Flavor:
+        type: OS::Nova::Flavor
+        properties:
+            # Required
+            ram: {get_param: RAM}
+            vcpus: {get_param: VCPUS}
+            disk: {get_param: DISK}
+            # Optional
+            # id: some_id
+            # is_public: False
+            name: {get_param: FLAVOR_NAME}
+            ephemeral: {get_param: EPHEMERAL}
+            swap: {get_param: SWAP}
+            rxtx_factor: {get_param: RXTX_FACTOR}
+            extra_specs:
+                'hw:cpu_model': {get_param: CPU_MODEL}
+                'hw:cpu_policy': {get_param: CPU_POLICY}

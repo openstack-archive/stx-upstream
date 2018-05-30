@@ -1,0 +1,63 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Nova::KeyPair
+#
+# Pre-Reqs:
+#    None
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    If a tenant can run:  nova keypair-create then they can run this template
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Nova_KeyPair.yaml STACK
+#
+# Expected Outcome:
+#   A new keypair
+#     nova keypair-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Nova::KeyPair heat resource
+
+parameters:
+
+    NEW_KEY_NAME:
+        description: Name for the new keypair
+        type: string
+        default: KeyPairDeluxe
+
+resources:
+
+    OS_Nova_KeyPair:
+        type: OS::Nova::KeyPair
+        properties:
+            # required properties
+            name: { get_param: NEW_KEY_NAME }
+            # optional properties
+            # public_key: CONTENTS of the  PUBLIC KEY FILE created by:
+            #    ssh-keygen -t dsa -f /root/.ssh/id_rsa -N "" -q
+            # If the file is accessible externally use
+            #   get_file  { get_file: new_key.pub }
+            save_private_key: false
+
+outputs:
+
+    kp_public_key:
+        description: The public key for this new keypair
+        value: { get_attr: [ OS_Nova_KeyPair, public_key] }
+
+    kp_private_key:
+        description: The private key for this new keypair
+        value: { get_attr: [ OS_Nova_KeyPair, private_key] }

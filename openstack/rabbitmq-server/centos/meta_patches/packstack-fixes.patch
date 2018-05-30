@@ -1,0 +1,37 @@
+From 251b011a5ccd75bfeb3ea56bb4d414491b560874 Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Tue, 24 Jan 2017 12:16:38 -0500
+Subject: [PATCH 2/5] WRS: packstack-fixes.patch
+
+Conflicts:
+	SPECS/rabbitmq-server.spec
+---
+ SPECS/rabbitmq-server.spec | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/SPECS/rabbitmq-server.spec b/SPECS/rabbitmq-server.spec
+index f1c3cab..3095f87 100644
+--- a/SPECS/rabbitmq-server.spec
++++ b/SPECS/rabbitmq-server.spec
+@@ -28,6 +28,9 @@ Patch6: rabbitmq-server-0006-rabbit_prelaunch-must-use-RABBITMQ_SERVER_ERL_ARGS.
+ Patch101: rabbitmq-common-0001-Avoid-RPC-roundtrips-while-listing-items.patch
+ Patch102: rabbitmq-common-0002-Use-proto_dist-from-command-line.patch
+ 
++# WRS Patches
++Patch201: update-rabbitmq-server.service.patch
++
+ URL: http://www.rabbitmq.com/
+ BuildArch: noarch
+ BuildRequires: erlang >= %{erlang_minver}, python-simplejson, xmlto, libxslt, python, zip
+@@ -72,6 +75,8 @@ cd deps/rabbit_common
+ %patch102 -p1
+ cd ../..
+ 
++%patch201 -p1
++
+ # We have to remove it until common_test subpackage lands RHOS
+ rm -f \
+ 	deps/amqp_client/src/rabbit_ct_client_helpers.erl \
+-- 
+1.8.3.1
+

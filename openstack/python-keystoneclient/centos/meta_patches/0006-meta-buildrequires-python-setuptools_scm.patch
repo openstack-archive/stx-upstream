@@ -1,0 +1,20 @@
+diff --git a/SPECS/python-keystoneclient.spec b/SPECS/python-keystoneclient.spec
+index 965c437..efc0c4b 100644
+--- a/SPECS/python-keystoneclient.spec
++++ b/SPECS/python-keystoneclient.spec
+@@ -34,6 +34,7 @@ Summary:    Client library for OpenStack Identity API
+ 
+ BuildRequires: python2-devel
+ BuildRequires: python-setuptools
++BuildRequires: python2-setuptools_scm
+ BuildRequires: python-pbr >= 2.0.0
+ BuildRequires: git
+ 
+@@ -61,6 +62,7 @@ Summary:    Client library for OpenStack Identity API
+ 
+ BuildRequires: python3-devel
+ BuildRequires: python3-setuptools
++BuildRequires: python3-setuptools_scm
+ BuildRequires: python3-pbr >= 2.0.0
+ 
+ Requires: python3-oslo-config >= 2:4.0.0

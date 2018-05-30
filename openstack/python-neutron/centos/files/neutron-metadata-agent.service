@@ -1,0 +1,17 @@
+[Unit]
+Description=Neutron networking agent
+After=syslog.target network.target openvswitch.service
+Before=pmon.service
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+ExecStart=/etc/rc.d/init.d/neutron-metadata-agent start
+ExecStop=/etc/rc.d/init.d/neutron-metadata-agent stop
+ExecReload=/etc/rc.d/init.d/neutron-metadata-agent reload
+PIDFile=/var/run/neutron-metadata-agent.pid
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+

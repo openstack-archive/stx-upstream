@@ -1,0 +1,21 @@
+commit 5ba75388d3394c3016570a4e68fb79aebd18bf31
+Author: Shoaib Nasir <shoaib.nasir@windriver.com>
+Date:   Wed Feb 14 19:01:00 2018 -0500
+
+    WRS: 0002-Upstream-gnnochi-panko-fix
+
+diff --git a/SPECS/python-keystonemiddleware.spec b/SPECS/python-keystonemiddleware.spec
+index 63e83d2..cb3c9c9 100644
+--- a/SPECS/python-keystonemiddleware.spec
++++ b/SPECS/python-keystonemiddleware.spec
+@@ -15,6 +15,10 @@ Summary:        Middleware for OpenStack Identity
+ License:        ASL 2.0
+ URL:            http://launchpad.net/keystonemiddleware
+ Source0:        https://tarballs.openstack.org/%{sname}/%{sname}-%{version}.tar.gz
++
++# WRS
++Patch0001:      0001-Upstream-gnnochi-panko-fix.patch
++
+ BuildArch:      noarch
+ 
+ 

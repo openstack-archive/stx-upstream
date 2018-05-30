@@ -1,0 +1,13 @@
+diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
+index 62817fd..2c25c75 100644
+--- a/SPECS/python-openstackclient.spec
++++ b/SPECS/python-openstackclient.spec
+@@ -10,7 +10,7 @@
+ 
+ Name:             python-openstackclient
+ Version:          3.12.0
+-Release:          1%{?dist}
++Release:          2.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:          OpenStack Command-line Client
+ 
+ License:          ASL 2.0

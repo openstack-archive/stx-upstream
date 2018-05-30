@@ -1,0 +1,435 @@
+From 6f1c69328515b4aa1591c999dedbbf88eefacfbe Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Wed, 14 Feb 2018 22:19:17 -0500
+Subject: [PATCH 1/1] US106901: OSC equivalence for Ceilometer     OSC
+ equivalence achieved for the following ceilometer commands
+
+    ceilometer clis:
+        ceilometer metertype-list
+        ceilometer pipeline-list
+        ceilometer pipeline-show
+        ceilometer pipeline-update
+
+    OSC equivalence:
+        openstack telemetry metertype list
+        openstack telemetry pipeline list
+        openstack telemetry pipeline show
+        openstack telemetry pipeline update
+---
+ openstackclient/common/extension.py       |  22 +++++
+ openstackclient/common/module.py          |   2 +-
+ openstackclient/telemetry/__init__.py     |   0
+ openstackclient/telemetry/client.py       |  68 ++++++++++++++
+ openstackclient/telemetry/v2/__init__.py  |   0
+ openstackclient/telemetry/v2/metertype.py |  67 ++++++++++++++
+ openstackclient/telemetry/v2/pipeline.py  | 146 ++++++++++++++++++++++++++++++
+ requirements.txt                          |   1 +
+ setup.cfg                                 |   6 ++
+ 9 files changed, 311 insertions(+), 1 deletion(-)
+ create mode 100644 openstackclient/telemetry/__init__.py
+ create mode 100644 openstackclient/telemetry/client.py
+ create mode 100644 openstackclient/telemetry/v2/__init__.py
+ create mode 100644 openstackclient/telemetry/v2/metertype.py
+ create mode 100644 openstackclient/telemetry/v2/pipeline.py
+
+diff --git a/openstackclient/common/extension.py b/openstackclient/common/extension.py
+index 139f43a..c1b0347 100644
+--- a/openstackclient/common/extension.py
++++ b/openstackclient/common/extension.py
+@@ -12,6 +12,12 @@
+ #   License for the specific language governing permissions and limitations
+ #   under the License.
+ #
++#  Copyright (c) 2013-2018 Wind River Systems, Inc.
++#
++#
++#
++#
++#
+ 
+ """Extension action implementations"""
+ 
+@@ -55,6 +61,13 @@ class ListExtension(command.Lister):
+             default=False,
+             help=_('List extensions for the Block Storage API'),
+         )
++        # WRS extension
++        parser.add_argument(
++            '--telemetry',
++            action='store_true',
++            default=False,
++            help=_('List extensions for Ceilometer API'),
++        )
+         parser.add_argument(
+             '--long',
+             action='store_true',
+@@ -111,6 +124,15 @@ class ListExtension(command.Lister):
+                 message = _("Failed to retrieve extensions list "
+                             "from Network API")
+                 LOG.warning(message)
++        # WRS extension
++        if parsed_args.telemetry or show_all:
++            telemetry_client = self.app.client_manager.telemetry
++            try:
++                data += telemetry_client.list_extensions.show_all()
++            except Exception:
++                message = _("Extensions list not supported by "
++                            "Ceilometer API")
++                LOG.warning(message)
+ 
+         extension_tuples = (
+             utils.get_item_properties(
+diff --git a/openstackclient/common/module.py b/openstackclient/common/module.py
+index 20497f2..12d2038 100644
+--- a/openstackclient/common/module.py
++++ b/openstackclient/common/module.py
+@@ -35,7 +35,7 @@ class ListCommand(command.Lister):
+             '--group',
+             metavar='<group-keyword>',
+             help=_('Show commands filtered by a command group, for example: '
+-                   'identity, volume, compute, image, network and '
++                   'identity, volume, compute, image, network, telemetry and '
+                    'other keywords'),
+         )
+         return parser
+diff --git a/openstackclient/telemetry/__init__.py b/openstackclient/telemetry/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/openstackclient/telemetry/client.py b/openstackclient/telemetry/client.py
+new file mode 100644
+index 0000000..0698a20
+--- /dev/null
++++ b/openstackclient/telemetry/client.py
+@@ -0,0 +1,68 @@
++#   Copyright 2012-2018 OpenStack Foundation
++#
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++#  Copyright (c) 2013-2018 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++# WRS extension
++
++
++from osc_lib import utils
++from openstackclient.i18n import _
++
++import logging
++LOG = logging.getLogger(__name__)
++
++DEFAULT_API_VERSION = '2'
++API_VERSION_OPTION = 'telemetry_api_version'
++API_NAME = "telemetry"
++API_VERSIONS = {
++    "2": "ceilometerclient.v2.client.Client",
++}
++
++
++def make_client(instance):
++    """Returns an ceilometer service client"""
++    ceilometer_client = utils.get_client_class(
++        API_NAME,
++        instance._api_version[API_NAME],
++        API_VERSIONS)
++    LOG.debug('Instantiating ceilometer client: %s', ceilometer_client)
++
++    # Remember interface only if interface is set
++    kwargs = utils.build_kwargs_dict('endpoint_type', instance.interface)
++
++    client = ceilometer_client(
++        session=instance.session,
++        region_name=instance.region_name,
++        **kwargs
++    )
++
++    return client
++
++
++def build_option_parser(parser):
++    """Hook to add global options"""
++    parser.add_argument(
++        '--os-telemetry-api-version',
++        metavar='<telemetry-api-version>',
++        default=utils.env('TELEMETRY_API_VERSION'),
++        help=_('Ceilometer API version, default=%s (Env: TELEMETRY_API_VERSION)') %
++        DEFAULT_API_VERSION,
++    )
++    return parser
+diff --git a/openstackclient/telemetry/v2/__init__.py b/openstackclient/telemetry/v2/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/openstackclient/telemetry/v2/metertype.py b/openstackclient/telemetry/v2/metertype.py
+new file mode 100644
+index 0000000..5472123
+--- /dev/null
++++ b/openstackclient/telemetry/v2/metertype.py
+@@ -0,0 +1,67 @@
++#   Copyright 2012-2018 OpenStack Foundation
++#
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++#   Copyright (c) 2013-2018 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++#  Copyright (c) 2013-2018 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++# WRS extension
++
++from osc_lib.command import command
++from osc_lib import utils
++
++from openstackclient.i18n import _
++
++
++class ListMetertype(command.Lister):
++    """List the user's meter types."""
++
++    def get_parser(self, prog_name):
++        parser = super(ListMetertype, self).get_parser(prog_name)
++        parser.add_argument(
++            "-q", "--query",
++            metavar="<QUERY>",
++            help=_("key[op]data_type::value; list. data_type is optional, "
++                  "but if supplied must be string, integer, float, or boolean.")
++        )
++        parser.add_argument(
++            "-l", "--limit",
++            metavar="<NUMBER>",
++            help=_("Maximum number of meters to return.")
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        ceilometer_client = self.app.client_manager.telemetry
++
++        columns = (
++            "Name",
++            "Type",
++            "Unit",
++        )
++
++        metertypes = ceilometer_client.metertypes.list()
++
++        return (columns,
++                (utils.get_item_properties(
++                    s, columns,
++                ) for s in metertypes))
+diff --git a/openstackclient/telemetry/v2/pipeline.py b/openstackclient/telemetry/v2/pipeline.py
+new file mode 100644
+index 0000000..cbe077a
+--- /dev/null
++++ b/openstackclient/telemetry/v2/pipeline.py
+@@ -0,0 +1,146 @@
++#   Copyright 2012-2018 OpenStack Foundation
++#
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++#   Copyright (c) 2013-2018 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++#   WRS extension
++
++from osc_lib.command import command
++from osc_lib import utils
++import six
++
++from openstackclient.i18n import _
++
++from oslo_utils import strutils
++from ceilometerclient import exc
++from ceilometerclient.common import utils as ceilometer_utils
++
++
++class ListPipeline(command.Lister):
++    """List the pipelines ."""
++
++    def get_parser(self, prog_name):
++        parser = super(ListPipeline, self).get_parser(prog_name)
++        parser.add_argument(
++            "-q", "--query", 
++            metavar="<QUERY>",
++            help=_("key[op]value; list.")
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        ceilometer_client = self.app.client_manager.telemetry
++
++        columns = (
++            "Name",
++            "Enabled",
++            "Location",
++            "Max Bytes",
++            "Backup Count",
++            "Compress",
++        )
++
++        pipelines = ceilometer_client.pipelines.list()
++
++        return (columns,
++                (utils.get_item_properties(
++                    s, columns,
++                ) for s in pipelines))
++
++
++class ShowPipeline(command.ShowOne):
++    """Show details of a given pipeline."""
++
++    def get_parser(self, prog_name):
++        parser = super(ShowPipeline, self).get_parser(prog_name)
++        parser.add_argument(
++            "-n", "--name",
++            metavar="<PIPELINE_NAME>",
++            help=_("Name of the pipeline to show.")
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        ceilometer_client = self.app.client_manager.telemetry
++        pipelines = ceilometer_client.pipelines.get(parsed_args.name)
++        data = pipelines._info.copy()
++        return zip(*sorted(six.iteritems(data)))
++
++
++def _show_pipeline(pipeline):
++    fields = ['name', 'enabled', 'location', 'max_bytes',
++              'backup_count', 'compress']
++    data = dict([(f, getattr(pipeline, f, '')) for f in fields])
++    ceilometer_utils.print_dict(data, wrap=72)
++       
++
++class UpdatePipeline(command.Command):
++    """Update output values for an existing csv pipeline"""
++
++    def get_parser(self, prog_name):
++        parser = super(UpdatePipeline, self).get_parser(prog_name)
++        parser.add_argument(
++            "-n", "--name",
++            required=True,
++            metavar="<PIPELINE_NAME>",
++            help=_("Name of the pipeline to update.")
++        )
++        parser.add_argument(
++            "--enabled", 
++            type=strutils.bool_from_string,
++            metavar="{True|False}",
++            help=_("True if enabling this pipeline")
++        )
++        parser.add_argument(
++            "--location", 
++            metavar="<LOCATION>",
++            help=_("Full Path of the output file.")
++        )
++        parser.add_argument(
++            "--backup_count",
++            type=int,
++            metavar="<BACKUP_COUNT>",
++            help=_("Number of backup files to keep.")
++        )
++        parser.add_argument(
++            "--max_bytes",
++            type=int,
++            metavar="<MAX_BYTES>",
++            help=_("Maximum size of the file in bytes.")
++        )
++        parser.add_argument(
++            "--compress",
++            type=strutils.bool_from_string,
++            metavar="{True|False}",
++            help=_("True if compressing backups.")
++        )        
++        return parser
++
++    def take_action(self, parsed_args):
++        """Update output values for an existing csv pipeline."""
++        ceilometer_client = self.app.client_manager.telemetry
++             
++        fields = dict(filter(lambda x: not (x[1] is None), vars(parsed_args).items()))
++        fields = ceilometer_utils.key_with_slash_to_nested_dict(fields)
++        fields.pop('name')
++        try:
++            pipeline = ceilometer_client.pipelines.update(parsed_args.name, **fields)
++        except exc.HTTPNotFound:
++            raise exc.CommandError('Pipeline not found: %s' % parsed_args.name)
++        _show_pipeline(pipeline)
+diff --git a/requirements.txt b/requirements.txt
+index 24e4672..56a5705 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -15,3 +15,4 @@ python-glanceclient>=2.7.0 # Apache-2.0
+ python-keystoneclient>=3.8.0 # Apache-2.0
+ python-novaclient>=9.0.0 # Apache-2.0
+ python-cinderclient>=3.0.0 # Apache-2.0
++python-ceilometerclient>=2.9.0 # Apache-2.0
+diff --git a/setup.cfg b/setup.cfg
+index 11f7261..1b8e006 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -37,6 +37,7 @@ openstack.cli.base =
+ 	network = openstackclient.network.client
+ 	object_store = openstackclient.object.client
+ 	volume = openstackclient.volume.client
++        telemetry = openstackclient.telemetry.client
+ openstack.common = 
+ 	availability_zone_list = openstackclient.common.availability_zone:ListAvailabilityZone
+ 	configuration_show = openstackclient.common.configuration:ShowConfiguration
+@@ -632,6 +633,11 @@ openstack.volume.v3 =
+ 	volume_transfer_request_delete = openstackclient.volume.v2.volume_transfer_request:DeleteTransferRequest
+ 	volume_transfer_request_list = openstackclient.volume.v2.volume_transfer_request:ListTransferRequest
+ 	volume_transfer_request_show = openstackclient.volume.v2.volume_transfer_request:ShowTransferRequest
++openstack.telemetry.v2 =
++        telemetry_metertype_list = openstackclient.telemetry.v2.metertype:ListMetertype
++        telemetry_pipeline_list = openstackclient.telemetry.v2.pipeline:ListPipeline
++        telemetry_pipeline_show = openstackclient.telemetry.v2.pipeline:ShowPipeline
++        telemetry_pipeline_update = openstackclient.telemetry.v2.pipeline:UpdatePipeline
+ 
+ [pbr]
+ autodoc_tree_index_modules = True
+-- 
+1.8.3.1
+

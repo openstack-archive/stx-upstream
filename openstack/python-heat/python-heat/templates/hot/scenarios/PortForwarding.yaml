@@ -1,0 +1,210 @@
+################################################################################
+# Copyright (c) 2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#   Demonstrates a virtual router port forwarding setup
+#   Sets up ports, VM instances, and forwarding rules
+#
+# Pre-Reqs:
+#   An environment capable of launching 3 VMs
+#   Image imported to glance
+#   Keypair imported to nova
+#   Private network created
+#   Public (external) network created with attachment to private subnet
+#   Router create connecting private network to public network
+#
+# Mandatory Template Parameters:
+#   KEYPAIR
+#   IMAGE
+#   FLAVOR
+#   ROUTER_ID
+#   PRIVATE_NET
+#   PRIVATE_SUBNET
+#
+# Tenant Considerations:
+#   Should be run as tenant.
+#   Can be run as admin
+#
+# Sample CLI syntax:
+#   heat stack-create -f PortForwarding.yaml \
+#       -P ROUTER_ID=812b639cd3714d389a4e2662b114b72b  \
+#       -P KEYPAIR=tenant1-keypair \
+#       -P FLAVOR=small \
+#       -P PRIVATE_NET=tenant1-mgmt \
+#       -P PRIVATE_SUBNET=tenant1-mgmt-subnet0 \
+#       DNAT
+#
+# Expected Outcome:
+#   3 VM instances launched
+#   3 Neutron port forwarding rules (1 to each VM) (neutron portforwarding-list)
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+    HOT template to deploy three servers into an existing neutron tenant
+    network and assign port forwarding rules to each server so they are
+    accessible from the public network via specific layer4 port numbers.
+
+parameters:
+
+    KEYPAIR:
+        type: string
+        description: Name of keypair to assign to servers
+        constraints:
+            - custom_constraint: nova.keypair
+
+    KEYPAIR_ADMIN_USER:
+        type: string
+        description: Name of user account to inject ssh keys from keypair
+        default: 'ec2-user'
+
+    IMAGE:
+        type: string
+        description: Name of image to use for servers
+        default: tis-centos-guest
+        constraints:
+            - custom_constraint: glance.image
+
+    FLAVOR:
+        type: string
+        description: Flavor to use for servers
+        default: small
+        constraints:
+            - custom_constraint: nova.flavor
+
+    ROUTER_ID:
+        type: string
+        description: ID of public facing router that handles NAT translations
+        constraints:
+            - custom_constraint: neutron.router
+
+    PRIVATE_NET:
+        type: string
+        description: Name of private network into which servers get deployed
+        constraints:
+            - custom_constraint: neutron.network
+
+    PRIVATE_SUBNET:
+        type: string
+        description: Name of private sub network into which servers get deployed
+        constraints:
+            - custom_constraint: neutron.subnet
+
+    PRIVATE_PORT_NUMBER:
+        type: number
+        description: Layer4 protocol port number which will terminate on each VM
+        default: 80
+
+    PROTOCOL:
+        type: string
+        description: Layer4 protocol of all port mappings
+        default: tcp
+
+    SERVER1_PUBLIC_PORT_NUMBER:
+        type: number
+        description: Public layer4 protocol portnum which terminates on server1
+        default: 8080
+
+    SERVER2_PUBLIC_PORT_NUMBER:
+        type: number
+        description: Public layer4 protocol portnum which terminates on server2
+        default: 8081
+
+    SERVER3_PUBLIC_PORT_NUMBER:
+        type: number
+        description: Public layer4 protocol portnum which terminates on server3
+        default: 8082
+
+resources:
+
+    server1:
+        type: OS::Nova::Server
+        properties:
+            name: Server1
+            image: { get_param: IMAGE }
+            flavor: { get_param: FLAVOR }
+            key_name: { get_param: KEYPAIR }
+            admin_user: { get_param: KEYPAIR_ADMIN_USER }
+            networks:
+                - port: { get_resource: server1_port }
+
+    server1_port:
+        type: OS::Neutron::Port
+        properties:
+            network: { get_param: PRIVATE_NET }
+            fixed_ips:
+                - subnet: { get_param: PRIVATE_SUBNET }
+
+    server1_rule:
+        type: WR::Neutron::PortForwarding
+        properties:
+            router_id: { get_param: ROUTER_ID }
+            inside_addr: { get_attr: [ server1, first_address ] }
+            inside_port: { get_param: PRIVATE_PORT_NUMBER }
+            outside_port: { get_param: SERVER1_PUBLIC_PORT_NUMBER }
+            protocol: { get_param: PROTOCOL }
+            description: "Server1 port forwarding rule"
+
+    server2:
+        type: OS::Nova::Server
+        properties:
+            name: Server2
+            image: { get_param: IMAGE }
+            flavor: { get_param: FLAVOR }
+            key_name: { get_param: KEYPAIR }
+            admin_user: { get_param: KEYPAIR_ADMIN_USER }
+            networks:
+                - port: { get_resource: server2_port }
+
+    server2_port:
+        type: OS::Neutron::Port
+        properties:
+            network: { get_param: PRIVATE_NET }
+            fixed_ips:
+                - subnet: { get_param: PRIVATE_SUBNET }
+
+    server2_rule:
+        type: WR::Neutron::PortForwarding
+        properties:
+            router_id: { get_param: ROUTER_ID }
+            inside_addr: { get_attr: [ server2, first_address ] }
+            inside_port: { get_param: PRIVATE_PORT_NUMBER }
+            outside_port: { get_param: SERVER2_PUBLIC_PORT_NUMBER }
+            protocol: { get_param: PROTOCOL }
+            description: "Server2 port forwarding rule"
+
+    server3:
+        type: OS::Nova::Server
+        properties:
+            name: Server3
+            image: { get_param: IMAGE }
+            flavor: { get_param: FLAVOR }
+            key_name: { get_param: KEYPAIR }
+            admin_user: { get_param: KEYPAIR_ADMIN_USER }
+            networks:
+                - port: { get_resource: server3_port }
+
+    server3_port:
+        type: OS::Neutron::Port
+        properties:
+            network: { get_param: PRIVATE_NET }
+            fixed_ips:
+                - subnet: { get_param: PRIVATE_SUBNET }
+
+    server3_rule:
+        type: WR::Neutron::PortForwarding
+        properties:
+            # required properties
+            router_id: { get_param: ROUTER_ID }
+            inside_addr: { get_attr: [ server3, first_address ] }
+            inside_port: { get_param: PRIVATE_PORT_NUMBER }
+            outside_port: { get_param: SERVER3_PUBLIC_PORT_NUMBER }
+            protocol: { get_param: PROTOCOL }
+            # optional properties
+            description: "Server3 port forwarding rule"

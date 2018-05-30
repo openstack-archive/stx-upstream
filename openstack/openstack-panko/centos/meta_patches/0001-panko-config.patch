@@ -1,0 +1,171 @@
+From 39121ea596ec8137f2d56b8a35ebba73feb6b5c8 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Fri, 20 Oct 2017 10:07:03 -0400
+Subject: [PATCH 1/1] panko config
+
+---
+ SOURCES/panko-dist.conf      |  2 +-
+ SOURCES/panko-expirer-active | 27 +++++++++++++++++++++++++++
+ SPECS/openstack-panko.spec   | 22 +++++++++++++++++-----
+ 3 files changed, 45 insertions(+), 6 deletions(-)
+ create mode 100644 SOURCES/panko-expirer-active
+
+diff --git a/SOURCES/panko-dist.conf b/SOURCES/panko-dist.conf
+index c33a2ee..ac6f79f 100644
+--- a/SOURCES/panko-dist.conf
++++ b/SOURCES/panko-dist.conf
+@@ -1,4 +1,4 @@
+ [DEFAULT]
+-log_dir = /var/log/panko
++#log_dir = /var/log/panko
+ use_stderr = False
+ 
+diff --git a/SOURCES/panko-expirer-active b/SOURCES/panko-expirer-active
+new file mode 100644
+index 0000000..7d526e0
+--- /dev/null
++++ b/SOURCES/panko-expirer-active
+@@ -0,0 +1,60 @@
++#!/bin/bash
++
++#
++# Wrapper script to run panko-expirer when on active controller only
++#
++PANKO_EXPIRER_INFO="/var/run/panko-expirer.info"
++PANKO_EXPIRER_CMD="/usr/bin/nice -n 2 /usr/bin/panko-expirer"
++
++function is_active_pgserver()
++{
++    # Determine whether we're running on the same controller as the service.
++    local service=postgres
++    local enabledactive=$(/usr/bin/sm-query service $service| grep enabled-active)
++    if [ "x$enabledactive" == "x" ]
++    then
++        # enabled-active not found for that service on this controller
++        return 1
++    else
++        # enabled-active found for that resource
++        return 0
++    fi
++}
++
++if is_active_pgserver
++then
++    if [ ! -f ${PANKO_EXPIRER_INFO} ]
++    then
++        echo skip_count=0 > ${PANKO_EXPIRER_INFO}
++    fi
++
++    source ${PANKO_EXPIRER_INFO}
++    sudo -u postgres psql -d sysinv -c "SELECT alarm_id, entity_instance_id from i_alarm;" | grep -P "^(?=.*100.101)(?=.*${HOSTNAME})" &>/dev/null
++    if [ $? -eq 0 ]
++    then
++        source /etc/platform/platform.conf
++        if [ "${system_type}" = "All-in-one" ]
++        then
++            source /etc/init.d/task_affinity_functions.sh
++            idle_core=$(get_most_idle_core)
++            if [ "$idle_core" -ne "0" ]
++            then
++                sh -c "exec taskset -c $idle_core ${PANKO_EXPIRER_CMD}"
++                sed -i "/skip_count/s/=.*/=0/" ${PANKO_EXPIRER_INFO}
++                exit 0
++            fi
++        fi
++
++        if [ "$skip_count" -lt "3" ]
++        then
++            newval=$(($skip_count+1))
++            sed -i "/skip_count/s/=.*/=$newval/" ${PANKO_EXPIRER_INFO}
++            exit 0
++        fi
++    fi
++
++    eval ${PANKO_EXPIRER_CMD}
++    sed -i "/skip_count/s/=.*/=0/" ${PANKO_EXPIRER_INFO}
++fi
++
++exit 0
+diff --git a/SPECS/openstack-panko.spec b/SPECS/openstack-panko.spec
+index d12da57..90471d9 100644
+--- a/SPECS/openstack-panko.spec
++++ b/SPECS/openstack-panko.spec
+@@ -4,20 +4,26 @@
+ 
+ Name:           openstack-panko
+ Version:        3.0.0
+-Release:        1%{?dist}
++Release:        1%{?_tis_dist}.%{tis_patch_ver}
+ Summary:        Panko provides Event storage and REST API
+ 
+ License:        ASL 2.0
+ URL:            http://github.com/openstack/panko
+ Source0:        https://tarballs.openstack.org/%{pypi_name}/%{pypi_name}-%{upstream_version}.tar.gz
+ Source1:        %{pypi_name}-dist.conf
+-Source2:        %{pypi_name}.logrotate
++# WRS
++Source2:        panko-expirer-active
++
++# WRS: Include patches here
++Patch1:         0001-modify-panko-api.patch
++
+ BuildArch:      noarch
+ 
+ BuildRequires:  python-setuptools
+ BuildRequires:  python-pbr
+ BuildRequires:  python2-devel
+ BuildRequires:  openstack-macros
++BuildRequires:  python-tenacity >= 3.1.0
+ 
+ %description
+ HTTP API to store events.
+@@ -116,6 +122,9 @@ This package contains documentation files for panko.
+ %prep
+ %setup -q -n %{pypi_name}-%{upstream_version}
+ 
++# WRS: Apply patches here
++%patch1 -p1
++
+ find . \( -name .gitignore -o -name .placeholder \) -delete
+ 
+ find panko -name \*.py -exec sed -i '/\/usr\/bin\/env python/{d;q}' {} +
+@@ -158,6 +167,8 @@ mkdir -p %{buildroot}/%{_var}/log/%{name}
+ install -p -D -m 640 %{SOURCE1} %{buildroot}%{_datadir}/panko/panko-dist.conf
+ install -p -D -m 640 etc/panko/panko.conf %{buildroot}%{_sysconfdir}/panko/panko.conf
+ install -p -D -m 640 etc/panko/api_paste.ini %{buildroot}%{_sysconfdir}/panko/api_paste.ini
++# WRS
++install -p -D -m 640 panko/api/panko-api.py %{buildroot}%{_datadir}/panko/panko-api.py
+ 
+ #TODO(prad): build the docs at run time, once the we get rid of postgres setup dependency
+ 
+@@ -169,8 +180,8 @@ install -d -m 755 %{buildroot}%{_sharedstatedir}/panko
+ install -d -m 755 %{buildroot}%{_sharedstatedir}/panko/tmp
+ install -d -m 755 %{buildroot}%{_localstatedir}/log/panko
+ 
+-# Install logrotate
+-install -p -D -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
++# WRS
++install -p -D -m 755 %{SOURCE2} %{buildroot}%{_bindir}/panko-expirer-active
+ 
+ # Remove all of the conf files that are included in the buildroot/usr/etc dir since we installed them above
+ rm -f %{buildroot}/usr/etc/panko/*
+@@ -201,14 +212,15 @@ exit 0
+ %{_bindir}/panko-api
+ %{_bindir}/panko-dbsync
+ %{_bindir}/panko-expirer
++%{_bindir}/panko-expirer-active
+ 
+ %files common
+ %dir %{_sysconfdir}/panko
++%{_datadir}/panko/panko-api.*
+ %attr(-, root, panko) %{_datadir}/panko/panko-dist.conf
+ %config(noreplace) %attr(-, root, panko) %{_sysconfdir}/panko/policy.json
+ %config(noreplace) %attr(-, root, panko) %{_sysconfdir}/panko/panko.conf
+ %config(noreplace) %attr(-, root, panko) %{_sysconfdir}/panko/api_paste.ini
+-%config(noreplace) %attr(-, root, panko) %{_sysconfdir}/logrotate.d/%{name}
+ %dir %attr(0755, panko, root)  %{_localstatedir}/log/panko
+ 
+ %defattr(-, panko, panko, -)
+-- 
+1.8.3.1
+

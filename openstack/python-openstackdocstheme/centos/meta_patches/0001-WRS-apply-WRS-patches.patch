@@ -1,0 +1,33 @@
+From e81c260407459ce9707da6876c92129d86041380 Mon Sep 17 00:00:00 2001
+From: Al Bailey <Al.Bailey@windriver.com>
+Date: Fri, 27 Oct 2017 12:05:28 -0500
+Subject: [PATCH] WRS apply WRS patches
+
+---
+ SPECS/python-openstackdocstheme.spec | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/SPECS/python-openstackdocstheme.spec b/SPECS/python-openstackdocstheme.spec
+index 1eae0c4..316b88b 100644
+--- a/SPECS/python-openstackdocstheme.spec
++++ b/SPECS/python-openstackdocstheme.spec
+@@ -6,7 +6,7 @@
+ 
+ Name:           python-%{pypi_name}
+ Version:        1.11.0
+-Release:        1%{?dist}
++Release:        1%{?_tis_dist}.%{tis_patch_ver}
+ Summary:        OpenStack Docs Theme
+ 
+ License:        ASL 2.0
+@@ -14,6 +14,7 @@ URL:            http://docs.openstack.org/
+ Source0:        https://pypi.io/packages/source/o/%{pypi_name}/%{pypi_name}-%{version}.tar.gz
+ Patch0001:      0001-Remove-all-Google-Analytics-tracking.patch
+ Patch0002:      0002-Remove-external-references.patch
++Patch0003:      0003-WRS.-Fix-when-building-outside-git-tree.patch
+ BuildArch:      noarch
+ 
+ %package -n     python2-%{pypi_name}
+-- 
+1.8.3.1
+

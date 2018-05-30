@@ -1,0 +1,108 @@
+#!/bin/bash
+################################################################################
+# Copyright (c) 2016 Wind River Systems, Inc.
+# 
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Purpose:
+#  Query nova configured PCI devices and display related IRQ cpulist info.
+#
+# Usage:
+#  /usr/bin/nova-pci-interrupts.sh <pci_addr>
+#
+# Define minimal path
+PATH=/bin:/usr/bin:/usr/local/bin:/usr/sbin
+
+# logger setup
+WHOAMI=`basename $0`
+
+function LOG ()
+{
+  local tstamp_H=$( date +"%Y-%0m-%0e %H:%M:%S.%N" )
+  echo -e "${tstamp_H} ${HOSTNAME} $0($$): $@";
+}
+
+function INFO()
+{
+  MSG="INFO"
+  LOG "${MSG} $@"
+}
+function ERROR()
+{
+  MSG="ERROR"
+  LOG "${MSG} $@"
+}
+
+
+# Require root to access all /proc and /sys details (e.g., smp_affinity_cpulist, etc)
+if [ $UID -ne 0 ]; then
+  ERROR "require root or sudo"
+  exit 1
+fi
+
+# Define array of PCI addresses to display IRQ information
+declare -a ADDRS
+if [ "$#" -eq 0 ]; then
+   INFO "No PCI addrs specified.  usage: $0 <pci_addr> <pci_addr> ...\n(querying nova configured pci devices on ${HOSTNAME})"
+
+   source /etc/nova/openrc
+   TMPNAME=$(printf "/tmp/%s-tmp.%d" $(basename $0) $$)
+   CMD="nova list --all --host ${HOSTNAME} --fields=wrs-res:topology,wrs-res:pci_devices"
+
+   INFO "nova configured PCI devices and associated IRQ cpulists:"
+   echo ${CMD}
+   ${CMD} 2>/dev/null > ${TMPNAME}
+   cat ${TMPNAME}
+
+   # extract pci_addrs from field 'wrs-res:pci_devices'
+   ADDRS+=( $(cat ${TMPNAME} | awk '/addr:/ {match($0, "addr:([^,]*),", a); print a[1]}') )
+   rm -f ${TMPNAME}
+
+   INFO "Found: pci_addrs:" ${ADDRS[@]}
+else
+   ADDRS+=( $@ )
+fi
+
+for pci_addr in ${ADDRS[@]}; do
+  # Find PCI device matching address, keep last matching device name
+  dev=$(find /sys/devices -name "${pci_addr}" | \
+    perl -ne 'print $1 if /\/sys\/devices\/pci.*([[:xdigit:]]{4}:[[:xdigit:]]{2}:[[:xdigit:]]{2}\.[[:xdigit:]])$/;')
+
+  if [ -z "${dev}" ] ; then
+    ERROR "cannot find pci_addr: ${pci_addr}"
+    continue
+  fi
+
+  # Obtain all IRQs for this device
+  irq=$(cat /sys/bus/pci/devices/${dev}/irq 2>/dev/null)
+  if [ "${irq}" -eq 0 ]; then
+    irq=""
+  fi
+  msi_irqs=$(ls /sys/bus/pci/devices/${dev}/msi_irqs 2>/dev/null | xargs)
+  numa_node=$(cat /sys/bus/pci/devices/${dev}/numa_node 2>/dev/null | xargs)
+  uevent=$(cat /sys/bus/pci/devices/${dev}/uevent 2>/dev/null | xargs)
+  if [[ ${uevent} =~ PCI_ID=([^[:space:]]+):([^[:space:]]+) ]]; then
+    vendor_id=${BASH_REMATCH[1]}
+    product_id=${BASH_REMATCH[2],,}
+  else
+    vendor_id=""
+    product_id=""
+  fi
+  pci_info=$(lspci -s ${dev} 2>/dev/null)
+  INFO "addr:${dev} vendor:${vendor_id} product:${product_id} numa_node:${numa_node} irq:${irq} msi_irqs:${msi_irqs} ; ${pci_info}"
+
+  # flatten list of irqs, removing duplicates
+  declare -a irqs=( $(echo "${irq} ${msi_irqs}" | xargs | tr ' ' '\n' | sort -nu) )
+  for i in ${irqs[@]}
+  do
+    if [[ -e /proc/irq/${i} ]]; then
+      cpulist=$(cat /proc/irq/${i}/smp_affinity_list 2>/dev/null)
+      LOG "irq:${i} cpulist:${cpulist}"
+    fi
+  done
+done
+
+exit 0
+

@@ -1,0 +1,149 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Neutron::Subnet
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#    A network named: private-net0 (neutron net-list)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    The tenant (or admin) needs access to the network selected
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Neutron_Subnet.yaml STACK
+#
+# Expected Outcome:
+#  A new subnet called sample_subnet
+#    neutron subnet-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Neutron::Subnet heat resource
+
+parameters:
+
+    NETWORK:
+        description: UUID of the parent network to use when creating the subnet
+        type: string
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    CIDR:
+        description: Cidr of the subnet
+        type: string
+        default: 192.168.12.0/24
+
+resources:
+
+    OS_Neutron_Subnet:
+        type: OS::Neutron::Subnet
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+
+            #  cidr: {required: true, type: string}
+            # An error will occur if this overlaps with an existing subnet
+            cidr: { get_param: CIDR }
+
+            # either network_id (uuid) or network (name or uuid) is required
+            # network_id: { get_param: NETWORK }
+            network: { get_param: NETWORK }
+
+            #################################################
+            # Optional properties
+            #################################################
+            #  allocation_pools:
+            #    required: false
+            #    schema:
+            #      '*':
+            #        required: false
+            #        schema:
+            #          end: {required: true, type: string}
+            #          start: {required: true, type: string}
+            #        type: map
+            #    type: list
+
+            #  dns_nameservers: {required: false, type: list}
+            dns_nameservers:
+                - 8.8.8.8
+                - 9.9.9.9
+
+            #  enable_dhcp: {required: false, type: boolean}
+            enable_dhcp: true
+
+            #  gateway_ip: {required: false, type: string}
+
+            #  ip_version:
+            #    constraints:
+            #    - allowed_values: [4, 6]
+            #    default: 4
+            #    required: false
+            #    type: integer
+            ip_version: 4
+
+            #  name: {required: false, type: string}
+            name: sample_subnet
+
+            #  tenant_id: {required: false, type: string}
+
+            #  value_specs:
+            #    default: {}
+            #    required: false
+            #    type: map
+
+
+outputs:
+
+    sn_allocation_pools:
+        description: Ip allocation pools and their ranges.
+        value: { get_attr: [ OS_Neutron_Subnet, allocation_pools] }
+
+    sn_cidr:
+        description: CIDR block notation for this subnet.
+        value: { get_attr: [ OS_Neutron_Subnet, cidr] }
+
+    sn_dns_nameservers:
+        description: List of dns nameservers.
+        value: { get_attr: [ OS_Neutron_Subnet, dns_nameservers] }
+
+    sn_enable_dhcp:
+        description: '''true'' if DHCP enabled for subnet else ''false''.'
+        value: { get_attr: [ OS_Neutron_Subnet, enable_dhcp] }
+
+    sn_gateway_ip:
+        description: Ip of the subnet's gateway.
+        value: { get_attr: [ OS_Neutron_Subnet, gateway_ip] }
+
+    sn_ip_version:
+        description: Ip version for the subnet.
+        value: { get_attr: [ OS_Neutron_Subnet, ip_version] }
+
+    sn_name:
+        description: Friendly name of the subnet.
+        value: { get_attr: [ OS_Neutron_Subnet, name] }
+
+    sn_network_id:
+        description: Parent network of the subnet.
+        value: { get_attr: [ OS_Neutron_Subnet, network_id] }
+
+    sn_show:
+        description: All attributes.
+        value: { get_attr: [ OS_Neutron_Subnet, show] }
+
+    sn_tenant_id:
+        description: Tenant owning the subnet.
+        value: { get_attr: [ OS_Neutron_Subnet, tenant_id] }

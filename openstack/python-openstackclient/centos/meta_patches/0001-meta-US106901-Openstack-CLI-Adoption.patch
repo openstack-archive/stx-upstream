@@ -1,0 +1,25 @@
+From 12504bfa15db581d310f3e059b5c8dce0df1be9f Mon Sep 17 00:00:00 2001
+From: Sen Yang <sen.yang@windriver.com>
+Date: Thu, 1 Feb 2018 12:05:55 -0500
+Subject: [PATCH 1/1] US106901 Openstack-CLI-Adoption for
+ Glance/Cinder/Ceilometer
+
+---
+ SPECS/python-openstackclient.spec | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
+index 1cf210a..6774444 100644
+--- a/SPECS/python-openstackclient.spec
++++ b/SPECS/python-openstackclient.spec
+@@ -24,6 +24,7 @@ Patch0003:        CGTS-7814-warning-only-when-the-admin-password-chang.patch
+ Patch0004:        0001-CGTS-7947-add-os-keystone-region-name-to-identity-cl.patch
+ Patch0005:        0001-US101470-Openstackclient-implementation-of-novaclien.patch
+ Patch0006:        0002-US101470-Openstackclient-implementation-of-novaclien.patch
++Patch0007:        0001-US106901-Openstack-CLI-Adoption.patch
+ 
+ BuildArch:        noarch
+ 
+-- 
+1.8.3.1
+

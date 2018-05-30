@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenStack ceilometer collection service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/ceilometer-collector --logfile /var/log/ceilometer/ceilometer-collector.log
+#Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

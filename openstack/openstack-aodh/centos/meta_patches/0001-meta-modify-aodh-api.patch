@@ -1,0 +1,72 @@
+From c4f387dbc34568caedd13e6c782a601cbdfcf707 Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Mon, 2 Oct 2017 14:28:46 -0400
+Subject: [PATCH 4/5] WRS: 0001-meta-modify-aodh-api.patch
+
+Conflicts:
+	SPECS/openstack-aodh.spec
+---
+ SOURCES/openstack-aodh-api.service |  2 +-
+ SPECS/openstack-aodh.spec          | 11 +++++++++--
+ 2 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/SOURCES/openstack-aodh-api.service b/SOURCES/openstack-aodh-api.service
+index b8b2921..06bcd12 100644
+--- a/SOURCES/openstack-aodh-api.service
++++ b/SOURCES/openstack-aodh-api.service
+@@ -5,7 +5,7 @@ After=syslog.target network.target
+ [Service]
+ Type=simple
+ User=root
+-ExecStart=/usr/bin/aodh-api
++ExecStart=/bin/python /usr/bin/gunicorn --bind 192.168.204.2:8042 --pythonpath /usr/share/aodh aodh-api
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/SPECS/openstack-aodh.spec b/SPECS/openstack-aodh.spec
+index b52931c..217dd14 100644
+--- a/SPECS/openstack-aodh.spec
++++ b/SPECS/openstack-aodh.spec
+@@ -20,9 +20,10 @@ Source14:         %{name}-listener.service
+ #WRS
+ Source20:         aodh-expirer-active
+ 
+-BuildArch:        noarch
+-
++#WRS: Include patches here: 
++Patch1:           0001-modify-aodh-api.patch
+ 
++BuildArch:        noarch
+ 
+ BuildRequires:    python-setuptools
+ BuildRequires:    python2-devel
+@@ -221,6 +222,9 @@ This package contains the Aodh test files.
+ %prep
+ %setup -q -n %{pypi_name}-%{upstream_version}
+ 
++#WRS: Apply patches here
++%patch1 -p1
++
+ find . \( -name .gitignore -o -name .placeholder \) -delete
+ 
+ find aodh -name \*.py -exec sed -i '/\/usr\/bin\/env python/{d;q}' {} +
+@@ -263,6 +267,8 @@ install -p -D -m 640 %{SOURCE1} %{buildroot}%{_datadir}/aodh/aodh-dist.conf
+ install -p -D -m 640 etc/aodh/aodh.conf %{buildroot}%{_sysconfdir}/aodh/aodh.conf
+ install -p -D -m 640 etc/aodh/policy.json %{buildroot}%{_sysconfdir}/aodh/policy.json
+ install -p -D -m 640 etc/aodh/api_paste.ini %{buildroot}%{_sysconfdir}/aodh/api_paste.ini
++#WRS
++install -p -D -m 640 aodh/api/aodh-api.py %{buildroot}%{_datadir}/aodh/aodh-api.py
+ 
+ # Setup directories
+ install -d -m 755 %{buildroot}%{_sharedstatedir}/aodh
+@@ -344,6 +350,7 @@ exit 0
+ %files common -f %{pypi_name}.lang
+ %doc README.rst
+ %dir %{_sysconfdir}/aodh
++%{_datadir}/aodh/aodh-api.*
+ %attr(-, root, aodh) %{_datadir}/aodh/aodh-dist.conf
+ %config(noreplace) %attr(-, root, aodh) %{_sysconfdir}/aodh/aodh.conf
+ %config(noreplace) %attr(-, root, aodh) %{_sysconfdir}/aodh/policy.json
+-- 
+1.9.1
+

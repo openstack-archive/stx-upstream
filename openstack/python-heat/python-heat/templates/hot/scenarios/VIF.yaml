@@ -1,0 +1,96 @@
+################################################################################
+# Copyright (c) 2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#   Demonstrates Launching a VM specifying VIF PCI Address
+#   vif pci address format is: 0000:<bus>:<slot>.0
+#   where bus and slot are 2 digit hex values
+#   example syntax:   0000:05:0A.0
+#
+# Pre-Reqs:
+#   Normal lab setup.
+#   Ability to launch a VM with a VIF PCI Address
+#   A keypair called:  controller-0  (nova keypair-list)
+#   A flavor called: m1.small (nova flavor-list)
+#   A glance image called: wrl6 (glance image-list)
+#   Network called: private-net0  (neutron net-list)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Sample CLI syntax:
+#    heat stack-create -f VIF.yaml -P VIF_PCI_ADDR=0000:00:00.0 STACK
+#
+# Expected Outcome:
+#  A new stack (heat stack-list)
+#  A new nova VM  (nova list)
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Creates a HEAT stack and a VM instance using the speficied vif pic address
+
+parameters:
+
+    KEYPAIR:
+        description: Name of existing KeyPair to enable SSH access to VMs
+        type: string
+        default: controller-0
+        constraints:
+            - custom_constraint: nova.keypair
+
+    FLAVOR:
+        description: Nova flavor to use.   (nova flavor-list)
+        type: string
+        default: m1.small
+        constraints:
+            - custom_constraint: nova.flavor
+
+    IMAGE:
+        description: the name or uuid of the server image in glance
+        type: string
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    NETWORK:
+        description: name of private network to use (neutron net-list)
+        type: string
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    VM_NAME:
+        description: Name to label the VM instance
+        type: string
+        default: 'vif-1'
+
+    VIF:
+        description: Vif Model to use
+        type: string
+        default: 'virtio'
+
+    VIF_PCI_ADDR:
+        description: Vif pci address
+        type: string
+        default: '0000:01:01.0'
+
+resources:
+
+    Srv:
+        type: OS::Nova::Server
+        properties:
+            name: { get_param: VM_NAME }
+            image: { get_param: IMAGE }
+            flavor: { get_param: FLAVOR }
+            key_name: { get_param: KEYPAIR }
+            networks:
+                - network: { get_param: NETWORK }
+                  vif-model: { get_param: VIF }
+                  vif-pci-address: { get_param: VIF_PCI_ADDR }

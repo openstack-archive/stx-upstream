@@ -1,0 +1,47 @@
+From 4e7ae98c2ffb058711338161a283ce04e47d6bc9 Mon Sep 17 00:00:00 2001
+From: Kam Nasim <kam.nasim@windriver.com>
+Date: Wed, 8 Nov 2017 16:54:56 -0500
+Subject: [PATCH] meta to roll in pike rebase patches
+
+---
+ SPECS/python-django-openstack-auth.spec | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/SPECS/python-django-openstack-auth.spec b/SPECS/python-django-openstack-auth.spec
+index 3c65c20..6bd7088 100644
+--- a/SPECS/python-django-openstack-auth.spec
++++ b/SPECS/python-django-openstack-auth.spec
+@@ -14,6 +14,9 @@ License:        BSD
+ URL:            http://pypi.python.org/pypi/django_openstack_auth/
+ Source0:        https://tarballs.openstack.org/django_openstack_auth/django_openstack_auth-%{upstream_version}.tar.gz
+ 
++# WRS Patches
++Patch0001: 0001-Pike-rebase-for-openstack-auth.patch
++
+ BuildArch:      noarch
+ 
+ BuildRequires:  git
+@@ -45,6 +48,11 @@ BuildRequires:  python-mox3
+ BuildRequires:  python-mock
+ BuildRequires:  python-testscenarios
+ 
++#WRS: Need these for build_sphinx
++BuildRequires:  tsconfig
++BuildRequires:  python2-pycodestyle
++BuildRequires:  python2-oslo-concurrency
++
+ Requires:       python-django
+ BuildRequires:  python-django
+ 
+@@ -107,7 +115,7 @@ Keystone V2 API.
+ 
+ 
+ %prep
+-%autosetup -n %{pypi_name}-%{upstream_version} -S git
++%autosetup -n %{pypi_name}-%{upstream_version} -S git -p1
+ 
+ 
+ # Remove the requirements file so that pbr hooks don't add it
+-- 
+1.8.3.1
+

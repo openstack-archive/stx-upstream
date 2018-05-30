@@ -1,0 +1,6 @@
+0001-Modify-service-files-and-create-expirer-cron-script.patch
+0001-Update-package-versioning-for-TIS-format.patch
+meta-remove-default-logrotate.patch
+0001-meta-modify-aodh-api.patch
+0001-meta-pass-aodh-api-config.patch
+0006-add-drivername-for-postgresql.patch

@@ -1,0 +1,13 @@
+diff --git a/SPECS/python-keystoneclient.spec b/SPECS/python-keystoneclient.spec
+index edd6720..a41311e 100644
+--- a/SPECS/python-keystoneclient.spec
++++ b/SPECS/python-keystoneclient.spec
+@@ -181,7 +181,7 @@ Contains SDK files for %{name} package
+ sed -i 's/^warning-is-error.*/warning-is-error = 0/g' setup.cfg
+ 
+ # Let RPM handle the dependencies
+-rm -rf {test-,}requirements.txt
++rm -f test-requirements.txt
+ 
+ %build
+ %py2_build

@@ -1,0 +1,6 @@
+TAR_NAME="magnum-ui"
+SRC_DIR="$CGCS_BASE/git/magnum-ui"
+
+TIS_BASE_SRCREV=0b9fc50aada1a3e214acaad1204b48c96a549e5f
+TIS_PATCH_VER=1
+

@@ -1,0 +1,3 @@
+cgcs/middleware/ceph/recipes-common/ceph-manager|ceph-manager
+cgcs/openstack/recipes-base|openstack
+cgcs/recipes-extended/ceph|ceph

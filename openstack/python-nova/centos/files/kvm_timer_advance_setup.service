@@ -1,0 +1,14 @@
+[Unit]
+Description=KVM Timer Advance Setup
+After=openstack-nova-compute-setup.service
+Before=nova-compute.service goenabled-compute.service
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+User=root
+ExecStart=/usr/bin/nova_setup_timer_advance
+
+[Install]
+WantedBy=multi-user.target
+

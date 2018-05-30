@@ -1,0 +1,31 @@
+From 4fe0798dc5f1457b19fe43361d5a1b235bd7a6a6 Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Thu, 25 Aug 2016 10:54:38 -0400
+Subject: [PATCH 1/1] US80213:Support for the openstack CLI command     Fixed
+ an issue where neutron error response message was not fully propagating
+ through to the user
+
+---
+ keystoneauth1/exceptions/http.py | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/keystoneauth1/exceptions/http.py b/keystoneauth1/exceptions/http.py
+index 6f725ed..0265575 100644
+--- a/keystoneauth1/exceptions/http.py
++++ b/keystoneauth1/exceptions/http.py
+@@ -415,6 +415,12 @@ def from_response(response, method, url):
+                 error = body["error"]
+                 kwargs["message"] = error.get("message")
+                 kwargs["details"] = error.get("details")
++            # Neutron error response has "NeutronError" instead of "error" in the body
++            # This block ensures the error response is correctly constructed into an exception object
++            elif isinstance(body, dict) and isinstance(body.get("NeutronError"), dict):
++                error = body["NeutronError"]
++                kwargs["message"] = error.get("message")
++                kwargs["details"] = error.get("details")
+     elif content_type.startswith("text/"):
+         kwargs["details"] = response.text
+ 
+-- 
+1.8.3.1
+

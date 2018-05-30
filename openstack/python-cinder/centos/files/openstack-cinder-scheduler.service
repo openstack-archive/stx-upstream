@@ -1,0 +1,17 @@
+[Unit]
+Description=OpenStack Cinder Scheduler Server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+# WRS - use root user
+#User=cinder
+User=root
+ExecStart=/usr/bin/cinder-scheduler --config-file /usr/share/cinder/cinder-dist.conf --config-file /etc/cinder/cinder.conf --logfile /var/log/cinder/cinder-scheduler.log
+# WRS - Managed by sm
+#Restart=on-failure
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,245 @@
+From 7662bc5ed71f6704ffc90c7ad8ea040e6872e190 Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Mon, 2 Oct 2017 14:28:46 -0400
+Subject: [PATCH 1/5] WRS:
+ 0001-Modify-service-files-and-create-expirer-cron-script.patch
+
+Conflicts:
+	SPECS/openstack-aodh.spec
+---
+ SOURCES/aodh-expirer-active              | 28 ++++++++++++++++++++++++++++
+ SOURCES/openstack-aodh-api.service       |  5 ++---
+ SOURCES/openstack-aodh-evaluator.service |  5 ++---
+ SOURCES/openstack-aodh-expirer.service   |  5 ++---
+ SOURCES/openstack-aodh-listener.service  |  5 ++---
+ SOURCES/openstack-aodh-notifier.service  |  5 ++---
+ SPECS/openstack-aodh.spec                | 25 +++++++++++--------------
+ 7 files changed, 49 insertions(+), 29 deletions(-)
+ create mode 100644 SOURCES/aodh-expirer-active
+
+diff --git a/SOURCES/aodh-expirer-active b/SOURCES/aodh-expirer-active
+new file mode 100644
+index 0000000..373fa5d
+--- /dev/null
++++ b/SOURCES/aodh-expirer-active
+@@ -0,0 +1,61 @@
++#!/bin/bash
++
++#
++# Wrapper script to run aodh-expirer when on active controller only
++#
++AODH_EXPIRER_INFO="/var/run/aodh-expirer.info"
++AODH_EXPIRER_CMD="/usr/bin/nice -n 2 /usr/bin/aodh-expirer"
++
++function is_active_pgserver()
++{
++    # Determine whether we're running on the same controller as the service.
++    local service=postgres
++    local enabledactive=$(/usr/bin/sm-query service $service| grep enabled-active)
++    if [ "x$enabledactive" == "x" ]
++    then
++        # enabled-active not found for that service on this controller
++        return 1
++    else
++        # enabled-active found for that resource
++        return 0
++    fi
++}
++
++if is_active_pgserver
++then
++    if [ ! -f ${AODH_EXPIRER_INFO} ]
++    then
++        echo delay_count=0 > ${AODH_EXPIRER_INFO}
++    fi
++
++    source ${AODH_EXPIRER_INFO}
++    sudo -u postgres psql -d sysinv -c "SELECT alarm_id, entity_instance_id from i_alarm;" | grep -P "^(?=.*100.101)(?=.*${HOSTNAME})" &>/dev/null
++    if [ $? -eq 0 ]
++    then
++        source /etc/platform/platform.conf
++        if [ "${system_type}" = "All-in-one" ]
++        then
++            source /etc/init.d/task_affinity_functions.sh
++            idle_core=$(get_most_idle_core)
++            if [ "$idle_core" -ne "0" ]
++            then
++                sh -c "exec taskset -c $idle_core ${AODH_EXPIRER_CMD}"
++                sed -i "/delay_count/s/=.*/=0/" ${AODH_EXPIRER_INFO}
++                exit 0
++            fi
++        fi
++
++        if [ "$delay_count" -lt "3" ]
++        then
++            newval=$(($delay_count+1))
++            sed -i "/delay_count/s/=.*/=$newval/" ${AODH_EXPIRER_INFO}
++           (sleep 3600; /usr/bin/aodh-expirer-active) &
++            exit 0
++        fi
++    fi
++
++    eval ${AODH_EXPIRER_CMD}
++    sed -i "/delay_count/s/=.*/=0/" ${AODH_EXPIRER_INFO}
++fi
++
++exit 0
+diff --git a/SOURCES/openstack-aodh-api.service b/SOURCES/openstack-aodh-api.service
+index 2224261..b8b2921 100644
+--- a/SOURCES/openstack-aodh-api.service
++++ b/SOURCES/openstack-aodh-api.service
+@@ -4,9 +4,8 @@ After=syslog.target network.target
+ 
+ [Service]
+ Type=simple
+-User=aodh
+-ExecStart=/usr/bin/aodh-api --logfile /var/log/aodh/api.log
+-Restart=on-failure
++User=root
++ExecStart=/usr/bin/aodh-api
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/SOURCES/openstack-aodh-evaluator.service b/SOURCES/openstack-aodh-evaluator.service
+index 4f70431..795ef0c 100644
+--- a/SOURCES/openstack-aodh-evaluator.service
++++ b/SOURCES/openstack-aodh-evaluator.service
+@@ -4,9 +4,8 @@ After=syslog.target network.target
+ 
+ [Service]
+ Type=simple
+-User=aodh
+-ExecStart=/usr/bin/aodh-evaluator --logfile /var/log/aodh/evaluator.log
+-Restart=on-failure
++User=root
++ExecStart=/usr/bin/aodh-evaluator
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/SOURCES/openstack-aodh-expirer.service b/SOURCES/openstack-aodh-expirer.service
+index cc68b1b..0185d63 100644
+--- a/SOURCES/openstack-aodh-expirer.service
++++ b/SOURCES/openstack-aodh-expirer.service
+@@ -4,9 +4,8 @@ After=syslog.target network.target
+ 
+ [Service]
+ Type=simple
+-User=aodh
+-ExecStart=/usr/bin/aodh-expirer --logfile /var/log/aodh/expirer.log
+-Restart=on-failure
++User=root
++ExecStart=/usr/bin/aodh-expirer
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/SOURCES/openstack-aodh-listener.service b/SOURCES/openstack-aodh-listener.service
+index a024fe3..40e20d2 100644
+--- a/SOURCES/openstack-aodh-listener.service
++++ b/SOURCES/openstack-aodh-listener.service
+@@ -4,9 +4,8 @@ After=syslog.target network.target
+ 
+ [Service]
+ Type=simple
+-User=aodh
+-ExecStart=/usr/bin/aodh-listener --logfile /var/log/aodh/listener.log
+-Restart=on-failure
++User=root
++ExecStart=/usr/bin/aodh-listener
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/SOURCES/openstack-aodh-notifier.service b/SOURCES/openstack-aodh-notifier.service
+index d6135d7..68a96dd 100644
+--- a/SOURCES/openstack-aodh-notifier.service
++++ b/SOURCES/openstack-aodh-notifier.service
+@@ -4,9 +4,8 @@ After=syslog.target network.target
+ 
+ [Service]
+ Type=simple
+-User=aodh
+-ExecStart=/usr/bin/aodh-notifier --logfile /var/log/aodh/notifier.log
+-Restart=on-failure
++User=root
++ExecStart=/usr/bin/aodh-notifier
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/SPECS/openstack-aodh.spec b/SPECS/openstack-aodh.spec
+index 203f2f0..5d0dedd 100644
+--- a/SPECS/openstack-aodh.spec
++++ b/SPECS/openstack-aodh.spec
+@@ -18,8 +18,13 @@ Source12:         %{name}-notifier.service
+ Source13:         %{name}-expirer.service
+ Source14:         %{name}-listener.service
+ 
++#WRS
++Source20:         aodh-expirer-active
++
+ BuildArch:        noarch
+ 
++
++
+ BuildRequires:    python-setuptools
+ BuildRequires:    python2-devel
+ BuildRequires:    systemd
+@@ -263,7 +268,7 @@ install -p -D -m 640 etc/aodh/api_paste.ini %{buildroot}%{_sysconfdir}/aodh/api_
+ # Setup directories
+ install -d -m 755 %{buildroot}%{_sharedstatedir}/aodh
+ install -d -m 755 %{buildroot}%{_sharedstatedir}/aodh/tmp
+-install -d -m 750 %{buildroot}%{_localstatedir}/log/aodh
++install -d -m 755 %{buildroot}%{_localstatedir}/log/aodh
+ 
+ # Install logrotate
+ install -p -D -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
+@@ -284,6 +289,9 @@ mv %{buildroot}%{python2_sitelib}/%{pypi_name}/locale %{buildroot}%{_datadir}/lo
+ # Find language files
+ %find_lang %{pypi_name} --all-name
+ 
++# WRS
++install -p -D -m 750 %{SOURCE20} %{buildroot}%{_bindir}/aodh-expirer-active
++
+ # Remove unused files
+ rm -fr %{buildroot}/usr/etc
+ 
+@@ -346,13 +354,13 @@ exit 0
+ %config(noreplace) %attr(-, root, aodh) %{_sysconfdir}/aodh/api_paste.ini
+ %config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
+ %dir %attr(0755, aodh, root)  %{_localstatedir}/log/aodh
+-%{_bindir}/aodh-dbsync
+ 
+ %defattr(-, aodh, aodh, -)
+ %dir %{_sharedstatedir}/aodh
+ %dir %{_sharedstatedir}/aodh/tmp
+ 
+ %files api
++%{_bindir}/aodh-dbsync
+ %{_bindir}/aodh-api
+ %{_bindir}/aodh-data-migration
+ %{_bindir}/aodh-combination-alarm-conversion
+@@ -373,22 +381,11 @@ exit 0
+ 
+ %files expirer
+ %{_bindir}/aodh-expirer
++%{_bindir}/aodh-expirer-active
+ %{_unitdir}/%{name}-expirer.service
+ 
+ 
+ %changelog
+-* Mon Aug 28 2017 rdo-trunk <javier.pena@redhat.com> 3.0.4-1
+-- Update to 3.0.4
+-
+-* Mon Jul 24 2017 Pradeep Kilambi <pkilambi@redhat.com> 3.0.3-2
+-- Move aodh-dbsync to openstack-aodh-common
+-
+-* Thu Jul 13 2017 Mehdi Abaakouk <sileht@redhat.com> 3.0.3-1
+-- Update to 3.0.3
+-
+-* Tue Feb 28 2017 Alfredo Moralejo <amoralej@redhat.com> 3.0.2-1
+-- Update to 3.0.2
+-
+ * Thu Oct 06 2016 Haikel Guemar <hguemar@fedoraproject.org> 3.0.0-1
+ - Update to 3.0.0
+ 
+-- 
+1.9.1
+

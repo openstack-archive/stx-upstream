@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenStack Identity Service (code-named Keystone)
+After=syslog.target network.target
+
+[Service]
+Type=forking
+#ReminAfterExit is set to yes as we have 2 pids to monitor
+RemainAfterExit=yes
+ExecStart=/usr/bin/keystone-all start
+ExecStop=/usr/bin/keystone-all stop
+ExecReload=/usr/bin/keystone-all reload
+
+[Install]
+WantedBy=multi-user.target

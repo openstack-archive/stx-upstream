@@ -1,0 +1,17 @@
+[Unit]
+Description=OpenStack Image Service deferred image deletion service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+# WRS - use root user
+#User=glance
+User=root
+ExecStart=/usr/bin/glance-scrubber
+PrivateTmp=true
+# WRS - Not currently used - would be managed by sm
+#Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

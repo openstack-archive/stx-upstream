@@ -1,0 +1,29 @@
+From 8e5e778228717039e39be1fb65c63a6fe7c3cd5d Mon Sep 17 00:00:00 2001
+From: Al Bailey <Al.Bailey@windriver.com>
+Date: Tue, 6 Mar 2018 09:56:17 -0600
+Subject: [PATCH] Remove TOX calls from build
+
+---
+ SPECS/python-wsme.spec | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/SPECS/python-wsme.spec b/SPECS/python-wsme.spec
+index 4a2c360..602bff0 100644
+--- a/SPECS/python-wsme.spec
++++ b/SPECS/python-wsme.spec
+@@ -106,12 +106,6 @@ manipulate the request and the response objects.
+ %{__python3} setup.py install --skip-build --root %{buildroot}
+ %endif
+ 
+-%check
+-%{__python2} setup.py test
+-%if 0%{?with_python3}
+-%{__python3} setup.py test
+-%endif
+-
+ %files -n python2-%{lpypi_name}
+ %doc README.rst examples/
+ %license LICENSE
+-- 
+1.8.3.1
+

@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenStack Neutron BGP Dynamic Routing agent
+After=syslog.target neutron-server.service
+
+[Service]
+Type=simple
+ExecStart=/etc/rc.d/init.d/neutron-bgp-dragent start
+ExecStop=/etc/rc.d/init.d/neutron-bgp-dragent stop
+ExecReload=/etc/rc.d/init.d/neutron-bgp-dragent reload
+PrivateTmp=true
+PIDFile=/var/run/neutron-bgp-dragent.pid
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

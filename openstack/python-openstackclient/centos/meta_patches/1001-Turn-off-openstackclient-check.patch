@@ -1,0 +1,36 @@
+From be8dcc12e9a6719cb5031fd009bd2b587dfd33a9 Mon Sep 17 00:00:00 2001
+From: Al Bailey <Al.Bailey@windriver.com>
+Date: Thu, 19 Oct 2017 14:19:56 -0500
+Subject: [PATCH] Turn off openstackclient check
+
+---
+ SPECS/python-openstackclient.spec | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
+index 1db72f9..a04299e 100644
+--- a/SPECS/python-openstackclient.spec
++++ b/SPECS/python-openstackclient.spec
+@@ -228,12 +228,13 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --e
+ # Find language files
+ %find_lang openstackclient --all-name
+ 
+-%check
+-%{__python2} setup.py test
+-%if 0%{?with_python3}
+-rm -rf .testrepository
+-%{__python3} setup.py test
+-%endif
++# WRS disable check.
++#%check
++#%{__python2} setup.py test
++#%if 0%{?with_python3}
++#rm -rf .testrepository
++#%{__python3} setup.py test
++#%endif
+ 
+ %files -n python2-%{client}
+ %license LICENSE
+-- 
+1.8.3.1
+

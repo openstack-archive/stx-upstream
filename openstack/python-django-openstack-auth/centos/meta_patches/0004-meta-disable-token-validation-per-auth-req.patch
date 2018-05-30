@@ -1,0 +1,24 @@
+From 5dc546e81e87d78f97af2fd734d41119faa866fe Mon Sep 17 00:00:00 2001
+From: Kam Nasim <kam.nasim@windriver.com>
+Date: Mon, 12 Feb 2018 11:04:17 -0500
+Subject: [PATCH] meta patch for disable-token-validation-per-auth-request
+
+---
+ SPECS/python-django-openstack-auth.spec | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/SPECS/python-django-openstack-auth.spec b/SPECS/python-django-openstack-auth.spec
+index 4960ab2..3a462de 100644
+--- a/SPECS/python-django-openstack-auth.spec
++++ b/SPECS/python-django-openstack-auth.spec
+@@ -16,6 +16,7 @@ Source0:        https://tarballs.openstack.org/django_openstack_auth/django_open
+ 
+ # WRS Patches
+ Patch0001: 0001-Pike-rebase-for-openstack-auth.patch
++Patch0002: 0002-disable-token-validation-per-auth-request.patch
+ 
+ BuildArch:      noarch
+ 
+-- 
+1.8.3.1
+

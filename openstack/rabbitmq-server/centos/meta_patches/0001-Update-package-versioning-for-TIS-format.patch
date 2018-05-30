@@ -1,0 +1,31 @@
+From 9eb2a001b8f80d1a66d4ec78d882d7d6cb4dff51 Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Tue, 24 Jan 2017 12:16:38 -0500
+Subject: [PATCH 4/5] WRS: 0001-Update-package-versioning-for-TIS-format.patch
+
+Conflicts:
+	SPECS/rabbitmq-server.spec
+---
+ SPECS/rabbitmq-server.spec | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/SPECS/rabbitmq-server.spec b/SPECS/rabbitmq-server.spec
+index 3095f87..b5d53a2 100644
+--- a/SPECS/rabbitmq-server.spec
++++ b/SPECS/rabbitmq-server.spec
+@@ -2,11 +2,9 @@
+ # We want to install into /usr/lib, even on 64-bit platforms
+ %global _rabbit_libdir %{_exec_prefix}/lib/rabbitmq
+ 
+-%define tis_version r1
+-
+ Name: rabbitmq-server
+ Version: 3.6.5
+-Release: 1.%{tis_version}%{?dist}
++Release: 1.el7%{?_tis_dist}.%{tis_patch_ver}
+ License: MPLv1.1
+ Group: Development/Libraries
+ Source0: http://www.rabbitmq.com/releases/rabbitmq-server/v%{version}/%{name}-%{version}.tar.xz
+-- 
+1.8.3.1
+

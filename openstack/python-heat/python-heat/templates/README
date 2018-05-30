@@ -1,0 +1,213 @@
+Copyright © 2014-2017 Wind River Systems, Inc.
+
+SPDX-License-Identifier: Apache-2.0
+-----------------------------------------------------------------------
+
+
+DESCRIPTION
+===========
+This SDK Module provides example HEAT templates to assist Titanium Cloud
+users in writing their own HEAT templates.  Simple examples of the 
+more commonly used HEAT resources can be found in heat/simple/ directory, 
+in a YAML file named after the heat resource.  More complex examples of 
+heat templates, involving several different inter-related heat resources 
+can be found in heat/scenarios/ directory.
+
+NOTE that the contents of this SDK Module can also be found on the 
+controllers, at /etc/heat/templates/ .
+
+
+BACKGROUND
+==========
+HEAT is an Orchestration service that is meant to simplify the launching and 
+basic management of complex applications or application 'Services' (or using 
+Heat terminology, a 'Stack'). An application Service consists of a set of related 
+resources (VMs, Flavors, Images, Volumes, Networks, Subnets, Routers, Load 
+Balancers, Firewalls, Scaling Policies, etc.) that collectively provide a higher 
+order Application Function (e.g. Evolved Packet Core, Class 5 Call Server, Signaling 
+and Media Session Border Controller, etc.). Nearly all of the individual OpenStack 
+commands that are executed to create the individual resources of an application service 
+can be described in a HEAT template. HEAT also provides a means of auto-scaling the 
+application service. VMs or other resource types can be scaled horizontally or 
+vertically based on measurements of cloud-platform-monitored metrics or 
+guest-application-monitored metrics. In regard to VM for example, scaling 
+horizontally (in/out) means decreasing/increasing number of VMs, whereas scaling 
+vertically (up/down) means resizing the VM by increasing or decreasing its resources 
+(e.g. vcpus).
+
+Titanium Cloud utilizes HEAT templates to enable customers to easily launch and 
+manage application Services. A set of Titanium Cloud templates are provided that can 
+be used as a reference to create application Service templates.
+
+
+DELIVERABLE
+===========
+The Heat Template SDK Module is delivered as source YAML files in a compressed 
+tarball called "wrs-heat-templates-#.#.#.tgz".  
+
+
+Simple examples of the more commonly used HEAT resources can be found in 
+the hot/simple/ directory, in a YAML file named after the heat resource.  
+
+./hot/simple:
+    OS_Ceilometer_Alarm.yaml            - Creates a Ceilometer Threshold Alarm; 
+                                          specifying the meter name, the criteria of the 
+                                          threshold ( > x or < x ), evaluation period, etc.
+    OS_Cinder_Volume.yaml               - Creates a Cinder Volume of a particular size 
+                                          (in GBytes).
+    OS_Cinder_VolumeAttachment.yaml     - Given a VM Instance and a Cinder Volume, this 
+                                          creates an attachment or a mount point within the 
+                                          VM to the Cinder Volume.
+    OS_Glance_Image.yaml                - Creates a Glance Image specifying the image file, 
+                                          container format, disk format, etc. .
+    OS_Heat_AccessPolicy.yaml           - Specifies which resources are shown on a 
+                                          'heat stack-show <stackname>' and a 
+                                          'heat resource-show <stackname> <resourcename>'.
+    OS_Heat_AutoScalingGroup.yaml       - Creates an In/Out Autoscaling group; specifying
+                                          the min/max size, cooldown period, etc., and
+                                          the resource being scaled (defined by referencing
+                                          another heat template / yaml file).
+    OS_Heat_Stack.yaml                  - Creates a HEAT Stack Resource, in place, within
+                                          a Heat template, specifying the version, parameters 
+                                          and resources of the inner Heat Stack.
+    OS_Neutron_FloatingIP.yaml          - Creates a source NAT type relationship with an 
+                                          External IP (from a specified external tenant 
+                                          network) and an Internal IP (from a specified 
+                                          internal port).
+    WR_Neutron_Port_Forwarding.yaml     - Creates a destination NAT type relationship 
+                                          with an External IP and Port (of a router) and
+                                          an Internal IP and Port (of a VM).
+    OS_Neutron_Net.yaml                 - Creates a Tenant Network. Other resources such as 
+                                          Port, Subnet and VM Instances can refer to a 
+                                          Tenant Network.
+    OS_Neutron_Port.yaml                - Creates a VM Instance Port on a particular Tenant 
+                                          Network. VM Instance can use this object to create 
+                                          its specific port / attachment to a particular 
+                                          Tenant Network.
+    OS_Neutron_Router.yaml              - Creates an IP Router for Tenant Networks.
+                                          IP Interfaces on the Router to different Subnets 
+                                          of particular Tenant Networks is done as shown 
+                                          in OS_Neutron_RouterInterface.yaml and 
+                                          OS_Neutron_RouterGateway.yaml.
+    OS_Neutron_RouterGateway.yaml       - Creates the Router Gateway Interface for the 
+                                          specified router and the specified external network. 
+                                          The IP Address for the interface is allocated from 
+                                          the external network's subnet and a default IP Route 
+                                          is created using the gateway_ip of the subnet.
+    OS_Neutron_RouterInterface.yaml     - Creates an IP Interface on an existing Router for 
+                                          an existing IP Subnet.
+    OS_Neutron_SecurityGroup.yaml       - Creates a Neutron Security Group, specifying the
+                                          ingress and/or egress ACL rules.  Use 
+                                          security_groups inside of OS::Nova::Server to assign
+                                          the security group to a VM.
+    OS_Neutron_Subnet.yaml              - Creates an IP Subnet on a specified Tenant Network. 
+                                          Requires the specification of the IP Subnet and mask, 
+                                          and dhcp support. Can optionally specify DNS NameServers.
+    OS_Nova_Flavor.yaml                 - Creates a Nova Flavor describing the resource 
+                                          requirements for a VM. I.e. specifying required RAM, 
+                                          vCPUs, disk size, etc. .
+    OS_Nova_KeyPair.yaml                - Creates a SSH key pair to enable secure initial login 
+                                          to a launched VM. The created key pair should be 
+                                          referenced in OS::Nova::Server.
+    OS_Nova_Server.yaml                 - Creates a VM Instance, specifying flavor, image and 
+                                          network attachments.
+    OS_Nova_ServerGroup.yaml            - Creates a Server Group; i.e. a container of multiple 
+                                          VM Instances with group attributes such as 
+                                          compute-node affinity or anti-affinity. 
+                                          Use NovaSchedulerHints: 
+                                          [{Key: 'group', Value: {Ref: <server_group_name>}}] 
+                                          inside of OS::Nova::Server to assign a VM Instance 
+                                          to a ServerGroup.
+    WR_Neutron_ProviderNet.yaml         - Creates a Provider Network specifying the name and 
+                                          type (i.e. flat, vlan or vxlan).
+    WR_Neutron_ProviderNetRange.yaml    - Creates a segment id range for a Provider Network; 
+                                          specifying the providerNet, and the min and max values 
+                                          of the segment id range.
+    WR_Neutron_QoSPolicy.yaml           - Creates a Neutron QoS Policy which specifies a packet 
+                                          scheduling weight. This QoS Policy can be referenced 
+                                          by a Tenant Network to modify the scheduling weight of 
+                                          AVS ingress traffic from VMs for this Tenant Network.
+
+
+
+More complex examples of heat templates, involving several different inter-related 
+heat resources can be found in hot/scenarios/ directory.
+
+./hot/scenarios:
+    BootFromCinder.yaml                 - A small single VM Instance scenario; intended to 
+                                          illustrate the creation of a Cinder Volume and then 
+                                          the launching / creation of a VM Instance using this 
+                                          Cinder Volume as its boot device.
+    CFNPushStatsAutoScaling.yaml        - An autoscaling stack of VMs that use cfn-push-stats 
+                                          to emit custom meters which are used by autoscaling
+                                          policies.
+    CombinationAutoScaling.yaml         - A single template that creates a simple VM In/Out 
+                                          auto-scaling use case. A single Load Balancer VM is 
+                                          created and an AutoScalingGroup of server VMs is 
+                                          created which scales in or out based on link 
+                                          utilization. 
+    NestedAutoScale.yaml                - A more complex In/Out autoscaling use case that 
+                                          scales a Stack In/Out.  A single Load Balancer VM is
+                                          created and an AutoScalingGroup of a Heat Stack
+                                          (containing a Cinder Volume and a VM) is created 
+                                          which scales in or out based on link utilization.
+    NestedStack.yaml                    - The Heat Stack being scaled In/Out in the above 
+                                          use case.  A Stack containing a Cinder Volume and
+                                          a VM.
+    Networking_and_Servers.yaml         - Two different examples of creating VMs attached 
+                                          to a Tenant Network containing two Subnets;
+                                          illustrating how to specify the exact subnet to 
+                                          attach to, if required.
+    PortForwarding.yaml                 - An example of 3 VMs/Servers sharing 1 External IP
+                                          address, using a unique External Port to forward 
+                                          traffic to the correct VM/Server.
+    VMAutoScaling.yaml                  - A template that creates a typical resource 
+                                          Up/Down auto-scaling use case.  The size of a VM in 
+                                          terms of number of guest vcpus is scaled up or down 
+                                          based on average cpu utilization.
+    LabSetup.yaml                       - A complex example of setting up a large virtual
+                                          LAB with a number of resources and resource types.
+                                          The Stack contains/creates 2 provider networks,
+                                          a keypair, 2 flavors, 4 networks, 5 subnets and
+                                          2 routers with gateways setup.
+
+A demo illustrating a complex environment can be found in the hot/demo/ directory.
+
+./hot/demo:
+    scaleUpDown.yaml                    - A demo to illustrate scale up and down 
+
+USAGE
+=====
+The HEAT template (YAML) files can be used to create a 'Stack' by using either the 
+HEAT CLI, Heat Rest APIs and/or the Heat Horizon panel (Orchestration).
+
+For example, to create a 'Stack' using the HEAT CLI:
+    heat stack-create -f <heat-template-yaml-filename> <stack-name>
+
+Refer to the Titanium Cloud Administration Guide, Managing Stacks Section, for 
+additional information on using HEAT:
+    * Overview of YAML Template format,
+    * Description on how to pass 'parameters' to a HEAT stack,
+    * Description of TiS-specific Extensions to HEAT,
+    * Examples of how to launch a HEAT Stack using the CLI and Horizon,
+    * How to pass User Data to a VM/Server/Guest in a HEAT template,
+    * Overview of HEAT Autoscaling; both In/Out and Up/Down,
+    * Examples of using heat-cfntools in Guest to report Guest Metrics
+      to Ceilometer and optionally use for HEAT Autoscaling,
+    * and more.
+
+
+CAVEATS
+=======
+
+TiS-specific Extensions to HEAT are only provided for the Heat Orchestration Template 
+(HOT) format; NOT for the CloudFormatioN (CFN) format.  HEAT in Titanium Cloud will still accept
+and work with CFN-formatted heat templates; this CFN format is just simply not 
+extended with additional Titanium Cloud HEAT capabilities.
+
+Example CFN-formatted HEAT templates are no longer provided in this SDK Module.  Example 
+CFN-formatted HEAT template files can be found at 
+    https://github.com/openstack/heat-templates/tree/master/cfn
+
+
+

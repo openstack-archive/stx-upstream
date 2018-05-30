@@ -1,0 +1,45 @@
+---
+ keystoneclient/v2_0/client.py |   18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+--- a/keystoneclient/v2_0/client.py
++++ b/keystoneclient/v2_0/client.py
+@@ -13,6 +13,7 @@
+ #    License for the specific language governing permissions and limitations
+ #    under the License.
+ 
++import os
+ import logging
+ 
+ from keystoneclient.auth.identity import v2 as v2_auth
+@@ -29,6 +30,8 @@ from keystoneclient.v2_0 import tenants
+ from keystoneclient.v2_0 import tokens
+ from keystoneclient.v2_0 import users
+ 
++import requests
++from requests.packages.urllib3.exceptions import InsecureRequestWarning
+ 
+ _logger = logging.getLogger(__name__)
+ 
+@@ -130,6 +133,21 @@ class Client(httpclient.HTTPClient):
+ 
+     def __init__(self, **kwargs):
+         """Initialize a new client for the Keystone v2.0 API."""
++
++        # NOTE(knasim-wrs): As per US76645, the Keystone adminURL
++        # is no longer an internal address since it needs to be
++        # accessible via remote Openstack client. Things get
++        # complicated with HTTPS where the internal keystone client
++        # gets this adminURL and cannot connect to Keystone server
++        # as it cannot verify the SSL certificate.
++        # We will check for this condition here, if OS_ENDPOINT_TYPE
++        # is not publicURL then this is an internal access scenario and
++        # Keystone client will be set to SSL insecure mode
++        if os.environ.get('OS_ENDPOINT_TYPE') == 'internalURL':
++            kwargs['insecure'] = True
++            # disable verbose insecurity warnings
++            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
++
+         super(Client, self).__init__(**kwargs)
+ 
+         self.certificates = certificates.CertificatesManager(self._adapter)

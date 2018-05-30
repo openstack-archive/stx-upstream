@@ -1,0 +1,204 @@
+#!/bin/bash
+###############################################################################
+#
+# Copyright (c) 2018 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# 
+###############################################################################
+#
+# Description:
+#   This displays total CPU occupancy based on hi-resolution timings.
+#
+###############################################################################
+# Define minimal path
+PATH=/bin:/usr/bin:/usr/local/bin
+
+# NOTE: Comment out  LOG_DEBUG and DEBUG_METHODS in production version.
+# Uncomment LOG_DEBUG to enable debug print statements
+##LOG_DEBUG=1
+
+# Uncomment DEBUG_METHODS to enable test of methods
+##DEBUG_METHODS=1
+
+SCHEDSTAT_VERSION=$(cat /proc/schedstat 2>/dev/null | awk '/version/ {print $2;}')
+NPROCESSORS_ONLN=$(getconf _NPROCESSORS_ONLN)
+ARCH=$(arch)
+
+# NOTE: we only support 64-bit math due to long integers of schedstat
+SUPPORTED_SCHEDSTAT_VERSION=15
+SUPPORTED_ARCH='x86_64'
+
+# Customize sleep interval based on how responsive we want scaling to react.
+# This is set small for demonstration purposes.
+SLEEP_INTERVAL="1.0s"
+
+# Log if debug is enabled via LOG_DEBUG
+function log_debug
+{
+    if [ ! -z "${LOG_DEBUG}" ]; then
+        logger -p debug -t "$0[${PPID}]" -s "$@" 2>&1
+    fi
+}
+
+# Log unconditionally to STDERR
+function log_error
+{
+    logger -p error -t "$0[${PPID}]" -s "$@"
+}
+
+# Log unconditionally to STDOUT
+function log
+{
+    logger -p info -t "$0[${PPID}]" -s "$@" 2>&1
+}
+
+function read_proc_schedstat
+{
+    local _outvar=$1
+    local _result  # Use some naming convention to avoid OUTVARs to clash
+    local _cpu
+    local _cputime
+    _result=0
+    while read -r line
+    do
+        # version 15: cputime is 7th field
+        if [[ $line =~ ^cpu([[:digit:]]+)[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]+([[:digit:]]+)[[:space:]]+ ]]
+        then
+            _cpu=${BASH_REMATCH[1]}
+            _cputime=${BASH_REMATCH[2]}
+            ((_result += _cputime))
+        fi
+    done < "/proc/schedstat"
+
+    eval $_outvar=\$_result # Instead of just =$_result
+}
+
+function occupancy_loadavg()
+{
+    # NOTE: This method is not recommended, as the feedback is slow and
+    # based on the loadavg 1-minute decay. The loadavg also includes
+    # IoWait which isn't desired. This does not require large integers.
+
+    # Calculate total CPU occupancy based on 1 minute loadavg.
+    ldavg_1m=$(cat /proc/loadavg 2>/dev/null | awk '{print $1}')
+
+    # Calculate total CPU occupancy (%)
+    occ=$(awk -v ldavg=${ldavg_1m} -v N=${NPROCESSORS_ONLN} \
+              'BEGIN {printf "%.1f\n", 100.0 * ldavg / N;}'
+    )
+    log_debug "CPU Occupancy(loadavg): ${occ}"
+    echo ${occ}
+}
+
+function occupancy_jiffie()
+{
+    # NOTE: This method is not recommended, as the per-cpu stats are not
+    # properly updated by the kernel after scaling VM back up.
+    # This routine uses simple small integer math.
+
+    # Calculate total CPU occupancy based on jiffie stats.
+
+    read cpu user nice system idle iowait irq softirq steal guest < /proc/stat
+    j_occ_0=$((user+system+nice+irq+softirq+steal))
+    j_tot_0=$((user+system+nice+irq+softirq+steal+idle+iowait))
+
+    sleep ${SLEEP_INTERVAL}
+
+    read cpu user nice system idle iowait irq softirq steal guest < /proc/stat
+    j_occ_1=$((user+system+nice+irq+softirq+steal))
+    j_tot_1=$((user+system+nice+irq+softirq+steal+idle+iowait))
+
+    # Calculate total CPU occupancy (%)
+    occ=$(( 100 * (j_occ_1 - j_occ_0) / (j_tot_1 - j_tot_0) ))
+
+    log_debug "CPU Occupancy(jiffie): ${occ}"
+    echo ${occ}
+}
+
+function occupancy_schedstat()
+{
+    # NOTE: This method is recommended as timings are high resolution.
+    # However the timings require large integers, so we are assuming
+    # we require 64-bit guest.
+
+    # Calculate total CPU occupancy based on uptime stats
+    local cputime_0=''
+    local cputime_1=''
+
+    read t_elapsed_0 t_idle_0 < /proc/uptime
+    read_proc_schedstat cputime_0
+
+    sleep ${SLEEP_INTERVAL}
+
+    read t_elapsed_1 t_idle_1 < /proc/uptime
+    read_proc_schedstat cputime_1
+
+    # Calculate total CPU occupancy (%)
+    occ=$(awk -v te0=${t_elapsed_0} -v te1=${t_elapsed_1} \
+              -v tc0=${cputime_0} -v tc1=${cputime_1} \
+              -v N=${NPROCESSORS_ONLN} \
+              'BEGIN {dt_ms = N*(te1 - te0)*1E3; cputime_ms = (tc1 - tc0)/1.0E6;
+                     occ = 100.0 * cputime_ms / dt_ms;
+                     printf "%.1f\n", occ;}'
+    )
+    log_debug "CPU Occupancy(schedstat): ${occ}"
+    echo ${occ}
+}
+
+function occupancy_uptime()
+{
+    # NOTE: This method is is very similar to the loadavg method in that
+    # IoWait is treated as load, but the occupancy is instantaneous.
+    # This does not require large integers.
+
+    # Calculate total CPU occupancy based on uptime/idle stats
+    read t_elapsed_0 t_idle_0 < /proc/uptime
+
+    sleep ${SLEEP_INTERVAL}
+
+    read t_elapsed_1 t_idle_1 < /proc/uptime
+
+    # Calculate total CPU occupancy (%)
+    occ=$(awk -v te0=${t_elapsed_0} -v ti0=${t_idle_0} \
+              -v te1=${t_elapsed_1} -v ti1=${t_idle_1} \
+              -v N=${NPROCESSORS_ONLN} \
+              'BEGIN {dt = N*(te1 - te0); di = ti1 - ti0; cputime = dt - di;
+                      occ = 100.0 * cputime / dt;
+                      printf "%.1f\n", occ;}'
+    )
+    log_debug "CPU Occupancy(uptime): ${occ}"
+    echo ${occ}
+}
+
+###############################################################################
+#
+# MAIN Program
+#
+###############################################################################
+
+if [ ! -z "${DEBUG_METHODS}" ]
+then
+    log_debug "Testing occupancy_loadavg"
+    occupancy_loadavg
+
+    log_debug "Testing occupancy_jiffie"
+    occupancy_jiffie
+
+    log_debug "Testing occupancy_uptime"
+    occupancy_uptime
+
+    log_debug "Testing occupancy_schedstat"
+    occupancy_schedstat
+fi
+
+log_debug "Discovered arch=${ARCH}, schedstat version=${SCHEDSTAT_VERSION}."
+if [[ ${ARCH} == ${SUPPORTED_ARCH} ]] && [[ ${SCHEDSTAT_VERSION} -eq  ${SUPPORTED_SCHEDSTAT_VERSION} ]]
+then
+    occupancy_schedstat
+else
+    occupancy_uptime
+fi
+
+exit 0

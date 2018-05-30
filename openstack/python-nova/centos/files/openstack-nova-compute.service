@@ -1,0 +1,20 @@
+[Unit]
+Description=OpenStack Nova Compute Server
+After=syslog.target network.target libvirtd.service
+
+[Service]
+Environment=LIBGUESTFS_ATTACH_METHOD=appliance
+Type=simple
+#NotifyAccess=all
+TimeoutStartSec=0
+#Restart=always
+User=root
+PIDFile=/var/run/nova/nova-compute.pid
+ExecStart=/usr/bin/nova-compute
+ExecStartPost=/bin/bash -c 'echo $MAINPID > /var/run/nova/nova-compute.pid'
+ExecStop=/bin/kill -HUP $MAINPID
+StandardOutput=null
+
+[Install]
+WantedBy=multi-user.target
+

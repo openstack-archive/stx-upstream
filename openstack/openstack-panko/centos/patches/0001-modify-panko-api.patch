@@ -1,0 +1,63 @@
+From 3583e2afbae8748f05dc12c51eefc4983358759c Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Mon, 6 Nov 2017 17:32:46 -0500
+Subject: [PATCH 1/1] modify panko api
+
+---
+ panko/api/app.py       | 12 +++++++++---
+ panko/api/panko-api.py |  6 ++++++
+ 2 files changed, 15 insertions(+), 3 deletions(-)
+ create mode 100644 panko/api/panko-api.py
+
+diff --git a/panko/api/app.py b/panko/api/app.py
+index 9867e18..4eedaea 100644
+--- a/panko/api/app.py
++++ b/panko/api/app.py
+@@ -51,7 +51,7 @@ global APPCONFIGS
+ APPCONFIGS = {}
+ 
+ 
+-def load_app(conf, appname='panko+keystone'):
++def load_app(conf, args, appname='panko+keystone'):
+     global APPCONFIGS
+ 
+     # Build the WSGI app
+@@ -62,6 +62,12 @@ def load_app(conf, appname='panko+keystone'):
+     if cfg_path is None or not os.path.exists(cfg_path):
+         raise cfg.ConfigFilesNotFoundError([conf.api_paste_config])
+ 
++    config_args = dict([(key, value) for key, value in args.iteritems()
++                        if key in conf and value is not None])
++    for key, value in config_args.iteritems():
++        if key == 'config_file':
++            conf.config_file = value
++
+     config = dict(conf=conf)
+     configkey = str(uuid.uuid4())
+     APPCONFIGS[configkey] = config
+@@ -71,8 +77,8 @@ def load_app(conf, appname='panko+keystone'):
+                           global_conf={'configkey': configkey})
+ 
+ 
+-def build_wsgi_app(argv=None):
+-    return load_app(service.prepare_service(argv=argv))
++def build_wsgi_app(argv=None, args=None):
++    return load_app(service.prepare_service(argv=argv), args)
+ 
+ 
+ def app_factory(global_config, **local_conf):
+diff --git a/panko/api/panko-api.py b/panko/api/panko-api.py
+new file mode 100644
+index 0000000..87d917d
+--- /dev/null
++++ b/panko/api/panko-api.py
+@@ -0,0 +1,6 @@
++from panko.api import app as build_wsgi_app
++import sys
++
++sys.argv = sys.argv[:1]
++args = {'config_file' : 'etc/panko/panko.conf', }
++application = build_wsgi_app.build_wsgi_app(args=args)
+-- 
+1.8.3.1
+

@@ -1,0 +1,13 @@
+[Unit]
+Description=Clean nova-local thinpool
+Before=computeconfig.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+ExecStart=/usr/bin/nova_clean_thinpool start
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,64 @@
+#!/bin/bash
+
+#
+# Wrapper script to rotate keystone fernet keys on active controller only
+#
+KEYSTONE_KEYS_ROTATE_INFO="/var/run/keystone-keys-rotate.info"
+KEYSTONE_KEYS_ROTATE_CMD="/usr/bin/nice -n 2 /usr/bin/keystone-manage fernet_rotate --keystone-user keystone --keystone-group keystone"
+
+function is_active_pgserver()
+{
+    # Determine whether we're running on the same controller as the service.
+    local service=postgres
+    local enabledactive=$(/usr/bin/sm-query service $service| grep enabled-active)
+    if [ "x$enabledactive" == "x" ]
+    then
+        # enabled-active not found for that service on this controller
+        return 1
+    else
+        # enabled-active found for that resource
+        return 0
+    fi
+}
+
+if is_active_pgserver
+then
+    if [ ! -f ${KEYSTONE_KEYS_ROTATE_INFO} ]
+    then
+        echo delay_count=0 > ${KEYSTONE_KEYS_ROTATE_INFO}
+    fi
+
+    source ${KEYSTONE_KEYS_ROTATE_INFO}
+    sudo -u postgres psql -d sysinv -c "SELECT alarm_id, entity_instance_id from i_alarm;" | grep -P "^(?=.*100.101)(?=.*${HOSTNAME})" &>/dev/null
+    if [ $? -eq 0 ]
+    then
+        source /etc/platform/platform.conf
+        if [ "${system_type}" = "All-in-one" ]
+        then
+            source /etc/init.d/task_affinity_functions.sh
+            idle_core=$(get_most_idle_core)
+            if [ "$idle_core" -ne "0" ]
+            then
+                sh -c "exec taskset -c $idle_core ${KEYSTONE_KEYS_ROTATE_CMD}"
+                sed -i "/delay_count/s/=.*/=0/" ${KEYSTONE_KEYS_ROTATE_INFO}
+                exit 0
+            fi
+        fi
+
+        if [ "$delay_count" -lt "3" ]
+        then
+            newval=$(($delay_count+1))
+            sed -i "/delay_count/s/=.*/=$newval/" ${KEYSTONE_KEYS_ROTATE_INFO}
+            (sleep 3600; /usr/bin/keystone-fernet-keys-rotate-active) &
+            exit 0
+        fi
+
+    fi
+
+    eval ${KEYSTONE_KEYS_ROTATE_CMD}
+    sed -i "/delay_count/s/=.*/=0/" ${KEYSTONE_KEYS_ROTATE_INFO}
+
+fi
+
+exit 0
+

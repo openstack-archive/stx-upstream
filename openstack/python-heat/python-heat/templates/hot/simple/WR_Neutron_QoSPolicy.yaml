@@ -1,0 +1,67 @@
+###############################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource WR::Neutron::QosPolicy
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    An admin activity
+#
+# Sample CLI syntax:
+#    heat stack-create -f   WR_Neutron_QoSPolicy.yaml STACK
+#
+# Expected Outcome:
+#  A new qos policy called SampleQoS
+#    neutron qos-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the WR::Neutron::QoSPolicy heat resource
+
+parameters:
+
+    NAME:
+        description: Name of the QoS policy
+        type: string
+        default: SampleQoS
+
+    DESCRIPTION:
+        description: Description of the QoS policy
+        type: string
+        default: 'A simple QoS policy'
+
+resources:
+
+    WR_Neutron_QoSPolicy:
+        type: WR::Neutron::QoSPolicy
+        properties:
+            # required properties
+            name: { get_param: NAME }
+
+            # optional properties
+            description: { get_param: DESCRIPTION }
+
+            # tenant-id: { get_param: TENANT_ID}
+
+            policies: {
+                scheduler: { weight: 16 },
+                # dscp: { dscp: 10 }
+            }
+
+outputs:
+    qos_show:
+        description: All attributes of the QoS policy
+        value: { get_attr: [ WR_Neutron_QoSPolicy, show] }

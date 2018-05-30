@@ -1,0 +1,32 @@
+From 4e791be412662ae1f97cfd4ff5a90ea6337e49a4 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Thu, 16 Nov 2017 15:25:08 -0500
+Subject: [PATCH 1/1] spec change event list descending
+
+---
+ SPECS/openstack-panko.spec | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/SPECS/openstack-panko.spec b/SPECS/openstack-panko.spec
+index 90471d9..95497b4 100644
+--- a/SPECS/openstack-panko.spec
++++ b/SPECS/openstack-panko.spec
+@@ -16,6 +16,7 @@ Source2:        panko-expirer-active
+ 
+ # WRS: Include patches here
+ Patch1:         0001-modify-panko-api.patch
++Patch2:         0002-Change-event-list-descending.patch
+ 
+ BuildArch:      noarch
+ 
+@@ -124,6 +125,7 @@ This package contains documentation files for panko.
+ 
+ # WRS: Apply patches here
+ %patch1 -p1
++%patch2 -p1
+ 
+ find . \( -name .gitignore -o -name .placeholder \) -delete
+ 
+-- 
+1.8.3.1
+

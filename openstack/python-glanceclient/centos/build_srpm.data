@@ -1,0 +1,5 @@
+TAR_NAME=python-glanceclient
+SRC_DIR="$CGCS_BASE/git/python-glanceclient"
+COPY_LIST="$FILES_BASE/*"
+TIS_BASE_SRCREV=13b25ff1fed908cfe7b4e719a97efd7121e3be96
+TIS_PATCH_VER=GITREVCOUNT

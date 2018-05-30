@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenStack ceilometer API service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/python /usr/bin/gunicorn --config /usr/share/ceilometer/ceilometer-api.conf --pythonpath /usr/share/ceilometer ceilometer-api
+#Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

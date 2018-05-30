@@ -1,0 +1,13 @@
+diff --git a/SPECS/python-keystoneclient.spec b/SPECS/python-keystoneclient.spec
+index 79ab30f..e68bc6f 100644
+--- a/SPECS/python-keystoneclient.spec
++++ b/SPECS/python-keystoneclient.spec
+@@ -8,7 +8,7 @@
+ Name:       python-keystoneclient
+ Epoch:      1
+ Version:    3.13.0
+-Release:    1%{?dist}
++Release:    1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:    Client library for OpenStack Identity API
+ License:    ASL 2.0
+ URL:        https://launchpad.net/python-keystoneclient

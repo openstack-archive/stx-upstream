@@ -1,0 +1,5 @@
+0001-Update-package-versioning-for-TIS-format.patch
+0002-meta-public-adminURL-detection.patch
+0003-meta-TiS-remote-client-sdk-patch.patch
+0004-meta-dont-remove-requirements-txt.patch
+0006-meta-buildrequires-python-setuptools_scm.patch

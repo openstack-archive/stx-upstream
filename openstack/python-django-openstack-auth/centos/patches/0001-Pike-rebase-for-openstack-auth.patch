@@ -1,0 +1,495 @@
+From b2e9d78e5385ad7c67b4ce2ef33b64206e5ccf6d Mon Sep 17 00:00:00 2001
+From: Kam Nasim <kam.nasim@windriver.com>
+Date: Wed, 25 Jan 2017 11:58:56 -0500
+Subject: [PATCH] Pike rebase for openstack auth
+
+Squashes in the following Titanium patches (some patches have been
+upstreamed and not mentioned here):
+
+- User lockout feature (Author: Aly Nathoo)
+- Add client ip to login / lockout activies and logging for user lockout
+(Author: David Balme)
+- Optimize keystone authentication requests during user lockout
+(Author: Kam Nasim)
+- Stop user lockout increment when Keystone is unavailable
+(Author: David Balme)
+- Change default region for openstack auth to local Horizon's region
+(Author: Tyler Smith)
+- Refactor user lockout for multiple browser sessions, and fix horizon
+session timeout issue (Author: Giao Le)
+- Validate token before initiating session to prevent invalid token
+  issues (Author: Giao Le)
+---
+ openstack_auth/backend.py     |   4 +
+ openstack_auth/forms.py       |  35 ++++--
+ openstack_auth/plugin/base.py |   7 +-
+ openstack_auth/user.py        |  15 +++
+ openstack_auth/utils.py       | 242 +++++++++++++++++++++++++++++++++++++++++-
+ openstack_auth/views.py       |  12 ++-
+ 6 files changed, 302 insertions(+), 13 deletions(-)
+
+diff --git a/openstack_auth/backend.py b/openstack_auth/backend.py
+index dae603a..cd15ca8 100644
+--- a/openstack_auth/backend.py
++++ b/openstack_auth/backend.py
+@@ -170,6 +170,10 @@ class KeystoneBackend(object):
+                 region_name = id_endpoint['region']
+                 break
+ 
++        local_region = getattr(settings, 'REGION_NAME', None)
++        if local_region:
++            region_name = local_region
++
+         interface = getattr(settings, 'OPENSTACK_ENDPOINT_TYPE', 'public')
+ 
+         endpoint, url_fixed = utils.fix_auth_url_version_prefix(
+diff --git a/openstack_auth/forms.py b/openstack_auth/forms.py
+index c7d0c51..90e281b 100644
+--- a/openstack_auth/forms.py
++++ b/openstack_auth/forms.py
+@@ -24,7 +24,6 @@ from django.views.decorators.debug import sensitive_variables
+ from openstack_auth import exceptions
+ from openstack_auth import utils
+ 
+-
+ LOG = logging.getLogger(__name__)
+ 
+ 
+@@ -117,6 +116,7 @@ class Login(django_auth_forms.AuthenticationForm):
+ 
+     @sensitive_variables()
+     def clean(self):
++        global failedUserLogins
+         default_domain = getattr(settings,
+                                  'OPENSTACK_KEYSTONE_DEFAULT_DOMAIN',
+                                  'Default')
+@@ -130,6 +130,14 @@ class Login(django_auth_forms.AuthenticationForm):
+             return self.cleaned_data
+ 
+         try:
++            # assess the lockout status for this user.
++            # If this user is already locked out then
++            # do not attempt to authenticate as that is
++            # a redundant hit on Keystone and web proxy.
++            lockedout = utils.check_user_lockout(username)
++            if lockedout:
++                raise forms.ValidationError("user currently locked out.")
++
+             self.user_cache = authenticate(request=self.request,
+                                            username=username,
+                                            password=password,
+@@ -141,14 +149,27 @@ class Login(django_auth_forms.AuthenticationForm):
+                     'remote_ip': utils.get_client_ip(self.request)
+                 }
+             LOG.info(msg)
++
++            # since this user logged in successfully, clear its
++            # lockout status
++            utils.clear_user_lockout(username)
++            
++            # handle user login
++            utils.handle_user_login(username, password)
++            
+         except exceptions.KeystoneAuthException as exc:
+-            msg = 'Login failed for user "%(username)s", remote address '\
+-                '%(remote_ip)s.' % {
+-                    'username': username,
+-                    'remote_ip': utils.get_client_ip(self.request)
+-                }
+-            LOG.warning(msg)
++            if getattr(exc,"invalidCredentials", False):
++                msg = 'Login failed for user "%(username)s", remote address '\
++                    '%(remote_ip)s.' % {
++                        'username': username,
++                        'remote_ip': utils.get_client_ip(self.request)
++                    }
++                LOG.warning(msg)
++                utils.add_user_lockout(username)
++                LOG.warning("Invalid password entered for User %s "
++                            "in web service." % username)
+             raise forms.ValidationError(exc)
++
+         if hasattr(self, 'check_for_test_cookie'):  # Dropped in django 1.7
+             self.check_for_test_cookie()
+         return self.cleaned_data
+diff --git a/openstack_auth/plugin/base.py b/openstack_auth/plugin/base.py
+index f1aff52..bbdaddc 100644
+--- a/openstack_auth/plugin/base.py
++++ b/openstack_auth/plugin/base.py
+@@ -95,7 +95,7 @@ class BasePlugin(object):
+ 
+         except (keystone_exceptions.ClientException,
+                 keystone_exceptions.AuthorizationFailure):
+-            msg = _('Unable to retrieve authorized projects.')
++            msg = 'Unable to retrieve authorized projects.'
+             raise exceptions.KeystoneAuthException(msg)
+ 
+     def list_domains(self, session, auth_plugin, auth_ref=None):
+@@ -132,7 +132,10 @@ class BasePlugin(object):
+                 keystone_exceptions.Forbidden,
+                 keystone_exceptions.NotFound) as exc:
+             LOG.debug(str(exc))
+-            raise exceptions.KeystoneAuthException(_('Invalid credentials.'))
++            authException = exceptions.KeystoneAuthException(
++                    _('Invalid credentials.'))
++            authException.invalidCredentials = True
++            raise authException
+         except (keystone_exceptions.ClientException,
+                 keystone_exceptions.AuthorizationFailure) as exc:
+             msg = _("An error occurred authenticating. "
+diff --git a/openstack_auth/user.py b/openstack_auth/user.py
+index 063648b..c6f616c 100644
+--- a/openstack_auth/user.py
++++ b/openstack_auth/user.py
+@@ -253,6 +253,9 @@ class User(models.AbstractBaseUser, models.AnonymousUser):
+         # Required by AbstractBaseUser
+         self.password = None
+ 
++        # WRS: additional check to validate token prior to using
++        self.validate_token = False
++
+     def __unicode__(self):
+         return self.username
+ 
+@@ -305,6 +308,18 @@ class User(models.AbstractBaseUser, models.AnonymousUser):
+                A default margin can be set by the TOKEN_TIMEOUT_MARGIN in the
+                django settings.
+             """
++            # WRS: validate token
++            if not self.validate_token:
++                try:
++                    utils.validate_token(
++                        auth_url=self.endpoint,
++                        auth_token=self.unscoped_token,
++                        token=self.token)
++                except (keystone_exceptions.ClientException,
++                        keystone_exceptions.AuthorizationFailure):
++                    self.token.expires = None
++                self.validate_token = True
++
+             return (self.token is not None and
+                     utils.is_token_valid(self.token, margin))
+ 
+diff --git a/openstack_auth/utils.py b/openstack_auth/utils.py
+index cac0d7a..1b35592 100644
+--- a/openstack_auth/utils.py
++++ b/openstack_auth/utils.py
+@@ -12,7 +12,13 @@
+ # limitations under the License.
+ 
+ import datetime
++import errno
++import fcntl
++import keyring
+ import logging
++import os
++import time
++import time
+ import re
+ 
+ from django.conf import settings
+@@ -25,6 +31,8 @@ from keystoneauth1 import session
+ from keystoneauth1 import token_endpoint
+ from keystoneclient.v2_0 import client as client_v2
+ from keystoneclient.v3 import client as client_v3
++from oslo_concurrency import lockutils
++from oslo_serialization import jsonutils
+ from six.moves.urllib import parse as urlparse
+ 
+ 
+@@ -357,6 +365,14 @@ def get_token_auth_plugin(auth_url, token, project_id=None, domain_name=None):
+                              reauthenticate=False)
+ 
+ 
++def validate_token(auth_url, auth_token, token):
++    auth_url, _ = fix_auth_url_version_prefix(auth_url)
++    auth = token_endpoint.Token(auth_url, auth_token)
++    sess = get_session()
++    client = get_keystone_client().Client(session=sess, auth=auth)
++    _ = client.tokens.validate(token)
++
++
+ def get_project_list(*args, **kwargs):
+     is_federated = kwargs.get('is_federated', False)
+     sess = kwargs.get('session') or get_session()
+@@ -489,9 +505,10 @@ def get_admin_permissions():
+     return {get_role_permission(role) for role in get_admin_roles()}
+ 
+ 
++
+ def get_client_ip(request):
+     """Return client ip address using SECURE_PROXY_ADDR_HEADER variable.
+-
++    If not present then consider using HTTP_X_FORWARDED_FOR from.
+     If not present or not defined on settings then REMOTE_ADDR is used.
+ 
+     :param request: Django http request object.
+@@ -508,7 +525,12 @@ def get_client_ip(request):
+             _SECURE_PROXY_ADDR_HEADER,
+             request.META.get('REMOTE_ADDR')
+         )
+-    return request.META.get('REMOTE_ADDR')
++    else:
++         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
++         if x_forwarded_for:
++             return (x_forwarded_for.split(',')[0])
++         else:
++            return request.META.get('REMOTE_ADDR')
+ 
+ 
+ def store_initial_k2k_session(auth_url, request, scoped_auth_ref,
+@@ -560,3 +582,219 @@ def store_initial_k2k_session(auth_url, request, scoped_auth_ref,
+         request.session['k2k_base_unscoped_token'] =\
+             unscoped_auth_ref.auth_token
+         request.session['k2k_auth_url'] = auth_url
++
++
++def __log_cache_error__(op, fn, ex):
++    msg = ("unable to %(op)s cache file %(fn)s due to %(ex)s") %\
++           {'op': op, 'fn': fn, 'ex': ex}
++    LOG.warning(msg)
++
++
++def __lock_cache__(cache_file):
++    try:
++        f = open(cache_file, "r+")
++    except Exception as ex:
++        __log_cache_error__("open", cache_file, ex)
++        raise
++
++    try:
++        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
++    except Exception as ex:
++        __log_cache_error__("lock", f.name, ex)
++        raise
++
++    return f
++
++
++def __write_cache__(f, filedata):
++    try:
++        f.seek(0, 0)
++        f.truncate()
++        f.write(jsonutils.dumps(filedata))
++    except Exception as ex:
++        __log_cache_error__("write", f.name, ex)
++
++
++def __read_cache__(f, default=[]):
++    try:
++        f.seek(0, 0)
++        return jsonutils.loads(f.read())
++    except Exception as ex:
++        __log_cache_error__("read", f.name, ex)
++
++    return default
++
++
++def __create_cache__(fname, default=[]):
++    try:
++        with open(__file__, "r") as l:
++            fcntl.flock(l.fileno(), fcntl.LOCK_EX)
++            if not os.path.exists(fname):
++                with open(fname, "w") as f:
++                    __write_cache__(f, default)
++
++    except Exception as ex:
++        __log_cache_error__("create", fname, ex)
++
++
++# Track failed logins
++# Keep an array of failedUserLogins
++# failedUserLogins : username NumFailedLogins LockoutTime
++# if a login fails due to invalid password (username is ok),
++#    add username to array and increment NumFailedLogins
++# if a login succeeds
++#    look up username in  failedUserLogins, if found
++#    if NumFailedLogins > 3, check LockoutTime
++#       if CurrentTime - LockoutTime < 5min then
++#          fail login
++#       else
++#          remove username from failedUserLogins
++#    else
++#       remove username from failedUserLogins, let user log in
++
++FAILED_LOGINS_CACHE_FILE = "/tmp/.hacache"
++FAILED_LOGINS_NAME_INDEX = 0
++FAILED_LOGINS_COUNT_INDEX = 1
++FAILED_LOGINS_TIME_INDEX = 2
++
++lockout_tuple = (settings.LOCKOUT_PERIOD_SEC, settings.LOCKOUT_RETRIES_NUM)
++
++if not os.path.exists(FAILED_LOGINS_CACHE_FILE):
++    __create_cache__(FAILED_LOGINS_CACHE_FILE)
++
++
++def check_user_lockout(username):
++    try:
++        with __lock_cache__(FAILED_LOGINS_CACHE_FILE) as f:
++            failedUserLogins = __read_cache__(f)
++            (lockout_period_sec, lockout_retries_num) = lockout_tuple
++            for i, user in enumerate(failedUserLogins):
++                if user[FAILED_LOGINS_NAME_INDEX] != username:
++                    continue
++                if user[FAILED_LOGINS_COUNT_INDEX] >= lockout_retries_num:
++                    delta = time.time() - user[FAILED_LOGINS_TIME_INDEX]
++                    if delta < lockout_period_sec:
++                        msg = ("Cannot login/authenticate -"
++                               " user \"%(username)s\" locked out." % \
++                               {'username': username})
++                        LOG.info(msg)
++                        return True
++                break
++    except:
++        pass
++
++    return False
++
++
++def add_user_lockout(username):
++    try:
++        with __lock_cache__(FAILED_LOGINS_CACHE_FILE) as f:
++            failedUserLogins = __read_cache__(f)
++            (lockout_period_sec, lockout_retries_num) = lockout_tuple
++            for user in failedUserLogins:
++                if user[FAILED_LOGINS_NAME_INDEX] == username:
++                    user[FAILED_LOGINS_COUNT_INDEX] += 1
++                    if user[FAILED_LOGINS_COUNT_INDEX] >= lockout_retries_num:
++                        # user is now locked out, record the new time
++                        user[FAILED_LOGINS_TIME_INDEX] = time.time()
++                        LOG.warning("User %s is locked out of web service"
++                                    "- attempted login." % (username))
++                    break
++            else:
++                failedUserLogins.append([username,1,0])
++            __write_cache__(f, failedUserLogins)
++    except:
++        pass
++
++
++def clear_user_lockout(username):
++    try:
++        with __lock_cache__(FAILED_LOGINS_CACHE_FILE) as f:
++            failedUserLogins = __read_cache__(f)
++            for i, user in enumerate(failedUserLogins):
++                if user[FAILED_LOGINS_NAME_INDEX] == username:
++                    # clear the entry for this user
++                    failedUserLogins[i] = None
++                    failedUserLogins = [elem for elem in failedUserLogins if elem]
++                    __write_cache__(f, failedUserLogins)
++                    break
++    except:
++        pass
++
++
++# Manage user password using keyring service
++#  1. add user password to keyring service once
++#     user logs in the first time
++#  2. delete user password from keyring service once
++#     user logs out all sessions
++
++USER_LOGINS_CACHE_FILE = '/tmp/.hacache1'
++USER_LOGINS_NAME_INDEX = 0
++USER_LOGINS_COUNT_INDEX = 1
++USER_LOGINS_KEYRING = 'hakeyring'
++
++if not os.path.exists(USER_LOGINS_CACHE_FILE):
++    __create_cache__(USER_LOGINS_CACHE_FILE)
++
++
++def get_user_password(username):
++    # use CGCS for admin
++    service = 'CGCS' if username == 'admin' else USER_LOGINS_KEYRING
++    return keyring.get_password(service, username)
++
++
++def handle_user_login(username, password):
++    if username == 'admin':
++        return
++
++    try:
++        with __lock_cache__(USER_LOGINS_CACHE_FILE) as f:
++            logined = False
++            userLogins = __read_cache__(f)
++            for i, user in enumerate(userLogins):
++                if user[USER_LOGINS_NAME_INDEX] == username:
++                        user[USER_LOGINS_COUNT_INDEX] += 1
++                        logined = True
++                        break
++            try:
++                old = keyring.get_password(USER_LOGINS_KEYRING, username)
++                if old and old != password:
++                    keyring.delete_password(USER_LOGINS_KEYRING, username)
++                    old = None
++                if not old:
++                    keyring.set_password(USER_LOGINS_KEYRING, username,
++                                         password)
++            except (keyring.errors.PasswordSetError, RuntimeError):
++                LOG.warning("Failed to update keyring passord"
++                            " for user %s" % username)
++
++            if not logined:
++                userLogins.append([username, 1])
++            __write_cache__(f, userLogins)
++    except:
++        LOG.warning("Failed to handle login for user %s" % username)
++
++
++def handle_user_logout(username):
++    if username == 'admin':
++        return
++
++    try:
++        with __lock_cache__(USER_LOGINS_CACHE_FILE) as f:
++            userLogins = __read_cache__(f)
++            for i, user in enumerate(userLogins):
++                if user[USER_LOGINS_NAME_INDEX] != username:
++                    continue
++                user[USER_LOGINS_COUNT_INDEX] -= 1
++                if user[USER_LOGINS_COUNT_INDEX] == 0:
++                    userLogins[i] = None
++                    userLogins = [e for e in userLogins if e]
++                    try:
++                        keyring.delete_password(USER_LOGINS_KEYRING, username)
++                    except keyring.errors.PasswordDeleteError:
++                        LOG.warning("Failed to delete keyring passowrd"
++                                    " for user %s" % username)
++                __write_cache__(f, userLogins)
++                break
++    except:
++        LOG.warning("Failed to handle logout for user %s" % username)
+diff --git a/openstack_auth/views.py b/openstack_auth/views.py
+index 7ae3063..bf4aa99 100644
+--- a/openstack_auth/views.py
++++ b/openstack_auth/views.py
+@@ -130,6 +130,10 @@ def login(request, template_name=None, extra_context=None, **kwargs):
+                      ' in %s minutes') %
+                    expiration_time).replace(':', ' Hours and ')
+             messages.warning(request, msg)
++        
++        # WRS: add login user name to handle HORIZON session timeout
++        utils.set_response_cookie(res, 'login_user',
++                                  request.user.username)
+     return res
+ 
+ 
+@@ -167,10 +171,14 @@ def logout(request, login_url=None, **kwargs):
+         see django.contrib.auth.views.logout_then_login extra parameters.
+ 
+     """
+-    msg = 'Logging out user "%(username)s".' % \
+-        {'username': request.user.username}
++    msg = 'Logging out user "%(username)s", remote address %(remote_ip)s.' % \
++        {'username': request.user.username,
++         'remote_ip': utils.get_client_ip(request)}
+     LOG.info(msg)
+ 
++    # handle user logout
++    utils.handle_user_logout(request.user.username)
++
+     """ Securely logs a user out. """
+     return django_auth_views.logout_then_login(request, login_url=login_url,
+                                                **kwargs)
+-- 
+1.8.3.1
+

@@ -1,0 +1,12 @@
+[Unit]
+Description=OpenStack Murano Cloud Foundry API Service
+After=syslog.target network.target mysqld.service
+
+[Service]
+Type=simple
+User=murano
+ExecStart=/usr/bin/murano-cfapi --config-file /etc/murano/murano.conf
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

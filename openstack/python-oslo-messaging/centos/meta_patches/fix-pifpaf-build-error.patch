@@ -1,0 +1,42 @@
+From 7473db64725de270d899a5ec35801c25f5ba54b1 Mon Sep 17 00:00:00 2001
+From: jmckenna <jason.mckenna@windriver.com>
+Date: Thu, 7 Dec 2017 09:10:31 -0500
+Subject: [PATCH] refactor patch "fix pifpaf build error"
+
+
+diff --git a/SPECS/python-oslo-messaging.spec b/SPECS/python-oslo-messaging.spec
+index abc5dce..627a1be 100644
+--- a/SPECS/python-oslo-messaging.spec
++++ b/SPECS/python-oslo-messaging.spec
+@@ -52,6 +52,7 @@ BuildRequires: python-tenacity
+ BuildRequires: python-testrepository
+ BuildRequires: python-testscenarios
+ BuildRequires: python-testtools
++BuildRequires: python2-pifpaf
+ 
+ 
+ Requires:   python-amqp >= 2.1.0
+@@ -135,6 +136,7 @@ Requires:      python-oslotest
+ Requires:      python-testrepository
+ Requires:      python-testscenarios
+ Requires:      python-testtools
++Requires:      python2-pifpaf
+ 
+ %description -n python2-%{pkg_name}-tests
+ Tests for the OpenStack common messaging library.
+@@ -165,6 +167,7 @@ BuildRequires: python3-tenacity
+ BuildRequires: python3-testrepository
+ BuildRequires: python3-testscenarios
+ BuildRequires: python3-testtools
++BuildRequires: python3-pifpaf
+ 
+ Requires:   python3-amqp >= 2.1.0
+ Requires:   python3-debtcollector >= 1.2.0
+@@ -217,6 +220,7 @@ Requires:      python3-oslotest
+ Requires:      python3-testrepository
+ Requires:      python3-testscenarios
+ Requires:      python3-testtools
++Requires:      python3-pifpaf
+ 
+ %description -n python3-%{pkg_name}-tests
+ Tests for the OpenStack common messaging library.

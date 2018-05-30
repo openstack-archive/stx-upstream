@@ -1,0 +1,101 @@
+From c390a3bc6920728806f581b85d46f02d75eb651c Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Mon, 11 Dec 2017 16:21:42 -0500
+Subject: [PATCH 1/1] Fix event query to sqlalchemy with non admin user
+
+This is an upstream fix.
+https://github.com/openstack/panko/commit/99d591df950271594ee049caa3ff22304437a228
+
+Do not port this patch in the next panko rebase.
+---
+ panko/storage/impl_sqlalchemy.py                   | 34 +++++++++++++++-------
+ .../functional/storage/test_storage_scenarios.py   |  4 +--
+ 2 files changed, 25 insertions(+), 13 deletions(-)
+
+diff --git a/panko/storage/impl_sqlalchemy.py b/panko/storage/impl_sqlalchemy.py
+index 670c8d7..29b5b97 100644
+--- a/panko/storage/impl_sqlalchemy.py
++++ b/panko/storage/impl_sqlalchemy.py
+@@ -24,6 +24,7 @@ from oslo_log import log
+ from oslo_utils import timeutils
+ import sqlalchemy as sa
+ from sqlalchemy.engine import url as sqlalchemy_url
++from sqlalchemy.orm import aliased
+ 
+ from panko import storage
+ from panko.storage import base
+@@ -61,8 +62,8 @@ trait_models_dict = {'string': models.TraitText,
+                      'float': models.TraitFloat}
+ 
+ 
+-def _build_trait_query(session, trait_type, key, value, op='eq'):
+-    trait_model = trait_models_dict[trait_type]
++def _get_model_and_conditions(trait_type, key, value, op='eq'):
++    trait_model = aliased(trait_models_dict[trait_type])
+     op_dict = {'eq': (trait_model.value == value),
+                'lt': (trait_model.value < value),
+                'le': (trait_model.value <= value),
+@@ -70,8 +71,7 @@ def _build_trait_query(session, trait_type, key, value, op='eq'):
+                'ge': (trait_model.value >= value),
+                'ne': (trait_model.value != value)}
+     conditions = [trait_model.key == key, op_dict[op]]
+-    return (session.query(trait_model.event_id.label('ev_id'))
+-            .filter(*conditions))
++    return (trait_model, conditions)
+ 
+ 
+ class Connection(base.Connection):
+@@ -274,16 +274,28 @@ class Connection(base.Connection):
+                 key = trait_filter.pop('key')
+                 op = trait_filter.pop('op', 'eq')
+                 trait_type, value = list(trait_filter.items())[0]
+-                trait_subq = _build_trait_query(session, trait_type,
+-                                                key, value, op)
+-                for trait_filter in filters:
++
++                trait_model, conditions = _get_model_and_conditions(
++                    trait_type, key, value, op)
++                trait_subq = (session
++                              .query(trait_model.event_id.label('ev_id'))
++                              .filter(*conditions))
++
++                first_model = trait_model
++                for label_num, trait_filter in enumerate(filters):
+                     key = trait_filter.pop('key')
+                     op = trait_filter.pop('op', 'eq')
+                     trait_type, value = list(trait_filter.items())[0]
+-                    q = _build_trait_query(session, trait_type,
+-                                           key, value, op)
+-                    trait_subq = trait_subq.filter(
+-                        trait_subq.subquery().c.ev_id == q.subquery().c.ev_id)
++                    trait_model, conditions = _get_model_and_conditions(
++                        trait_type, key, value, op)
++                    trait_subq = (
++                        trait_subq
++                        .add_columns(
++                            trait_model.event_id.label('l%d' % label_num))
++                        .filter(
++                            first_model.event_id == trait_model.event_id,
++                            *conditions))
++
+                 trait_subq = trait_subq.subquery()
+ 
+             query = (session.query(models.Event.id)
+diff --git a/panko/tests/functional/storage/test_storage_scenarios.py b/panko/tests/functional/storage/test_storage_scenarios.py
+index 3af76b4..9af75c8 100644
+--- a/panko/tests/functional/storage/test_storage_scenarios.py
++++ b/panko/tests/functional/storage/test_storage_scenarios.py
+@@ -340,8 +340,8 @@ class GetEventTest(EventTestBase):
+ 
+     def test_get_event_multiple_trait_filter(self):
+         trait_filters = [{'key': 'trait_B', 'integer': 1},
+-                         {'key': 'trait_A', 'string': 'my_Foo_text'},
+-                         {'key': 'trait_C', 'float': 0.123456}]
++                         {'key': 'trait_C', 'float': 0.123456},
++                         {'key': 'trait_A', 'string': 'my_Foo_text'}]
+         event_filter = storage.EventFilter(self.start, self.end,
+                                            traits_filter=trait_filters)
+         events = [event for event in self.conn.get_events(event_filter)]
+-- 
+1.8.3.1
+

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Generate maximum CPU load for a core
+# Launch this X times for X cores to get 100% utilization
+dd if=/dev/urandom of=/dev/null &

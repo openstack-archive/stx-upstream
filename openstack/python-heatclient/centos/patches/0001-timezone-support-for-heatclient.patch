@@ -1,0 +1,224 @@
+From d144d6cfe42d8af42106f709114fd707afcfaede Mon Sep 17 00:00:00 2001
+From: Litao Gao <litao.gao@windriver.com>
+Date: Fri, 24 Mar 2017 04:34:54 -0400
+Subject: [PATCH 1/1] timezone support for heatclient
+
+---
+ heatclient/common/utils.py | 48 ++++++++++++++++++++++++++++++++++++++++++++++
+ heatclient/v1/shell.py     | 18 +++++++++++++++++
+ 2 files changed, 66 insertions(+)
+
+diff --git a/heatclient/common/utils.py b/heatclient/common/utils.py
+index f2b20f1..9f2767f 100644
+--- a/heatclient/common/utils.py
++++ b/heatclient/common/utils.py
+@@ -18,6 +18,14 @@ import logging
+ import os
+ import textwrap
+ import uuid
++import sys
++import re
++
++from functools import wraps
++from cStringIO import StringIO
++from datetime import datetime
++import dateutil
++from dateutil import parser
+ 
+ from oslo_serialization import jsonutils
+ from oslo_utils import encodeutils
+@@ -371,3 +379,43 @@ def get_response_body(resp):
+     else:
+         body = None
+     return body
++
++
++def parse_date(string_data):
++    """Parses a date-like input string into a timezone aware Python
++    datetime.
++    """
++    pattern = r'(\d{4}-\d{2}-\d{2}[T ])?\d{2}:\d{2}:\d{2}(\.\d{6})?Z?'
++
++    def convert_date(matchobj):
++        formats = ["%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%d %H:%M:%S.%f",
++                   "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S",
++                   "%Y-%m-%dT%H:%M:%SZ", "%H:%M:%S"]
++        datestring = matchobj.group(0)
++        if datestring:
++            for format in formats:
++                try:
++                    datetime.strptime(datestring, format)
++                    datestring += "+0000"
++                    parsed = parser.parse(datestring)
++                    converted = parsed.astimezone(dateutil.tz.tzlocal())
++                    return datetime.strftime(converted, format)
++                except Exception:
++                    pass
++        return datestring
++
++    return re.sub(pattern, convert_date, str(string_data))
++
++
++def timestamp_converter(display):
++    """
++    Decorator that parse the timestamp and convert according timezone
++    """
++    @wraps(display)
++    def new_f(*args, **kwargs):
++        sys.stdout = mystdout = StringIO()
++        display(*args, **kwargs)
++        sys.stdout = sys.__stdout__
++        content = mystdout.getvalue()
++        print parse_date(content)
++    return new_f
+diff --git a/heatclient/v1/shell.py b/heatclient/v1/shell.py
+index ac4ecb9..d8c8324 100644
+--- a/heatclient/v1/shell.py
++++ b/heatclient/v1/shell.py
+@@ -45,6 +45,7 @@ def show_deprecated(deprecated, recommended):
+                    )
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('-f', '--template-file', metavar='<FILE>',
+            help=_('Path to the template.'))
+ @utils.arg('-e', '--environment-file', metavar='<FILE or URL>',
+@@ -414,6 +415,7 @@ def do_action_check(hc, args):
+         do_stack_list(hc)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of stack to describe.'))
+ @utils.arg('--no-resolve-outputs', action="store_true",
+@@ -592,6 +594,7 @@ def do_stack_cancel_update(hc, args):
+         do_stack_list(hc)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('-s', '--show-deleted', default=False, action="store_true",
+            help=_('Include soft-deleted stacks in the stack listing.'))
+ @utils.arg('-n', '--show-nested', default=False, action="store_true",
+@@ -695,6 +698,7 @@ def do_stack_list(hc, args=None):
+     utils.print_list(stacks, fields, sortby_index=sortby_index)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of stack to query.'))
+ def do_output_list(hc, args):
+@@ -856,6 +860,7 @@ def do_resource_type_template(hc, args):
+             print(utils.format_output(template))
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of stack to get the template for.'))
+ def do_template_show(hc, args):
+@@ -929,6 +934,7 @@ def do_template_validate(hc, args):
+     print(jsonutils.dumps(validation, indent=2, ensure_ascii=False))
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of stack to show the resources for.'))
+ @utils.arg('-n', '--nested-depth', metavar='<DEPTH>',
+@@ -970,6 +976,7 @@ def do_resource_list(hc, args):
+         utils.print_list(resources, fields, sortby_index=4)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of stack to show the resource for.'))
+ @utils.arg('resource', metavar='<RESOURCE>',
+@@ -1135,6 +1142,7 @@ def do_hook_clear(hc, args):
+                                         hook_type, resource_pattern)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of stack to show the events for.'))
+ @utils.arg('-r', '--resource', metavar='<RESOURCE>',
+@@ -1258,6 +1266,7 @@ def do_event(hc, args):
+     do_event_show(hc, args)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of stack to show the events for.'))
+ @utils.arg('resource', metavar='<RESOURCE>',
+@@ -1285,6 +1294,7 @@ def do_event_show(hc, args):
+         utils.print_dict(event.to_dict(), formatters=formatters)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('-f', '--definition-file', metavar='<FILE or URL>',
+            help=_('Path to JSON/YAML containing map defining '
+                   '<inputs>, <outputs>, and <options>.'))
+@@ -1355,6 +1365,7 @@ def do_config_list(hc, args):
+     utils.print_list(scs, fields, sortby_index=None)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<ID>',
+            help=_('ID of the config.'))
+ @utils.arg('-c', '--config-only', default=False, action="store_true",
+@@ -1475,6 +1486,7 @@ def do_deployment_list(hc, args):
+     utils.print_list(deployments, fields, sortby_index=5)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<ID>',
+            help=_('ID of the deployment.'))
+ def do_deployment_show(hc, args):
+@@ -1490,6 +1502,7 @@ def do_deployment_show(hc, args):
+         print(jsonutils.dumps(sd.to_dict(), indent=2))
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<ID>',
+            help=_('ID of the server to fetch deployments for.'))
+ def do_deployment_metadata_show(hc, args):
+@@ -1535,6 +1548,7 @@ def do_deployment_delete(hc, args):
+                                {'count': failure_count, 'total': len(args.id)})
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<ID>',
+            help=_('ID deployment to show the output for.'))
+ @utils.arg('output', metavar='<OUTPUT NAME>', nargs='?', default=None,
+@@ -1589,6 +1603,7 @@ def do_build_info(hc, args):
+     utils.print_dict(result, formatters=formatters)
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of stack to snapshot.'))
+ @utils.arg('-n', '--name', metavar='<NAME>',
+@@ -1608,6 +1623,7 @@ def do_stack_snapshot(hc, args):
+         print(jsonutils.dumps(snapshot, indent=2, ensure_ascii=False))
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of the stack containing the snapshot.'))
+ @utils.arg('snapshot', metavar='<SNAPSHOT>',
+@@ -1655,6 +1671,7 @@ def do_stack_restore(hc, args):
+         raise exc.CommandError(_('Stack or snapshot not found'))
+ 
+ 
++@utils.timestamp_converter
+ @utils.arg('id', metavar='<NAME or ID>',
+            help=_('Name or ID of the stack containing the snapshots.'))
+ def do_snapshot_list(hc, args):
+@@ -1678,6 +1695,7 @@ def do_snapshot_list(hc, args):
+         utils.print_list(snapshots["snapshots"], fields, formatters=formatters)
+ 
+ 
++@utils.timestamp_converter
+ def do_service_list(hc, args=None):
+     '''List the Heat engines.'''
+     show_deprecated('heat service-list',
+-- 
+1.8.3.1
+

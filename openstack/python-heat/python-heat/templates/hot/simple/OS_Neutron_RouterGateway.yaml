@@ -1,0 +1,75 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Neutron::RouterGateway
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#    An external network named: external-net0 (neutron net-list)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    The tenant (or admin) needs access to the network selected
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Neutron_RouterGateway.yaml STACK
+#
+# Expected Outcome:
+#  Creates a router with no external gateway called  sample_gateway_router
+#   and then adds a gateway to it
+#      neutron router-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Neutron::RouterGateway heat resource
+
+parameters:
+
+    NETWORK:
+        description: the external network to use when creating the router
+        type: string
+        default: external-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    ROUTER_NAME:
+        description: name of the new router
+        type: string
+        default: sample_gateway_router
+
+resources:
+
+    OS_Neutron_RouterGateway:
+        type: OS::Neutron::RouterGateway
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+            # either network_id(uuid) or network (name of uuid)
+            # network_id:
+            network: {get_param: NETWORK}
+
+            # router_id: {required: true, type: string}
+            router_id: { get_resource: some_router}
+
+            #################################################
+            # Optional properties: None
+            #################################################
+
+    some_router:
+        type: OS::Neutron::Router
+        properties:
+            name: { get_param: ROUTER_NAME }
+            external_gateway_info:
+                network: { get_param: NETWORK }
+                enable_snat: true

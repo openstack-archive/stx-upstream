@@ -1,0 +1,95 @@
+#!/bin/sh
+
+# This is a backwards compatibility hack to allow an /etc/init.d/nova-compute
+# script that will still start up nova-compute but also allow the "service"
+# mechanism to properly track the run state of the service.
+
+. /etc/init.d/task_affinity_functions.sh
+
+function log ()
+{
+    logger -p local1.info -t nova-compute $@
+    echo nova-compute: "$@"
+}
+
+# WRS: nova-compute may be started only by nova-cleanup or nova-startup.
+# Initial start via runlevel nova-init -> /etc/init.d/nova-cleanup -> /etc/init.d/nova-compute
+# Restart via pmond monitor -> /etc/init.d/nova-startup -> /etc/init.d/nova-compute
+function check_caller ()
+{
+    caller=$(pstree -s -p $$)
+    if echo "${caller}" | grep -q -v -e "nova-cleanup" -e "nova-startup"; then
+        log "Call $0 ignored, expecting caller: nova-cleanup or nova-startup. Caller=${caller}"
+        exit 0
+    fi
+}
+
+start ()
+{
+    if [ ! -d /var/log/nova ]; then
+        mkdir /var/log/nova
+    fi
+
+    log "Reaffining tasks back to platform cores..."
+    affine_tasks_to_platform_cores
+    [[ $? -eq 0 ]] && log "Tasks re-affining done." || log "Tasks re-affining failed."
+
+    echo -n "Starting nova-compute..."
+    systemctl start nova-compute.service
+
+    if [ $? -eq 0 ]; then
+        echo "done."
+    else
+        echo "failed."
+    fi
+}
+
+stop ()
+{
+    echo -n "Stopping nova-compute..."
+    systemctl stop nova-compute.service
+    if [ $? -eq 0 ]; then
+        echo "done."
+    else
+        echo "failed."
+    fi
+    rm -f $PIDFILE
+}
+
+status()
+{
+    systemctl status nova-compute.service
+}
+
+reset()
+{
+    :
+}
+
+case "$1" in
+    start)
+        check_caller
+        start
+        ;;
+    stop)
+        check_caller
+        stop
+        ;;
+    restart|force-reload|reload)
+        stop
+        start
+        ;;
+    status)
+        status
+        ;;
+    reset)
+        reset
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|force-reload|restart|reload|status|reset}"
+        exit 1
+        ;;
+esac
+
+exit 0
+

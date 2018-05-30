@@ -1,0 +1,7 @@
+SRC_DIR="$CGCS_BASE/git/heat"
+COPY_LIST="$FILES_BASE/*"
+TAR_NAME=openstack-heat
+
+# SRCREV is the last upstream commit
+TIS_BASE_SRCREV=be1e2e9fa5b44fb186d1705e0fefff4b8eec2233
+TIS_PATCH_VER=GITREVCOUNT

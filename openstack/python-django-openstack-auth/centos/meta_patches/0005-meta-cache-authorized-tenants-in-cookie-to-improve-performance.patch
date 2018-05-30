@@ -1,0 +1,25 @@
+From ac0df9c1b8cddc4bb5a06d7e1226144d3f85e83d Mon Sep 17 00:00:00 2001
+From: Kam Nasim <kam.nasim@windriver.com>
+Date: Wed, 14 Feb 2018 10:39:33 -0500
+Subject: [PATCH] meta patch for
+ cache-authorized-tenants-in-cookie-to-improve-performance
+
+---
+ SPECS/python-django-openstack-auth.spec | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/SPECS/python-django-openstack-auth.spec b/SPECS/python-django-openstack-auth.spec
+index 3a462de..21e4bde 100644
+--- a/SPECS/python-django-openstack-auth.spec
++++ b/SPECS/python-django-openstack-auth.spec
+@@ -17,6 +17,7 @@ Source0:        https://tarballs.openstack.org/django_openstack_auth/django_open
+ # WRS Patches
+ Patch0001: 0001-Pike-rebase-for-openstack-auth.patch
+ Patch0002: 0002-disable-token-validation-per-auth-request.patch
++Patch0003: 0003-cache-authorized-tenants-in-cookie-to-improve-performance.patch
+ 
+ BuildArch:      noarch
+ 
+-- 
+1.8.3.1
+

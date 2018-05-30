@@ -1,0 +1,234 @@
+################################################################################
+# Copyright (c) 2013-2014 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#   Demonstrates creating:
+#      A static nova instance that acts as a load balancer
+#      An autoscaling stack of nova instances
+#      Use of the WRS autoscaling naming enhancement
+#
+# Pre-Reqs:
+#   Normal lab setup. Capable of launching 3 VMs
+#   A keypair setup for the current user.   (nova keypair-list)
+#   A flavor called: m1.small (nova flavor-list)
+#   A glance image called:  wrl6 (glance image-list)
+#
+# Optional Template Parameters:
+#   KEYPAIR: A keypair setup for the current user (nova keypair-list)
+#   KEYPAIR_ADMIN_USER: The account to use when doing ssh to the VM (ssh keys
+#     injected from the keypair)
+#   FLAVOR: A nova flavor to use in launching the VMs and load balancer
+#     (nova flavor-list)
+#   IMAGE: A glance image to use in launching the VMs (glance image-list)
+#   LB_IMAGE: A glance image to use in launching the load balancer
+#    (glance image-list)
+#   LB_NETWORK: name of the network to use for the load balancer VM
+#      (neutron net-list)
+#   VM_NETWORK: name of the network to use for the scaling VMs
+#     (neutron net-list)
+#   PUBLIC_NETWORK:  name of public network to use for all VMs
+#    (neutron net-list)
+#   INTERNAL_NETWORK: name of the internal network to use for all VMs
+#    (neutron net-list)
+#   METER_NAME: name of the ceilometer meter to trigger autoscaling
+#    (ceilometer meter-list)
+#
+# Tenant Considerations:
+#    The default meters (vswitch) are not accessible to tenants
+#
+# Sample CLI syntax:
+#    heat stack-create -f CombinationAutoScaling.yaml STACK
+#
+# Expected Outcome:
+#  A VM running the load balancer (nova list)
+#  An auto-scaling stack of server VMs (nova list)
+#  New ceilometer alarm triggers  (ceilometer alarm-list)
+#
+#  Note: there is no communication between the load balancer and the VMs
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: Demonstrate mixture of regular and autoscaling VMs
+
+parameters:
+
+    KEYPAIR:
+        description: Name of an existing KeyPair for the VMs
+        type: string
+        default: controller-0
+        constraints:
+            - custom_constraint: nova.keypair
+
+    KEYPAIR_ADMIN_USER:
+        type: string
+        description: Name of user account to inject ssh keys from keypair
+        default: 'ec2-user'
+
+    FLAVOR:
+        description: Instance flavor
+        type: string
+        default: m1.small
+        constraints:
+            - custom_constraint: nova.flavor
+
+    LB_IMAGE:
+        description: the name or uuid of the loadbalancer glance image
+        type: string
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    IMAGE:
+        description: the name or uuid of the server image in glance
+        type: string
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    PUBLIC_NETWORK:
+        type: string
+        description: Public network name
+        default: public-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    INTERNAL_NETWORK:
+        type: string
+        description: Internal network name
+        default: internal-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    VM_NETWORK:
+        type: string
+        description: Server network name
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    LB_NETWORK:
+        type: string
+        description: Load Balancer network name
+        default: internal-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    METER_NAME:
+        type: string
+        description: ceilometer meter to trigger autoscaling
+        default: vswitch.port.receive.util
+
+    MinClusterSize:
+        type: string
+        default: '1'
+        description: Minimum number of servers in the scaling group
+
+    MaxClusterSize:
+        type: string
+        default: '2'
+        description: Maximum number of servers in the scaling group
+
+resources:
+
+    LoadBalancer:
+        type: OS::Nova::Server
+        properties:
+            name:
+                list_join:
+                    - "-"
+                    - [{get_param: 'OS::stack_name'}, 'LoadBalancer']
+            image: { get_param: LB_IMAGE}
+            flavor: {get_param: FLAVOR }
+            key_name: {get_param: KEYPAIR}
+            admin_user: {get_param: KEYPAIR_ADMIN_USER }
+            networks:
+                - network: { get_param: PUBLIC_NETWORK }
+                  vif-model: 'virtio'
+                - network: { get_param: LB_NETWORK }
+                - network: { get_param: INTERNAL_NETWORK }
+            user_data_format: 'RAW'
+            user_data: |
+                #wrs-config
+                DEMO_PERSONALITY="lb"
+                FUNCTIONS="hugepages,demo,"
+
+
+    SrvScaleOutPolicy:
+        type: OS::Heat::ScalingPolicy
+        properties:
+            auto_scaling_group_id: { get_resource: ServerGroup }
+            adjustment_type: change_in_capacity
+            scaling_adjustment: 1
+            cooldown: 30
+
+    SrvScaleInPolicy:
+        type: OS::Heat::ScalingPolicy
+        properties:
+            auto_scaling_group_id: { get_resource: ServerGroup }
+            adjustment_type: change_in_capacity
+            scaling_adjustment: -1
+            cooldown: 30
+
+    LINKAlarmHigh:
+        type: OS::Ceilometer::Alarm
+        properties:
+            description: Scale-out if the max link util > 50% for 30 secs
+            meter_name: { get_param: METER_NAME }
+            statistic: max
+            period: '30'
+            evaluation_periods: '1'
+            threshold: '50'
+            alarm_actions:
+                - {get_attr: [SrvScaleOutPolicy, alarm_url]}
+            comparison_operator: gt
+
+    LINKAlarmLow:
+        type: OS::Ceilometer::Alarm
+        properties:
+            description: Scale-in if the max link util < 20% for 30 secs
+            meter_name: { get_param: METER_NAME }
+            statistic: max
+            period: '30'
+            evaluation_periods: '1'
+            threshold: '20'
+            alarm_actions:
+                - {get_attr: [SrvScaleInPolicy, alarm_url]}
+            comparison_operator: lt
+
+    ServerGroup:
+        type: OS::Heat::AutoScalingGroup
+        properties:
+            cooldown: 60
+            desired_capacity: 1
+            min_size: { get_param: MinClusterSize }
+            max_size: { get_param: MaxClusterSize }
+            resource:
+                type: OS::Nova::Server
+                metadata:
+                    wrs-groupindex-mode: true
+                properties:
+                    name:
+                        list_join:
+                            - "-"
+                            - [{get_param: 'OS::stack_name'}, 'srv', '']
+                    flavor: { get_param: FLAVOR }
+                    image: { get_param: IMAGE }
+                    key_name: { get_param: KEYPAIR }
+                    admin_user: {get_param: KEYPAIR_ADMIN_USER }
+                    metadata: {"metering.stack": {get_param: "OS::stack_id"}}
+                    networks:
+                        - network: { get_param: PUBLIC_NETWORK }
+                          vif-model: 'virtio'
+                        - network: { get_param: VM_NETWORK }
+                        - network: { get_param: INTERNAL_NETWORK }
+                    user_data_format: 'RAW'
+                    user_data: |
+                        #wrs-config
+                        DEMO_PERSONALITY="srv"
+                        FUNCTIONS="hugepages,demo,"

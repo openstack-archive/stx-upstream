@@ -1,0 +1,27 @@
+From e38fcd3820d8c48d23d3b17a20d78d600c8e0347 Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Mon, 2 Oct 2017 14:42:44 -0400
+Subject: [PATCH 1/2] WRS: update-package-versioning-for-tis-format.patch
+
+Conflicts:
+	SPECS/python-oslo-service.spec
+---
+ SPECS/python-oslo-service.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/python-oslo-service.spec b/SPECS/python-oslo-service.spec
+index 172e484..ebf5ccf 100644
+--- a/SPECS/python-oslo-service.spec
++++ b/SPECS/python-oslo-service.spec
+@@ -8,7 +8,7 @@
+ 
+ Name:           python-%{pname}
+ Version:        1.16.1
+-Release:        1%{?dist}
++Release:        1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:        Oslo service library
+ 
+ License:        ASL 2.0
+-- 
+1.9.1
+

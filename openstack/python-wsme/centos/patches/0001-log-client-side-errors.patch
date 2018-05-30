@@ -1,0 +1,41 @@
+From cf0c831d31b970bf920f3152d50d849193e9154a Mon Sep 17 00:00:00 2001
+From: Kam Nasim <kam.nasim@windriver.com>
+Date: Tue, 3 Jan 2017 13:09:29 -0500
+Subject: [PATCH] change ClientSideError logging verbosity
+
+Regression introduced in 16.10. Reverts the following
+ upstream commit since WSME is used by SysInv-api to return ClientSideErrors,
+ and in the case of CLI commands, no log history for such errors would be
+ available.
+
+Reverting commit 94cd1751c7b028898a38fda0689cfce15e2a96e2
+
+  Author: Chris Dent <chdent@redhat.com>
+  Date: Thu Apr 9 14:04:32 2015 +0100
+
+    Change client-side error logging to debug
+
+    A client-side error (that is something akin to a 4xx HTTP response
+    code) is something that is common, it is not something that should
+    cause WARNING level log messages. This change switches to using
+    DEBUG so that it is easier to filter out the noisy messages.
+---
+ wsme/api.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/wsme/api.py b/wsme/api.py
+index 4aab9a4..2ba70e0 100644
+--- a/wsme/api.py
++++ b/wsme/api.py
+@@ -218,7 +218,7 @@ def format_exception(excinfo, debug=False):
+                        else six.text_type(error))
+         r = dict(faultcode="Client",
+                  faultstring=faultstring)
+-        log.debug("Client-side error: %s" % r['faultstring'])
++        log.warning("Client-side error: %s" % r['faultstring'])
+         r['debuginfo'] = None
+         return r
+     else:
+-- 
+1.8.3.1
+

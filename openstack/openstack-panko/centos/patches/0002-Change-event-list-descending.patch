@@ -1,0 +1,27 @@
+From 05b89c2f78357ad39b0cd9eb74903e14d1f56758 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Thu, 16 Nov 2017 15:14:17 -0500
+Subject: [PATCH 1/1] Change event list descending
+
+---
+ panko/storage/models.py | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/panko/storage/models.py b/panko/storage/models.py
+index 9c578c8..ed4c9a8 100644
+--- a/panko/storage/models.py
++++ b/panko/storage/models.py
+@@ -35,8 +35,8 @@ class Event(base.Model):
+ 
+     SUPPORT_DIRS = ('asc', 'desc')
+     SUPPORT_SORT_KEYS = ('message_id', 'generated')
+-    DEFAULT_DIR = 'asc'
+-    DEFAULT_SORT = [('generated', 'asc'), ('message_id', 'asc')]
++    DEFAULT_DIR = 'desc'
++    DEFAULT_SORT = [('generated', 'desc'), ('message_id', 'desc')]
+     PRIMARY_KEY = 'message_id'
+ 
+     def __init__(self, message_id, event_type, generated, traits, raw):
+-- 
+1.8.3.1
+

@@ -1,0 +1,6 @@
+TAR_NAME="python-magnumclient"
+SRC_DIR="$CGCS_BASE/git/python-magnumclient"
+
+TIS_BASE_SRCREV=6bef59aec50e41ec2133fad1bd1fc4c954a08312
+TIS_PATCH_VER=1
+

@@ -1,0 +1,42 @@
+From bc92f8743ede901522e6b19af208a4e5d038fa2f Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Mon, 2 Oct 2017 14:28:46 -0400
+Subject: [PATCH 3/5] WRS: meta-remove-default-logrotate.patch
+
+---
+ SPECS/openstack-aodh.spec | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/SPECS/openstack-aodh.spec b/SPECS/openstack-aodh.spec
+index c844a28..b52931c 100644
+--- a/SPECS/openstack-aodh.spec
++++ b/SPECS/openstack-aodh.spec
+@@ -11,7 +11,6 @@ URL:              https://github.com/openstack/aodh.git
+ Source0:          https://tarballs.openstack.org/%{pypi_name}/%{pypi_name}-%{upstream_version}.tar.gz
+ 
+ Source1:          %{pypi_name}-dist.conf
+-Source2:          %{pypi_name}.logrotate
+ Source10:         %{name}-api.service
+ Source11:         %{name}-evaluator.service
+ Source12:         %{name}-notifier.service
+@@ -270,9 +269,6 @@ install -d -m 755 %{buildroot}%{_sharedstatedir}/aodh
+ install -d -m 755 %{buildroot}%{_sharedstatedir}/aodh/tmp
+ install -d -m 755 %{buildroot}%{_localstatedir}/log/aodh
+ 
+-# Install logrotate
+-install -p -D -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
+-
+ # Install systemd unit services
+ install -p -D -m 644 %{SOURCE10} %{buildroot}%{_unitdir}/%{name}-api.service
+ install -p -D -m 644 %{SOURCE11} %{buildroot}%{_unitdir}/%{name}-evaluator.service
+@@ -352,7 +348,6 @@ exit 0
+ %config(noreplace) %attr(-, root, aodh) %{_sysconfdir}/aodh/aodh.conf
+ %config(noreplace) %attr(-, root, aodh) %{_sysconfdir}/aodh/policy.json
+ %config(noreplace) %attr(-, root, aodh) %{_sysconfdir}/aodh/api_paste.ini
+-%config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
+ %dir %attr(0755, aodh, root)  %{_localstatedir}/log/aodh
+ 
+ %defattr(-, aodh, aodh, -)
+-- 
+1.9.1
+

@@ -1,0 +1,11 @@
+[Unit]
+Description=OpenStack Heat API Service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/heat-api --config-file /usr/share/heat/heat-dist.conf --config-file /etc/heat/heat.conf
+
+[Install]
+WantedBy=multi-user.target

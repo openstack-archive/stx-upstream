@@ -1,0 +1,99 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Nova::ServerGroup
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    None
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Nova_ServerGroup.yaml STACK
+#
+# Expected Outcome:
+#  A new nova servergroup of size 2 and type affinity
+#    nova server-group-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Nova::ServerGroup heat resource
+
+parameters:
+
+    FLAVOR:
+        type: string
+        description: Nova flavor to use (nova flavor-list)
+        default: small
+        constraints:
+            - custom_constraint: nova.flavor
+
+    NETWORK:
+        type: string
+        description: network to use (neutron net-list)
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    IMAGE:
+        description: Glance image to use (glance image-list)
+        type: string
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    SIZE:
+        description: Number of servers to create for the group
+        type: number
+        default: 2
+
+resources:
+
+    OS_Nova_ServerGroup:
+        type: OS::Nova::ServerGroup
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+            # policies: {description: The scheduler policy for the server
+            # group., required: true, type: string}
+            # Note: only valid values are 'affinity'  or 'anti-affinity'
+            policies: ['affinity']
+
+            #################################################
+            # Optional properties:
+            #################################################
+            # best_effort: {description: Whether the scheduler should still
+            # allow the server to be created even if it cannot satisfy the
+            # group policy. (Optional.), required: false, type: boolean}
+            best_effort: true
+
+            # group_size: {description: Maximum number of servers in the
+            # server group. (Optional.), required: false, type: integer}
+            group_size: { get_param: SIZE }
+
+    OS_Nova_RG:
+        type: OS::Heat::ResourceGroup
+        properties:
+            count: { get_param: SIZE }
+            resource_def:
+                type: OS::Nova::Server
+                properties:
+                    networks:
+                        - network: { get_param: NETWORK }
+                    image: { get_param: IMAGE }
+                    flavor: { get_param: FLAVOR }
+                    scheduler_hints:
+                        group: { get_resource: OS_Nova_ServerGroup }

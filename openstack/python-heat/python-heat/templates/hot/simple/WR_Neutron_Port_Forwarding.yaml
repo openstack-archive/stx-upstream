@@ -1,0 +1,129 @@
+################################################################################
+# Copyright (c) 2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource WR::Neutron::ProviderNet
+#
+# Pre-Reqs:
+#    A glance image called: wrl6
+#    A nova flavor called: m1.tiny
+#    A neutron network called: external-net0
+#    Permissions to create a neutron router and a nova server
+#
+# Tenant Considerations:
+#    This is an admin activity
+#
+# Sample CLI syntax:
+#    heat stack-create -f  WR_Neutron_PortForwarding.yaml STACK
+#
+# Expected Outcome:
+#  A new router called:  PF_Router  (neutron router-list)
+#  A new server called:  PF_Server  (nova list)
+#  A new port forwarding rule created between a public port number on the router
+#    and a private port number on a VM instance.
+#  Verify using:   neutron portforwarding-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the WR::Neutron::PortForwarding heat resource
+
+parameters:
+
+    ROUTER_NAME:
+        description: Name of the new router instance
+        type: string
+        default: PF_Router
+
+    SERVER_NAME:
+        description: Name of the new server
+        type: string
+        default: PF_Server
+
+    NETWORK:
+        description: the external network to use when creating the Router
+        type: string
+        default: external-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    IMAGE:
+        type: string
+        description: Name of image to use for server
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    FLAVOR:
+        type: string
+        description: Flavor to use for server
+        default: m1.tiny
+        constraints:
+            - custom_constraint: nova.flavor
+
+    INSIDE_PORT:
+        description: Layer4 protocol port number in use on the VM instance
+        type: number
+        default: 80
+
+    OUTSIDE_PORT:
+        description: Layer4 protocol port number to publish on the VM instance
+        type: number
+        default: 8080
+
+    PROTOCOL:
+        description: Layer4 protocol type
+        type: string
+        default: tcp
+
+    DESCRIPTION:
+        description: User defined description of the forwarding rule
+        type: string
+        default: A sample port forwarding rule
+
+resources:
+    A_Router:
+        type: OS::Neutron::Router
+        properties:
+            admin_state_up: true
+            name: { get_param: ROUTER_NAME }
+            external_gateway_info:
+                network: {get_param: NETWORK}
+                enable_snat: true
+
+    A_Server:
+        type: OS::Nova::Server
+        properties:
+            name: { get_param: SERVER_NAME }
+            image: {get_param: IMAGE}
+            flavor: {get_param: FLAVOR}
+            networks: [ network: { get_param: NETWORK } ]
+
+    WR_Neutron_Port_Forwarding:
+        type: WR::Neutron::PortForwarding
+        properties:
+            # required properties
+            router_id: { get_resource: A_Router }
+            inside_addr: { get_attr: [A_Server, first_address ] }
+            inside_port: { get_param: INSIDE_PORT }
+            outside_port: { get_param: OUTSIDE_PORT }
+            protocol: { get_param: PROTOCOL }
+
+            # optional properties
+            description: { get_param: DESCRIPTION }
+
+outputs:
+
+    pn_show:
+        description: All attributes of the port forwarding rule
+        value: { get_attr: [ WR_Neutron_Port_Forwarding, show] }
+
+    pn_port_id:
+        description: The neutron port uuid to which the IP address is associated
+        value: { get_attr: [ WR_Neutron_Port_Forwarding, port_id] }

@@ -1,0 +1,103 @@
+################################################################################
+# Copyright (c) 2013 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#   This stack is not meant to be launched directly.
+#   It is used by NestedAutoScale.yaml
+#
+# Pre-Reqs:
+#    Refer to NestedAutoScale.yaml
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    Refer to NestedAutoScale.yaml
+#
+# Sample CLI syntax:
+#    Refer to NestedAutoScale.yaml
+#
+# Expected Outcome:
+#    Refer to NestedAutoScale.yaml
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+parameters:
+
+    METADATA:
+        description: a way of passing metadata from the outer stack to the VMs
+        type: json
+
+    NAMING:
+        description: Prefix for the name of the volumes and vms
+        type: string
+        default: ""
+
+    KEYPAIR:
+        description: keypair to use. (nova keypair-list)
+        type: string
+        default: controller-0
+        constraints:
+            - custom_constraint: nova.keypair
+
+    KEYPAIR_ADMIN_USER:
+        description: Name of user account to inject ssh keys from keypair
+        type: string
+        default: 'ec2-user'
+
+    FLAVOR:
+        description: Nova flavor to use.   (nova flavor-list)
+        type: string
+        default: m1.small
+        constraints:
+            - custom_constraint: nova.flavor
+
+    IMAGE:
+        description: Glance image to create cinder volume (glance image-list)
+        type: string
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    NETWORK:
+        description: Name of the private network to use (neutron net-list)
+        type: string
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+resources:
+
+    CinderVolume:
+        type: OS::Cinder::Volume
+        properties:
+            name:
+                list_join:
+                    - "_"
+                    - [{ get_param: NAMING }, "vol", { group_index } ]
+            image: { get_param: IMAGE }
+            size: 2
+
+    NovaServer:
+        type: OS::Nova::Server
+        properties:
+            name:
+                list_join:
+                    - "_"
+                    - [{ get_param: NAMING }, "vm", { group_index } ]
+            metadata: {get_param: METADATA }
+            key_name: { get_param: KEYPAIR }
+            admin_user: { get_param: KEYPAIR_ADMIN_USER }
+            block_device_mapping:
+                - device_name: vda
+                  delete_on_termination: true
+                  volume_id: { get_resource: CinderVolume }
+            flavor: { get_param: FLAVOR }
+            networks:
+                - network: { get_param: NETWORK }

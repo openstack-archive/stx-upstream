@@ -1,0 +1,4 @@
+TAR_NAME=python-networking-bgpvpn
+SRC_DIR="$CGCS_BASE/git/networking-bgpvpn"
+TIS_BASE_SRCREV=bf87af3bab560f737bd3de273733a5702a23d939
+TIS_PATCH_VER=GITREVCOUNT

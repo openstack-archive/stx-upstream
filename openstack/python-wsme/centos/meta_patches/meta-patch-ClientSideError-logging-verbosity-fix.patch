@@ -1,0 +1,36 @@
+From f45245a7435af40a0166e8c5e5fb68383d7774d8 Mon Sep 17 00:00:00 2001
+From: Kam Nasim <kam.nasim@windriver.com>
+Date: Tue, 3 Jan 2017 13:36:15 -0500
+Subject: [PATCH] meta patch for ClientSideError logging verbosity fix.
+
+---
+ SPECS/python-wsme.spec | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/SPECS/python-wsme.spec b/SPECS/python-wsme.spec
+index 943c1cd..7f392b4 100644
+--- a/SPECS/python-wsme.spec
++++ b/SPECS/python-wsme.spec
+@@ -18,6 +18,10 @@ Summary:        Web Services Made Easy
+ License:        MIT
+ URL:            https://pypi.python.org/pypi/WSME
+ Source0:        http://pypi.python.org/packages/source/W/%{pypi_name}/%{pypi_name}-%{version}.tar.gz
++
++# WRS
++Patch0001: 0001-log-client-side-errors.patch
++
+ BuildArch:      noarch
+ 
+ %description
+@@ -87,6 +91,8 @@ manipulate the request and the response objects.
+ %prep
+ %setup -q -n %{pypi_name}-%{version}
+ 
++# Apply WRS patches
++%patch0001 -p1
+ 
+ %build
+ %{__python2} setup.py build
+-- 
+1.8.3.1
+

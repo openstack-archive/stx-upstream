@@ -1,0 +1,2119 @@
+commit bf6c3b52f676888203082e25e404ed5e9503648e
+Author: rpm-build <rpm-build>
+Date:   Mon Feb 12 12:11:43 2018 -0500
+
+    neutron extensions
+
+diff --git a/openstackclient/network/v2/host.py b/openstackclient/network/v2/host.py
+new file mode 100644
+index 0000000..f9dab8b
+--- /dev/null
++++ b/openstackclient/network/v2/host.py
+@@ -0,0 +1,191 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2016 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++"""Host action implementations"""
++
++from osc_lib.command import command
++from osc_lib import exceptions
++from osc_lib import utils
++from openstackclient.network import common
++from openstackclient.network import sdk_utils
++
++_showhost_formatters = {
++    'agents': utils.format_list_of_dicts
++}
++
++_listhost_formatters = {
++    'agents': len
++}
++
++
++def _get_columns(item):
++    column_map = {}
++    return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map)
++
++
++def _get_attrs(client_manager, parsed_args):
++    attrs = {key: parsed_args[key] for key in ['availability', 'id', 'name']
++             if key in parsed_args and parsed_args[key] is not None}
++    return attrs
++
++
++class ListHost(common.NetworkAndComputeLister):
++    """List host"""
++
++    def update_parser_common(self, parser):
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        columns = (
++            'id',
++            'name',
++            'availability',
++            'agents',
++            'subnets',
++            'routers',
++            'ports'
++        )
++        column_headers = (
++            'Id',
++            'Name',
++            'Availability',
++            'Agents',
++            'Subnets',
++            'Routers',
++            'Ports'
++        )
++
++        args = {}
++
++        data = client.hosts(**args)
++
++        return (column_headers,
++                (utils.get_item_properties(
++                    s, columns,
++                    formatters=_listhost_formatters,
++                ) for s in data))
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class ShowHost(common.NetworkAndComputeShowOne):
++    """Show host details"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'host',
++            metavar="<HOST>",
++            help=("ID or name of host to look up")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_host(parsed_args.host, ignore_missing=False)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns,
++                                         formatters=_showhost_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class CreateHost(common.NetworkAndComputeShowOne):
++    """Create a host record"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument('--availability', metavar="availability",
++                            help='Set host availability status to up or down',
++                            required=False)
++        parser.add_argument('--id', metavar="id",
++                            help='Create a new host record',
++                            required=False)
++        parser.add_argument('name', metavar='NAME',
++                            help='System hostname of given host')
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++
++        # the neutron equivalent command defaults to availability=down
++        # when not specified
++        if "availability" not in attrs:
++            attrs['availability'] = "down"
++
++        obj = client.create_host(**attrs)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns,
++                                         formatters=_listhost_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class DeleteHost(common.NetworkAndComputeDelete):
++    """Delete host"""
++
++    # Used by base class to find resources in parsed_args.
++    resource = 'name'
++    r = None
++
++    def update_parser_common(self, parser):
++        parser.add_argument('name', metavar='NAME', nargs="+",
++                            help='System hostname of given host')
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_host(self.r)
++        client.delete_host(obj)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class UpdateHost(command.Command):
++    """Set host properties"""
++
++    def get_parser(self, prog_name):
++        parser = super(UpdateHost, self).get_parser(prog_name)
++        parser.add_argument('--availability', metavar="availability",
++                            help='Set host availability status to up or down',
++                            required=False)
++        parser.add_argument('host', metavar='HOST',
++                            help='System hostname of given host')
++        return parser
++
++    def take_action(self, parsed_args):
++        client = self.app.client_manager.network
++        obj = client.find_host(parsed_args.host, ignore_missing=False)
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++
++        if attrs == {}:
++            msg = "Nothing specified to be set"
++            raise exceptions.CommandError(msg)
++        client.update_host(obj, **attrs)
++        return
+diff --git a/openstackclient/network/v2/network.py b/openstackclient/network/v2/network.py
+index 4c1725c..9a8355b 100644
+--- a/openstackclient/network/v2/network.py
++++ b/openstackclient/network/v2/network.py
+@@ -58,6 +58,7 @@ def _get_columns_network(item):
+         'ipv6_address_scope_id': 'ipv6_address_scope',
+         'tenant_id': 'project_id',
+         'tags': 'tags',
++        'qos': 'wrs-tm:qos',
+     }
+     return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map)
+ 
+@@ -123,6 +124,8 @@ def _get_attrs_network(client_manager, parsed_args):
+         attrs['provider:physical_network'] = parsed_args.physical_network
+     if parsed_args.segmentation_id:
+         attrs['provider:segmentation_id'] = parsed_args.segmentation_id
++    if hasattr(parsed_args, 'wrs-tm:qos'):
++        attrs['wrs-tm:qos'] = getattr(parsed_args, 'wrs-tm:qos')
+     if parsed_args.qos_policy is not None:
+         network_client = client_manager.network
+         _qos_policy = network_client.find_qos_policy(parsed_args.qos_policy,
+@@ -167,6 +170,11 @@ def _add_additional_network_options(parser):
+         dest='segmentation_id',
+         help=_("VLAN ID for VLAN networks or Tunnel ID for "
+                "GENEVE/GRE/VXLAN networks"))
++    parser.add_argument(
++        '--wrs-tm:qos',
++        metavar='<wrs-tm:qos>',
++        dest='wrs-tm:qos',
++        help=_("wrs-tm:qos of the network"))
+ 
+ 
+ # TODO(sindhu): Use the SDK resource mapped attribute names once the
+diff --git a/openstackclient/network/v2/port.py b/openstackclient/network/v2/port.py
+index 9536fe8..4a29daf 100644
+--- a/openstackclient/network/v2/port.py
++++ b/openstackclient/network/v2/port.py
+@@ -62,6 +62,9 @@ def _get_columns(item):
+         'is_admin_state_up': 'admin_state_up',
+         'is_port_security_enabled': 'port_security_enabled',
+         'tenant_id': 'project_id',
++        'mtu': 'wrs-binding:mtu',
++        'vif_model': 'wrs-binding:vif_model',
++        'mac_filtering': 'wrs-binding:mac_filtering',
+     }
+     return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map)
+ 
+diff --git a/openstackclient/network/v2/portforwarding.py b/openstackclient/network/v2/portforwarding.py
+new file mode 100644
+index 0000000..0f70e84
+--- /dev/null
++++ b/openstackclient/network/v2/portforwarding.py
+@@ -0,0 +1,259 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2016 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++"""Port forwarding action implementations"""
++
++import argparse
++from osc_lib.command import command
++from osc_lib import exceptions
++from osc_lib import utils
++from openstackclient.i18n import _
++from openstackclient.identity import common as identity_common
++from openstackclient.network import common
++from openstackclient.network import sdk_utils
++
++_formatters = {}
++
++
++def _get_columns(item):
++    column_map = {}
++    invisible_columns = ["name"]
++    return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map,
++                                                           invisible_columns)
++
++
++def _get_attrs(client_manager, parsed_args):
++    attr_names = ['inside_addr', 'inside_port', 'outside_port',
++                  'protocol', 'description', 'router_id']
++    attrs = {key: parsed_args[key] for key in attr_names
++             if key in parsed_args and parsed_args[key] is not None}
++
++    if 'project' in parsed_args and parsed_args["project"] is not None:
++        identity_client = client_manager.identity
++        project_id = identity_common.find_project(
++            identity_client,
++            parsed_args["project"]
++        ).id
++        # TODO(dtroyer): Remove tenant_id when we clean up the SDK refactor
++        attrs['tenant_id'] = project_id
++        attrs['project_id'] = project_id
++
++    return attrs
++
++
++class ListPortforwarding(common.NetworkAndComputeLister):
++    """List portforwarding"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_("Owner's project (name or ID)")
++        )
++        parser.add_argument(
++            '--router-id',
++            metavar='<router_id>',
++            help=_("Router's ID")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        columns = (
++            'id',
++            'router_id',
++            'inside_addr',
++            'inside_port',
++            'outside_port',
++            'protocol',
++        )
++        column_headers = (
++            'ID',
++            'Router ID',
++            'Inside Address',
++            'Inside Port',
++            'Outside Port',
++            'Protocol'
++        )
++
++        args = _get_attrs(self.app.client_manager, vars(parsed_args))
++
++        data = client.portforwardings(**args)
++
++        return (column_headers,
++                (utils.get_item_properties(
++                    s, columns,
++                    formatters=_formatters,
++                ) for s in data))
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class ShowPortforwarding(common.NetworkAndComputeShowOne):
++    """Show portforwarding details"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'portforwarding',
++            metavar="<portforwarding>",
++            help=("Portforwarding to display (ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_portforwarding(parsed_args.portforwarding,
++                                         ignore_missing=False)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class CreatePortforwarding(common.NetworkAndComputeShowOne):
++    """Create new portforwarding"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--inside-addr',
++            help='Private IP address.')
++        parser.add_argument(
++            '--inside_addr',
++            help=argparse.SUPPRESS)
++        parser.add_argument(
++            '--inside-port',
++            help='Private layer4 protocol port.')
++        parser.add_argument(
++            '--inside_port',
++            help=argparse.SUPPRESS)
++        parser.add_argument(
++            '--outside-port',
++            help='Public layer4 protocol port.')
++        parser.add_argument(
++            '--outside_port',
++            help=argparse.SUPPRESS)
++        parser.add_argument(
++            '--protocol',
++            help='Layer4 protocol port number.')
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_("Owner's project (name or ID)")
++        )
++        identity_common.add_project_domain_option_to_parser(parser)
++        parser.add_argument(
++            '--description',
++            help='User specified text description')
++        parser.add_argument(
++            'router_id', metavar='ROUTERID',
++            help='Router instance identifier.')
++
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++        router = client.find_router(attrs['router_id'], ignore_missing=False)
++        attrs['router_id'] = router.id
++        obj = client.create_portforwarding(**attrs)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class DeletePortforwarding(common.NetworkAndComputeDelete):
++    """Delete portforwarding"""
++
++    # Used by base class to find resources in parsed_args.
++    resource = 'portforwarding'
++    r = None
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'portforwarding',
++            metavar="<portforwarding>",
++            nargs="+",
++            help=("Portforwarding to delete (ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_portforwarding(self.r)
++        client.delete_portforwarding(obj)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class UpdatePortforwarding(command.Command):
++    """Set portforwarding properties"""
++
++    def get_parser(self, prog_name):
++        parser = super(UpdatePortforwarding, self).get_parser(prog_name)
++        parser.add_argument(
++            '--inside-addr',
++            help='Private IP address.')
++        parser.add_argument(
++            '--inside_addr',
++            help=argparse.SUPPRESS)
++        parser.add_argument(
++            '--inside-port',
++            help='Private layer4 protocol port.')
++        parser.add_argument(
++            '--inside_port',
++            help=argparse.SUPPRESS)
++        parser.add_argument(
++            '--outside-port',
++            help='Public layer4 protocol port.')
++        parser.add_argument(
++            '--outside_port',
++            help=argparse.SUPPRESS)
++        parser.add_argument(
++            '--protocol',
++            help='Layer4 protocol port number.')
++        parser.add_argument(
++            '--description',
++            help='User specified text description')
++        parser.add_argument(
++            'portforwarding', metavar='PORTFORWARDING',
++            help='Portforwarding to delete (ID)')
++        return parser
++
++    def take_action(self, parsed_args):
++        client = self.app.client_manager.network
++        obj = client.find_portforwarding(parsed_args.portforwarding,
++                                         ignore_missing=False)
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++
++        if attrs == {}:
++            msg = "Nothing specified to be set"
++            raise exceptions.CommandError(msg)
++        client.update_portforwarding(obj, **attrs)
++        return
+diff --git a/openstackclient/network/v2/providernet.py b/openstackclient/network/v2/providernet.py
+new file mode 100644
+index 0000000..635eb64
+--- /dev/null
++++ b/openstackclient/network/v2/providernet.py
+@@ -0,0 +1,302 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2016 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++"""Providernet action implementations"""
++
++import argparse
++
++from osc_lib.command import command
++from osc_lib import exceptions
++from osc_lib import utils
++from openstackclient.network import common
++from openstackclient.network import sdk_utils
++
++
++def add_boolean_argument(parser, name, **kwargs):
++    for keyword in ('metavar', 'choices'):
++        kwargs.pop(keyword, None)
++    default = kwargs.pop('default', argparse.SUPPRESS)
++    parser.add_argument(
++        name,
++        metavar='{True,False}',
++        choices=['True', 'true', 'False', 'false'],
++        default=default,
++        **kwargs)
++
++
++def _format_ranges(item):
++    item = utils.format_list_of_dicts(item)
++    # we want to remove some fields
++    # to match the output to neutron providernet-list
++    separator = ', '
++    item = item.split(separator)
++    item = [s for s in item if "name" in s or "maximum" in s or "minimum" in s]
++
++    return separator.join(item)
++
++# the providernet list command does not display some values in the ranges field
++_filtered_ranges_formatters = {
++    'ranges': _format_ranges
++}
++
++_formatters = {
++    'ranges': utils.format_list_of_dicts
++}
++
++_net_list_on_providernet_formatters = {
++    'vxlan': utils.format_dict
++}
++
++
++def _get_columns(item):
++    column_map = {}
++    return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map)
++
++
++def _get_attrs(client_manager, parsed_args):
++    attrs = {key: parsed_args[key] for key in
++             ["name", "type", "vlan_transparent", "description", "mtu"]
++             if key in parsed_args}
++    if "mtu" in attrs and attrs["mtu"] is None:
++        del attrs["mtu"]
++
++    return attrs
++
++
++class ListProvidernet(common.NetworkAndComputeLister):
++    """List providernets"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--type',
++            dest='type',
++            help='List all providernets of type')
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        columns = (
++            'id',
++            'name',
++            'type',
++            'mtu',
++            'ranges'
++        )
++        column_headers = (
++            'ID',
++            'Name',
++            'Type',
++            'MTU',
++            'Ranges'
++        )
++
++        args = _get_attrs(self.app.client_manager, vars(parsed_args))
++
++        data = client.providernets(**args)
++
++        return (column_headers,
++                (utils.get_item_properties(
++                    s, columns,
++                    formatters=_filtered_ranges_formatters,
++                ) for s in data))
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class ShowProvidernet(common.NetworkAndComputeShowOne):
++    """Show providernet details"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'providernet',
++            metavar="<providernet>",
++            help=("Providernet to display (name or ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_providernet(parsed_args.providernet,
++                                      ignore_missing=False)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class CreateProvidernet(common.NetworkAndComputeShowOne):
++    """Create new providernet"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--description',
++            dest='description',
++            help='Set user-defined description field for a provider network')
++        parser.add_argument(
++            '--type', required=True,
++            dest='type', default='flat',
++            choices=['flat', 'vlan', 'vxlan'],
++            help='Set network type for a provider network')
++        parser.add_argument(
++            '--mtu', dest='mtu', type=int,
++            help='Maximum transmit unit on provider network')
++        add_boolean_argument(
++            parser,
++            '--vlan-transparent',
++            default='False',
++            help='Allow VLAN tagged packets on tenant networks')
++        parser.add_argument(
++            'name', metavar='NAME',
++            help='Set user-defined name for a provider network')
++
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++        obj = client.create_providernet(**attrs)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class DeleteProvidernet(common.NetworkAndComputeDelete):
++    """Delete providernet"""
++
++    # Used by base class to find resources in parsed_args.
++    resource = 'providernet'
++    r = None
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'providernet',
++            metavar="<providernet>",
++            nargs="+",
++            help=("Providernet to delete (name or ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_providernet(self.r)
++        client.delete_providernet(obj)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class UpdateProvidernet(command.Command):
++    """Set providernet properties"""
++
++    def get_parser(self, prog_name):
++        parser = super(UpdateProvidernet, self).get_parser(prog_name)
++        parser.add_argument(
++            '--description',
++            dest='description',
++            help='Set user-defined description field for a provider network')
++        parser.add_argument(
++            '--mtu', dest='mtu', type=int,
++            help='Maximum transmit unit on provider network')
++        add_boolean_argument(
++            parser,
++            '--vlan-transparent',
++            help='Allow VLAN tagged packets on tenant networks')
++        parser.add_argument(
++            'providernet', metavar='PROVIDERNET',
++            help='Set user-defined name for a provider network')
++
++        return parser
++
++    def take_action(self, parsed_args):
++        client = self.app.client_manager.network
++
++        obj = client.find_providernet(parsed_args.providernet,
++                                      ignore_missing=False)
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++        if attrs == {}:
++            msg = "Nothing specified to be set"
++            raise exceptions.CommandError(msg)
++
++        client.update_providernet(obj, **attrs)
++        return
++
++
++class NetListOnProvidernet(common.NetworkAndComputeLister):
++    """List the networks on a provider network."""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'providernet',
++            metavar="<providernet>",
++            help=("Providernet to display (name or ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_providernet(parsed_args.providernet,
++                                      ignore_missing=False)
++        providernet_id = obj.id
++
++        columns = (
++            'id',
++            'name',
++            'vlan_id',
++            'providernet_type',
++            'segmentation_id',
++            'vxlan',
++        )
++        column_headers = (
++            'ID',
++            'Name',
++            'VLAN ID',
++            'Providernet Type',
++            'Segmentation ID',
++            'Providernet Attributes'
++        )
++
++        args = {}
++
++        # cheated a bit here, doing the same request as a providernet list,
++        # except using providernet_id/providernet-bindings
++        # as the base path. Openstack client framwork does not support what
++        # we need in terms of editing the address at the
++        # time of implementing this
++        data = client.net_list_on_providernet(providernet_id +
++                                              "/providernet-bindings", **args)
++
++        return (column_headers,
++                (utils.get_item_properties(
++                    s, columns,
++                    formatters=_net_list_on_providernet_formatters,
++                ) for s in data))
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
+diff --git a/openstackclient/network/v2/providernet_connectivity_test.py b/openstackclient/network/v2/providernet_connectivity_test.py
+new file mode 100644
+index 0000000..e879ec2
+--- /dev/null
++++ b/openstackclient/network/v2/providernet_connectivity_test.py
+@@ -0,0 +1,220 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2016 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++"""Providernet connectivity test action implementations"""
++
++import itertools
++from osc_lib import exceptions
++from osc_lib import utils
++from openstackclient.network import common
++from openstackclient.network import sdk_utils
++
++_formatters = {
++}
++
++
++def _get_columns(item):
++    column_map = {}
++    invisible_columns = ["host_id", "host_name", "id", "message", "name",
++                         "providernet_id", "providernet_name",
++                         "segmentation_id", "status", "type", "updated_at"]
++    return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map,
++                                                           invisible_columns)
++
++
++def _get_attrs(client_manager, parsed_args, client):
++    attrs = {key: parsed_args[key] for key in
++             ["providernet", "host", "segmentation_id", "audit_uuid"]
++             if key in parsed_args and parsed_args[key] is not None}
++    if "providernet" in attrs:
++        providernet = client.find_providernet(attrs.pop("providernet"),
++                                              ignore_missing=False)
++        attrs["providernet_id"] = providernet.id
++    if "host" in attrs:
++        host = client.find_host(attrs.pop("host"), ignore_missing=False)
++        attrs["host_id"] = host.id
++    return attrs
++
++
++# copied from neutron client and modified to fit data formats here
++def _list_segments(segments):
++        """Takes a list of segments, and outputs them as a string"""
++        msg = ", ".join([str(x or "*") for x in sorted(segments)])
++        return msg
++
++
++# copied from neutron client and modified to fit data formats here
++def _group_segmentation_id_list(segmentation_ids):
++    """Takes a list of integers and groups them into ranges"""
++    if len(segmentation_ids) < 1:
++        return ""
++    try:
++        sorted_segmentation_ids = sorted(
++            [int(segmentation_id) for segmentation_id in segmentation_ids]
++        )
++    except Exception:
++        return _list_segments(segmentation_ids)
++    grouped_ids = [tuple(g[1]) for g in itertools.groupby(
++        enumerate(sorted_segmentation_ids), lambda (i, n): i - n
++    )]
++    msg = ", ".join(
++        [(("%s-%s" % (g[0][1], g[-1][1])) if g[0][1] != g[-1][1]
++         else ("%s" % g[0][1])) for g in grouped_ids]
++    )
++    return msg
++
++
++# copied from neutron client and modified to fit data formats here
++def _format_connectivity_results(data):
++    """Takes a list of results, and formats them for reporting
++
++       order assumed: providernet_id, providernet_name, type, host_name,
++                      segmentation_id, status, message
++    """
++
++    parsed_results = {}
++    has_message = False
++    for result in data:
++        providernet_id = result.providernet_id
++        providernet_name = result.providernet_name
++        providernet_type = result.type
++        hostname = result.host_name
++        if hasattr(result, "segmentation_id"):
++            segmentation_id = result.segmentation_id
++        else:
++            segmentation_id = None
++        status = result.status
++        message = result.message
++        if message:
++            has_message = True
++        test = (providernet_id, providernet_name, providernet_type,
++                hostname, status, message)
++        if test not in parsed_results:
++            parsed_results[test] = []
++        parsed_results[test].append(segmentation_id)
++
++    formatted_results = []
++    for test, results in parsed_results.iteritems():
++        (providernet_id, providernet_name, providernet_type,
++         hostname, status, message) = test
++        formatted_segmentation_ids = \
++            _group_segmentation_id_list(results)
++
++        if has_message:
++            formatted_result = (providernet_id,
++                                providernet_name,
++                                providernet_type,
++                                hostname,
++                                formatted_segmentation_ids,
++                                status,
++                                message
++                                )
++        else:
++            formatted_result = (providernet_id,
++                                providernet_name,
++                                providernet_type,
++                                hostname,
++                                formatted_segmentation_ids,
++                                status
++                                )
++        formatted_results.append(formatted_result)
++
++    return tuple(formatted_results), has_message
++
++
++class ListProvidernetConnectivityTest(common.NetworkAndComputeLister):
++    """List providernet connectivity tests"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--audit-uuid',
++            dest='audit_uuid', default=None,
++            help='List only for this audit-uuid')
++        parser.add_argument(
++            '--providernet',
++            dest='providernet', default=None,
++            help='List only for this providernet')
++        parser.add_argument(
++            '--host',
++            dest='host', default=None,
++            help='List only for this host')
++        parser.add_argument(
++            '--segmentation-id',
++            dest='segmentation_id', default=None,
++            help='List only for this segmentation-id')
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        column_headers = (
++            'Providernet ID',
++            'Providernet Name',
++            'Type',
++            'Host Name',
++            'Segmentation IDs',
++            'Status'
++        )
++        args = _get_attrs(self.app.client_manager, vars(parsed_args), client)
++
++        data = client.providernet_connectivity_tests(**args)
++        formatted_data, has_message = _format_connectivity_results(data)
++
++        # replicate behavior from neutron command:
++        # dont show message column if it does not exist
++        if has_message:
++            column_headers = column_headers + ('Message',)
++
++        return (column_headers,
++                formatted_data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class CreateProvidernetConnectivityTest(common.NetworkAndComputeShowOne):
++    """Create new providernet connectivity test"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--providernet',
++            dest='providernet', default=None,
++            help=('Schedule audit for given providernet'))
++        parser.add_argument(
++            '--host',
++            dest='host', default=None,
++            help='Schedule audits for all providernets on host')
++        parser.add_argument(
++            '--segmentation-id',
++            dest='segmentation_id', default=None,
++            help='Schedule for this segmentation ID')
++
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args), client)
++        obj = client.create_providernet_connectivity_test(**attrs)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
+diff --git a/openstackclient/network/v2/providernet_range.py b/openstackclient/network/v2/providernet_range.py
+new file mode 100644
+index 0000000..8748c4c
+--- /dev/null
++++ b/openstackclient/network/v2/providernet_range.py
+@@ -0,0 +1,272 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2016 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++"""Providernet range action implementations"""
++
++import argparse
++from osc_lib.command import command
++from osc_lib import exceptions
++from osc_lib import utils
++from openstackclient.i18n import _
++from openstackclient.identity import common as identity_common
++from openstackclient.network import common
++from openstackclient.network import sdk_utils
++
++_formatters = {
++    'vxlan': utils.format_dict
++}
++
++
++def _get_columns(item):
++    column_map = {}
++    return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map)
++
++
++def _get_attrs(client_manager, parsed_args):
++    attrs = {key: parsed_args[key] for key in
++             ["shared", "description", "name", "group", "ttl", "port", "mode",
++              "providernet_id", "providernet_range_id"]
++             if key in parsed_args}
++    if "range" in parsed_args and parsed_args["range"] is not None:
++        attrs["maximum"] = parsed_args["range"]["maximum"]
++        attrs["minimum"] = parsed_args["range"]["minimum"]
++    if "port" in attrs and attrs["port"] is None:
++        del attrs["port"]
++    if "ttl" in attrs and attrs["ttl"] is None:
++        del attrs["ttl"]
++    if "group" in attrs and attrs["group"] is None:
++        del attrs["group"]
++    if "mode" in attrs and attrs["mode"] is None:
++        del attrs["mode"]
++    if 'project' in parsed_args and parsed_args["project"] is not None:
++        identity_client = client_manager.identity
++        project_id = identity_common.find_project(
++            identity_client,
++            parsed_args["project"]
++        ).id
++        # TODO(dtroyer): Remove tenant_id when we clean up the SDK refactor
++        attrs['tenant_id'] = project_id
++        attrs['project_id'] = project_id
++
++    return attrs
++
++
++def _id_range_value(value):
++    range_list = value.split('-')
++    if (len(range_list) != 2):
++        raise argparse.ArgumentTypeError(
++            'Expecting MIN_VALUE-MAX_VALUE in range list')
++    return {'minimum': range_list[0],
++            'maximum': range_list[1]}
++
++
++class ListProvidernetRange(common.NetworkAndComputeLister):
++    """List providernet ranges"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_("Owner's project (name or ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        columns = (
++            'id',
++            'name',
++            'providernet_name',
++            'providernet_type',
++            'minimum',
++            'maximum',
++            'vxlan'
++        )
++        column_headers = (
++            'ID',
++            'Name',
++            'Providernet',
++            'Type',
++            'Minimum',
++            'Maximum',
++            'Attributes'
++        )
++
++        args = _get_attrs(self.app.client_manager, vars(parsed_args))
++
++        data = client.providernet_ranges(**args)
++
++        return (column_headers,
++                (utils.get_item_properties(
++                    s, columns,
++                    formatters=_formatters,
++                ) for s in data))
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class ShowProvidernetRange(common.NetworkAndComputeShowOne):
++    """Show providernet range details"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'providernet_range',
++            metavar="<providernet range>",
++            help=("Providernet range to display (name or ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_providernet_range(parsed_args.providernet_range,
++                                            ignore_missing=False)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class CreateProvidernetRange(common.NetworkAndComputeShowOne):
++    """Create new providernet range"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--shared',
++            dest='shared', action='store_true', default=False,
++            help=('Set whether a provider network segmentation id range '
++                  'may be shared between tenants'))
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_("Owner's project (name or ID)")
++        )
++        identity_common.add_project_domain_option_to_parser(parser)
++        parser.add_argument(
++            '--description',
++            dest='description',
++            help='Set user-defined description field for a provider network')
++        parser.add_argument(
++            '--range', metavar='MIN_VALUE-MAX_VALUE', required=True,
++            dest='range', type=_id_range_value,
++            help='Segmentation id value range')
++        parser.add_argument(
++            '--name', required=True,
++            dest='name',
++            help=('Set user-defined name for a provider network '
++                  'segmentation id range'))
++        parser.add_argument(
++            '--group',
++            dest='group',
++            help='Multicast IP addresses for VXLAN endpoints')
++        parser.add_argument(
++            '--ttl', dest='ttl', type=int,
++            help='Time-to-live value for VXLAN provider networks')
++        parser.add_argument(
++            '--port', dest='port', type=int,
++            help=('Destination UDP port value to use for '
++                  'VXLAN provider networks'))
++        parser.add_argument(
++            '--mode',
++            dest='mode', default='dynamic',
++            choices=['dynamic', 'static', 'evpn'],
++            help='Set vxlan learning mode')
++        parser.add_argument(
++            'providernet_id', metavar='PROVIDERNET',
++            help='Provider network this segmentation id range belongs to')
++
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++        obj = client.find_providernet(parsed_args.providernet_id,
++                                      ignore_missing=False)
++        attrs["providernet_id"] = obj.id
++        obj = client.create_providernet_range(**attrs)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class DeleteProvidernetRange(common.NetworkAndComputeDelete):
++    """Delete providernet range"""
++
++    # Used by base class to find resources in parsed_args.
++    resource = 'providernet_range'
++    r = None
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'providernet_range',
++            metavar="<providernet_range>",
++            nargs="+",
++            help=("Providernet to Delete (name or ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_providernet_range(self.r)
++        client.delete_providernet_range(obj)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class UpdateProvidernetRange(command.Command):
++    """Set providernet range properties"""
++
++    def get_parser(self, prog_name):
++        parser = super(UpdateProvidernetRange, self).get_parser(prog_name)
++        parser.add_argument(
++            '--description',
++            dest='description',
++            help='Set user-defined description field for a provider network')
++        parser.add_argument(
++            '--range', metavar='MIN_VALUE-MAX_VALUE',
++            dest='range', type=_id_range_value,
++            help='Segmentation id value range')
++        parser.add_argument(
++            'providernet_range_id', metavar='PROVIDERNET_RANGE',
++            help='Name or ID of this providernet range')
++        return parser
++
++    def take_action(self, parsed_args):
++        client = self.app.client_manager.network
++        obj = client.find_providernet_range(parsed_args.providernet_range_id,
++                                            ignore_missing=False)
++
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++        del attrs['providernet_range_id']
++
++        if attrs == {}:
++            msg = "Nothing specified to be set"
++            raise exceptions.CommandError(msg)
++        client.update_providernet_range(obj, **attrs)
++        return
+diff --git a/openstackclient/network/v2/providernet_type.py b/openstackclient/network/v2/providernet_type.py
+new file mode 100644
+index 0000000..2abd8c4
+--- /dev/null
++++ b/openstackclient/network/v2/providernet_type.py
+@@ -0,0 +1,60 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2016 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++"""Providernet type action implementations"""
++
++from osc_lib import exceptions
++from osc_lib import utils
++from openstackclient.network import common
++from openstackclient.network import sdk_utils
++
++_formatters = {
++}
++
++
++class ListProvidernetType(common.NetworkAndComputeLister):
++    """List providernet types"""
++
++    def update_parser_common(self, parser):
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        columns = (
++            'type',
++            'description'
++        )
++        column_headers = (
++            'Type',
++            'Description'
++        )
++
++        args = {}
++
++        data = client.providernet_types(**args)
++
++        return (column_headers,
++                (utils.get_item_properties(
++                    s, columns,
++                    formatters=_formatters,
++                ) for s in data))
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
+diff --git a/openstackclient/network/v2/qos.py b/openstackclient/network/v2/qos.py
+new file mode 100644
+index 0000000..dc5ab93
+--- /dev/null
++++ b/openstackclient/network/v2/qos.py
+@@ -0,0 +1,253 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2016 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++"""QOS action implementations"""
++
++import argparse
++from osc_lib.command import command
++from osc_lib import exceptions
++from osc_lib import utils
++from openstackclient.i18n import _
++from openstackclient.identity import common as identity_common
++from openstackclient.network import common
++from openstackclient.network import sdk_utils
++
++_formatters = {}
++
++TYPE_QOS_DSCP = "dscp"
++TYPE_QOS_RATELIMIT = "ratelimit"
++TYPE_QOS_SCHEDULER = "scheduler"
++
++
++def _get_columns(item):
++    column_map = {}
++    return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map)
++
++
++def _args2body_policies(qos, type, policies):
++    qos['policies'][type] = {}
++    for parg in policies:
++        if parg.count('=') != 1:
++            raise exceptions.CommandError("Policies must be specified"
++                                          " in the format a=b")
++        args = parg.split('=')
++        qos['policies'][type][args[0]] = args[1]
++
++
++def _get_attrs(client_manager, parsed_args):
++    attrs = {key: parsed_args[key] for key in
++             ["name", "description"] if key in parsed_args}
++    if "description" in attrs and attrs["description"] is None:
++        del attrs["description"]
++    attrs['policies'] = {}
++    if "dscp" in parsed_args and parsed_args["dscp"] is not None:
++        _args2body_policies(attrs, TYPE_QOS_DSCP,
++                            parsed_args['dscp'])
++
++    if "ratelimit" in parsed_args and parsed_args["ratelimit"] is not None:
++        _args2body_policies(attrs, TYPE_QOS_RATELIMIT,
++                            parsed_args['ratelimit'])
++
++    if "scheduler" in parsed_args and parsed_args["scheduler"] is not None:
++        _args2body_policies(attrs, TYPE_QOS_SCHEDULER,
++                            parsed_args['scheduler'])
++
++    if "project" in parsed_args and parsed_args["project"] is not None:
++        identity_client = client_manager.identity
++        project_id = identity_common.find_project(
++            identity_client,
++            parsed_args["project"]
++        ).id
++        # TODO(dtroyer): Remove tenant_id when we clean up the SDK refactor
++        attrs['tenant_id'] = project_id
++        attrs['project_id'] = project_id
++
++    return attrs
++
++
++def _id_range_value(value):
++    range_list = value.split('-')
++    if (len(range_list) != 2):
++        raise argparse.ArgumentTypeError(
++            'Expecting MIN_VALUE-MAX_VALUE in range list')
++    return {'minimum': range_list[0],
++            'maximum': range_list[1]}
++
++
++class ListQos(common.NetworkAndComputeLister):
++    """List qos"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_("Owner's project (name or ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        columns = (
++            'id',
++            'name',
++            'description'
++        )
++        column_headers = (
++            'ID',
++            'Name',
++            'Description'
++        )
++
++        args = _get_attrs(self.app.client_manager, vars(parsed_args))
++
++        data = client.qoses(**args)
++
++        return (column_headers,
++                (utils.get_item_properties(
++                    s, columns,
++                    formatters=_formatters,
++                ) for s in data))
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class ShowQos(common.NetworkAndComputeShowOne):
++    """Show qos details"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'qos',
++            metavar="<QOS>",
++            help=("Qos to display (name or ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_qos(parsed_args.qos, ignore_missing=False)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class CreateQos(common.NetworkAndComputeShowOne):
++    """Create new qos"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument('--name', metavar='NAME',
++                            help='Name of QoS policy')
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_("Owner's project (name or ID)")
++        )
++        identity_common.add_project_domain_option_to_parser(parser)
++        parser.add_argument('--description', metavar='DESCRIPTION',
++                            help="Description of QoS policy", required=False)
++        parser.add_argument('--dscp', metavar="POLICY",
++                            help='Set of policies for dscp',
++                            nargs='+', required=False)
++        parser.add_argument('--ratelimit', metavar="POLICY",
++                            help='Set of policies for ratelimit',
++                            nargs='+', required=False)
++        parser.add_argument('--scheduler', metavar="POLICY",
++                            help='Set of policies for scheduler',
++                            nargs='+', required=False)
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++        obj = client.create_qos(**attrs)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class DeleteQos(common.NetworkAndComputeDelete):
++    """Delete qos"""
++
++    # Used by base class to find resources in parsed_args.
++    resource = 'qos'
++    r = None
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            'qos',
++            metavar="<qos>",
++            nargs="+",
++            help=("QOS to delete (name or ID)")
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        obj = client.find_qos(self.r)
++        client.delete_qos(obj)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class UpdateQos(command.Command):
++    """Set qos properties"""
++
++    def get_parser(self, prog_name):
++        parser = super(UpdateQos, self).get_parser(prog_name)
++        parser.add_argument('--name', metavar='NAME',
++                            help='Name of QoS policy')
++        parser.add_argument('--description', metavar='DESCRIPTION',
++                            help="Description of QoS policy", required=False)
++        parser.add_argument('--dscp', metavar="POLICY",
++                            help='Set of policies for dscp',
++                            nargs='+', required=False)
++        parser.add_argument('--ratelimit', metavar="POLICY",
++                            help='Set of policies for ratelimit',
++                            nargs='+', required=False)
++        parser.add_argument('--scheduler', metavar="POLICY",
++                            help='Set of policies for scheduler',
++                            nargs='+', required=False)
++        parser.add_argument(
++            'qos',
++            metavar="<qos>",
++            help=("QOS to delete (name or ID)")
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        client = self.app.client_manager.network
++        obj = client.find_qos(parsed_args.qos, ignore_missing=False)
++        attrs = _get_attrs(self.app.client_manager, vars(parsed_args))
++
++        if attrs == {}:
++            msg = "Nothing specified to be set"
++            raise exceptions.CommandError(msg)
++        client.update_qos(obj, **attrs)
++        return
+diff --git a/openstackclient/network/v2/router.py b/openstackclient/network/v2/router.py
+index 4f90853..4eb5908 100644
+--- a/openstackclient/network/v2/router.py
++++ b/openstackclient/network/v2/router.py
+@@ -68,6 +68,7 @@ def _get_columns(item):
+         'is_ha': 'ha',
+         'is_distributed': 'distributed',
+         'is_admin_state_up': 'admin_state_up',
++        'host': 'wrs-net:host',
+     }
+     return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map)
+ 
+diff --git a/openstackclient/network/v2/setting.py b/openstackclient/network/v2/setting.py
+new file mode 100644
+index 0000000..d404325
+--- /dev/null
++++ b/openstackclient/network/v2/setting.py
+@@ -0,0 +1,183 @@
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++# Copyright (c) 2016 Wind River Systems, Inc.
++#
++#
++#
++#
++#
++
++"""Settings action implementations"""
++
++from osc_lib.command import command
++from osc_lib import exceptions
++from osc_lib import utils
++from openstackclient.i18n import _
++from openstackclient.identity import common as identity_common
++from openstackclient.network import common
++from openstackclient.network import sdk_utils
++
++_formatters = {}
++
++
++def _get_columns(item):
++    column_map = {"id": "project_id"}
++    invisible_columns = ["name"]
++    return sdk_utils.get_osc_show_columns_for_sdk_resource(item, column_map,
++                                                           invisible_columns)
++
++
++def _get_attrs(client_manager, parsed_args):
++    attrs = {key: parsed_args[key] for key in ["mac_filtering"]
++             if key in parsed_args}
++
++    if 'project' in parsed_args and parsed_args["project"] is not None:
++        identity_client = client_manager.identity
++        project_id = identity_common.find_project(
++            identity_client,
++            parsed_args["project"]
++        ).id
++        attrs['project_id'] = project_id
++
++    return attrs
++
++
++class ListSetting(common.NetworkAndComputeLister):
++    """List settings of all projects who have non-default setting values"""
++
++    def update_parser_common(self, parser):
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        columns = (
++            'mac_filtering',
++            'project_id'
++        )
++        column_headers = (
++            'Mac Filtering',
++            'Project ID'
++        )
++
++        args = {}
++
++        data = client.settings(**args)
++
++        return (column_headers,
++                (utils.get_item_properties(
++                    s, columns,
++                    formatters=_formatters,
++                ) for s in data))
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++class ShowSetting(common.NetworkAndComputeShowOne):
++    """Show settings of a given project"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_("Owner's project (name or ID)"),
++            required=False
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        client = self.app.client_manager.network
++        # if no project id is specified, operate on current project
++        args = _get_attrs(self.app.client_manager, vars(parsed_args))
++        if not "project_id" in args:
++            args["project_id"] = client.find_tenant().project_id
++        project_id = args["project_id"]
++
++        obj = client.find_setting(project_id, ignore_missing=False)
++
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns, formatters=_formatters)
++        return (display_columns, data)
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs access to"
++                                      " a network endpoint.")
++        return
++
++
++# this one uses NetworkAndComputeCommand because settings can be deleted
++# without a project id
++class DeleteSetting(common.NetworkAndComputeCommand):
++    """Delete setting"""
++
++    def update_parser_common(self, parser):
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_("Owner's project (name or ID)"),
++            required=False
++        )
++        return parser
++
++    def take_action_network(self, client, parsed_args):
++        client = self.app.client_manager.network
++        # if no project id is specified, operate on current project
++        args = _get_attrs(self.app.client_manager, vars(parsed_args))
++        if not "project_id" in args:
++            args["project_id"] = client.find_tenant().project_id
++        project_id = args["project_id"]
++
++        client.delete_setting(project_id)
++        return
++
++    def take_action_compute(self, client, parsed_args):
++        raise exceptions.CommandError("This command needs "
++                                      "access to a network endpoint.")
++        return
++
++
++class UpdateSetting(command.Command):
++    """Set setting properties"""
++
++    def get_parser(self, prog_name):
++        parser = super(UpdateSetting, self).get_parser(prog_name)
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_("Owner's project (name or ID)"),
++            required=False
++        )
++        parser.add_argument('--mac-filtering', metavar='mac_filtering',
++                            help="Enable/Disable source MAC filtering"
++                                 " on all ports",
++                            required=True)
++        return parser
++
++    def take_action(self, parsed_args):
++        client = self.app.client_manager.network
++        # if no project id is specified, operate on current project
++        args = _get_attrs(self.app.client_manager, vars(parsed_args))
++        if not "project_id" in args:
++            args["project_id"] = client.find_tenant().project_id
++        project_id = args["project_id"]
++        del args['project_id']
++
++        client.find_setting(project_id, ignore_missing=False)
++
++        if args == {}:
++            msg = "Nothing specified to be set"
++            raise exceptions.CommandError(msg)
++
++        client.update_setting(project_id, **args)
++        return
+diff --git a/openstackclient/network/v2/subnet.py b/openstackclient/network/v2/subnet.py
+index b96dff7..864c832 100644
+--- a/openstackclient/network/v2/subnet.py
++++ b/openstackclient/network/v2/subnet.py
+@@ -13,7 +13,9 @@
+ 
+ """Subnet action implementations"""
+ 
++import argparse
+ import copy
++import functools
+ import logging
+ 
+ from osc_lib.cli import parseractions
+@@ -27,6 +29,10 @@ from openstackclient.network import sdk_utils
+ from openstackclient.network.v2 import _tag
+ 
+ 
++MIN_VLAN_TAG = 1
++MAX_VLAN_TAG = 4094
++
++
+ LOG = logging.getLogger(__name__)
+ 
+ 
+@@ -233,9 +239,36 @@ def _get_attrs(client_manager, parsed_args, is_create=True):
+         attrs['service_types'] = parsed_args.service_types
+     if parsed_args.description is not None:
+         attrs['description'] = parsed_args.description
++
++    # wrs extensions
++    if ('vlan_id' in parsed_args and
++       parsed_args.vlan_id is not None):
++        attrs['wrs-net:vlan_id'] = parsed_args.vlan_id
++    if ('network_type' in parsed_args and
++       parsed_args.network_type is not None):
++        attrs['wrs-provider:network_type'] = parsed_args.network_type
++    if ('physical_network' in parsed_args and
++       parsed_args.physical_network is not None):
++        attrs['wrs-provider:vlan_id'] = parsed_args.physical_network
++    if ('segmentation_id' in parsed_args and
++       parsed_args.segmentation_id is not None):
++        attrs['wrs-provider:segmentation_id'] = parsed_args.segmentation_id
++    if ('unmanaged' in parsed_args and
++       parsed_args.unmanaged is not False):
++        attrs['wrs-net:managed'] = False
++
+     return attrs
+ 
+ 
++def _check_vlan_id(value):
++    vlan_id = int(value)
++    if vlan_id < MIN_VLAN_TAG or vlan_id > MAX_VLAN_TAG:
++        raise argparse.ArgumentTypeError(
++            "VLAN ID must be between {} and {}".format(
++                MIN_VLAN_TAG, MAX_VLAN_TAG))
++    return vlan_id
++
++
+ # TODO(abhiraut): Use the SDK resource mapped attribute names once the
+ # OSC minimum requirements include SDK 1.0.
+ class CreateSubnet(command.ShowOne):
+@@ -337,6 +370,27 @@ class CreateSubnet(command.ShowOne):
+             metavar='<description>',
+             help=_("Set subnet description")
+         )
++        parser.add_argument(
++            '--wrs-net:vlan_id',
++            dest='vlan_id',
++            type=_check_vlan_id,
++            help='VLAN ID of the subnet')
++        parser.add_argument(
++            '--wrs-provider:network_type',
++            dest='network_type',
++            help='Provider network type (admin only)')
++        parser.add_argument(
++            '--wrs-provider:physical_network',
++            dest='physical_network',
++            help='Provider network name (admin only)')
++        parser.add_argument(
++            '--wrs-provider:segmentation_id',
++            dest='segmentation_id',
++            help='Provider network segmentation id (admin only)')
++        parser.add_argument(
++            '--unmanaged',
++            action='store_true',
++            help='Disable IP allocation on this subnet')
+         _get_common_parse_arguments(parser)
+         _tag.add_tag_option_to_parser_for_create(parser, _('subnet'))
+         return parser
+@@ -497,14 +551,16 @@ class ListSubnet(command.Lister):
+         _tag.get_tag_filtering_args(parsed_args, filters)
+         data = network_client.subnets(**filters)
+ 
+-        headers = ('ID', 'Name', 'Network', 'Subnet')
+-        columns = ('id', 'name', 'network_id', 'cidr')
++        headers = ('ID', 'Name', 'Network', 'Subnet', 'Allocation Pools',
++                   'WRS-Net:VLAN ID')
++        columns = ('id', 'name', 'network_id', 'cidr', 'allocation_pools',
++                   'wrs-net:vlan_id')
+         if parsed_args.long:
+             headers += ('Project', 'DHCP', 'Name Servers',
+-                        'Allocation Pools', 'Host Routes', 'IP Version',
++                        'Host Routes', 'IP Version',
+                         'Gateway', 'Service Types', 'Tags')
+             columns += ('project_id', 'is_dhcp_enabled', 'dns_nameservers',
+-                        'allocation_pools', 'host_routes', 'ip_version',
++                        'host_routes', 'ip_version',
+                         'gateway_ip', 'service_types', 'tags')
+ 
+         return (headers,
+diff --git a/openstackclient/tests/unit/network/v2/fakes.py b/openstackclient/tests/unit/network/v2/fakes.py
+index eadab58..0d53fc5 100644
+--- a/openstackclient/tests/unit/network/v2/fakes.py
++++ b/openstackclient/tests/unit/network/v2/fakes.py
+@@ -1244,7 +1244,8 @@ class FakeSecurityGroupRule(object):
+ 
+     @staticmethod
+     def get_security_group_rules(security_group_rules=None, count=2):
+-        """Get an iterable Mock object with a list of faked security group rules.
++        """Get an iterable Mock object with a list of faked security group
++           rules.
+ 
+         If security group rules list is provided, then initialize the Mock
+         object with the list. Otherwise create one.
+@@ -1298,6 +1299,7 @@ class FakeSubnet(object):
+             'subnetpool_id': None,
+             'description': 'subnet-description-' + uuid.uuid4().hex,
+             'tags': [],
++            'wrs-net:vlan_id': '1',
+         }
+ 
+         # Overwrite default attributes.
+diff --git a/openstackclient/tests/unit/network/v2/test_subnet.py b/openstackclient/tests/unit/network/v2/test_subnet.py
+index c96d680..a4c8914 100644
+--- a/openstackclient/tests/unit/network/v2/test_subnet.py
++++ b/openstackclient/tests/unit/network/v2/test_subnet.py
+@@ -126,6 +126,7 @@ class TestCreateSubnet(TestSubnet):
+         'service_types',
+         'subnetpool_id',
+         'tags',
++        'wrs-net:vlan_id',
+     )
+ 
+     data = (
+@@ -147,6 +148,7 @@ class TestCreateSubnet(TestSubnet):
+         utils.format_list(_subnet.service_types),
+         _subnet.subnetpool_id,
+         utils.format_list(_subnet.tags),
++        getattr(_subnet, 'wrs-net:vlan_id', ''),
+     )
+ 
+     data_subnet_pool = (
+@@ -168,6 +170,7 @@ class TestCreateSubnet(TestSubnet):
+         utils.format_list(_subnet_from_pool.service_types),
+         _subnet_from_pool.subnetpool_id,
+         utils.format_list(_subnet.tags),
++        getattr(_subnet_from_pool, 'wrs-net:vlan_id', ''),
+     )
+ 
+     data_ipv6 = (
+@@ -189,6 +192,7 @@ class TestCreateSubnet(TestSubnet):
+         utils.format_list(_subnet_ipv6.service_types),
+         _subnet_ipv6.subnetpool_id,
+         utils.format_list(_subnet.tags),
++        getattr(_subnet_ipv6, 'wrs-net:vlan_id', ''),
+     )
+ 
+     def setUp(self):
+@@ -589,12 +593,13 @@ class TestListSubnet(TestSubnet):
+         'Name',
+         'Network',
+         'Subnet',
++        'Allocation Pools',
++        'WRS-Net:VLAN ID',
+     )
+     columns_long = columns + (
+         'Project',
+         'DHCP',
+         'Name Servers',
+-        'Allocation Pools',
+         'Host Routes',
+         'IP Version',
+         'Gateway',
+@@ -609,6 +614,8 @@ class TestListSubnet(TestSubnet):
+             subnet.name,
+             subnet.network_id,
+             subnet.cidr,
++            subnet_v2._format_allocation_pools(subnet.allocation_pools),
++            getattr(subnet, 'wrs-net:vlan_id', ''),
+         ))
+ 
+     data_long = []
+@@ -618,10 +625,11 @@ class TestListSubnet(TestSubnet):
+             subnet.name,
+             subnet.network_id,
+             subnet.cidr,
++            subnet_v2._format_allocation_pools(subnet.allocation_pools),
++            getattr(subnet, 'wrs-net:vlan_id', ''),
+             subnet.tenant_id,
+             subnet.enable_dhcp,
+             utils.format_list(subnet.dns_nameservers),
+-            subnet_v2._format_allocation_pools(subnet.allocation_pools),
+             utils.format_list(subnet.host_routes),
+             subnet.ip_version,
+             subnet.gateway_ip,
+@@ -1093,6 +1101,7 @@ class TestShowSubnet(TestSubnet):
+         'service_types',
+         'subnetpool_id',
+         'tags',
++        'wrs-net:vlan_id',
+     )
+ 
+     data = (
+@@ -1114,6 +1123,7 @@ class TestShowSubnet(TestSubnet):
+         utils.format_list(_subnet.service_types),
+         _subnet.subnetpool_id,
+         utils.format_list(_subnet.tags),
++        getattr(_subnet, 'wrs-net:vlan_id', ''),
+     )
+ 
+     def setUp(self):
+diff --git a/setup.cfg b/setup.cfg
+index 0afa479..1bff735 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -398,6 +398,39 @@ openstack.network.v2 =
+ 	subnet_pool_set = openstackclient.network.v2.subnet_pool:SetSubnetPool
+ 	subnet_pool_show = openstackclient.network.v2.subnet_pool:ShowSubnetPool
+ 	subnet_pool_unset = openstackclient.network.v2.subnet_pool:UnsetSubnetPool
++	providernet_list = openstackclient.network.v2.providernet:ListProvidernet
++	providernet_show = openstackclient.network.v2.providernet:ShowProvidernet
++	providernet_create = openstackclient.network.v2.providernet:CreateProvidernet
++	providernet_update = openstackclient.network.v2.providernet:UpdateProvidernet
++	providernet_delete = openstackclient.network.v2.providernet:DeleteProvidernet
++	providernet_range_list = openstackclient.network.v2.providernet_range:ListProvidernetRange
++	providernet_range_show = openstackclient.network.v2.providernet_range:ShowProvidernetRange
++	providernet_range_create = openstackclient.network.v2.providernet_range:CreateProvidernetRange
++	providernet_range_update = openstackclient.network.v2.providernet_range:UpdateProvidernetRange
++	providernet_range_delete = openstackclient.network.v2.providernet_range:DeleteProvidernetRange
++	qos_list = openstackclient.network.v2.qos:ListQos
++	qos_show = openstackclient.network.v2.qos:ShowQos
++	qos_create = openstackclient.network.v2.qos:CreateQos
++	qos_update = openstackclient.network.v2.qos:UpdateQos
++	qos_delete = openstackclient.network.v2.qos:DeleteQos
++	portforwarding_list = openstackclient.network.v2.portforwarding:ListPortforwarding
++	portforwarding_show = openstackclient.network.v2.portforwarding:ShowPortforwarding
++	portforwarding_create = openstackclient.network.v2.portforwarding:CreatePortforwarding
++	portforwarding_update = openstackclient.network.v2.portforwarding:UpdatePortforwarding
++	portforwarding_delete = openstackclient.network.v2.portforwarding:DeletePortforwarding
++	setting_list = openstackclient.network.v2.setting:ListSetting
++	setting_show = openstackclient.network.v2.setting:ShowSetting
++	setting_update = openstackclient.network.v2.setting:UpdateSetting
++	setting_delete = openstackclient.network.v2.setting:DeleteSetting
++	net_host_list = openstackclient.network.v2.host:ListHost
++	net_host_show = openstackclient.network.v2.host:ShowHost
++	net_host_create = openstackclient.network.v2.host:CreateHost
++	net_host_update = openstackclient.network.v2.host:UpdateHost
++	net_host_delete = openstackclient.network.v2.host:DeleteHost
++	providernet_type_list = openstackclient.network.v2.providernet_type:ListProvidernetType
++	providernet_connectivity_test_list = openstackclient.network.v2.providernet_connectivity_test:ListProvidernetConnectivityTest
++	providernet_connectivity_test_schedule = openstackclient.network.v2.providernet_connectivity_test:CreateProvidernetConnectivityTest
++	net_list_on_providernet = openstackclient.network.v2.providernet:NetListOnProvidernet
+ openstack.object_store.v1 = 
+ 	object_store_account_set = openstackclient.object.v1.account:SetAccount
+ 	object_store_account_show = openstackclient.object.v1.account:ShowAccount

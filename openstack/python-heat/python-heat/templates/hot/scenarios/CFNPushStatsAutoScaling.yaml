@@ -1,0 +1,305 @@
+# Copyright (c) 2013 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#   Demonstrates creating:
+#      An autoscaling stack of VMs that use cfn-push-stats to emit samples from
+#      within the guest.
+#     The name of the stack will prefix the custom meter
+#  This template requires OAM network setup properly to allow communication
+#   between the VMs to the controller
+#
+# Pre-Reqs:
+#   The VM must be able to communicate with the controller
+#   Normal lab setup. Capable of launching 3 VMs
+#   A keypair called: controller-0.   (nova keypair-list)
+#   A flavor called: small (nova flavor-list)
+#   A glance image called: tis-centos-guest (glance image-list)
+#   A network called: internal-net0 (neutron net-list)
+#   A nested template file CFNPushStats.yaml in the same folder as this yaml.
+#
+# Optional Template Parameters:
+#   KEYPAIR: A keypair setup for the current user (nova keypair-list)
+#   KEYPAIR_ADMIN_USER: Name of user to inject ssh keys from keypair on the VM
+#   FLAVOR: A nova flavor name or UUID for the VMs (nova flavor-list)
+#   IMAGE:  A glance image name or UUID for launching the VMs
+#      (glance image-list)
+#   PUBLIC_NETWORK: Name or UUID of the public network to use for the VMs
+#      (neutron net-list)
+#   INTERNAL_NETWORK: Name or UUID of the internal network to use for the VMs
+#     (neutron net-list)
+#   METER_NAME: Name of the new ceilometer meter to use to trigger autoscaling
+#   METER_UNIT: Unit of the new ceilometer meter to use to trigger autoscaling
+#   HIGH_VALUE: Value for the meter to trigger a scale up.
+#   LOW_VALUE: Value for the meter to trigger a scale down.
+#
+# Tenant Considerations:
+#    This template must be run as Admin
+#
+# Sample CLI syntax:
+#    heat stack-create -f CFNPushStatsAutoScale.yaml STACK
+#
+# Expected Outcome:
+#  VMs running the guest image (nova list)
+#  New ceilometer alarm triggers  (ceilometer alarm-list)
+#  New ceilometer meters (ceilometer meter-list) created from within the VM
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrates autoscaling VMs that use cfn-push-stats
+   to emit ceilometer meters from within the VM
+
+parameters:
+
+    KEYPAIR:
+        description: keypair to use. (nova keypair-list)
+        type: string
+        default: controller-0
+        constraints:
+            - custom_constraint: nova.keypair
+
+    KEYPAIR_ADMIN_USER:
+        description: Name of user account to inject ssh keys from keypair
+        type: string
+        default: 'ec2-user'
+
+    FLAVOR:
+        description: Nova flavor to use.   (nova flavor-list)
+        type: string
+        default: small
+        constraints:
+            - custom_constraint: nova.flavor
+
+    IMAGE:
+        description: Glance image to create a cinder volume (glance image-list)
+        type: string
+        default: tis-centos-guest
+        constraints:
+            - custom_constraint: glance.image
+
+    PUBLIC_NETWORK:
+        description: Name of public network to use for VMs (neutron net-list)
+        type: string
+        default: public-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    INTERNAL_NETWORK:
+        description: Name of internal network to use for VMs (neutron net-list)
+        type: string
+        default: internal-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    METER_NAME:
+        description: Ceilometer meter to query when determining autoscaling
+        type: string
+        default: vm_stat
+
+    METER_UNIT:
+        description: Name for custom meter to be created using cfn-push-stats
+        type: string
+        default: '%'
+
+    HIGH_VALUE:
+        description: Metric value that will trigger a scale up if exceeded
+        type: string
+        default: '80'
+
+    LOW_VALUE:
+        description: Metric value that will trigger a scale down if below
+        type: string
+        default: '30'
+
+resources:
+
+    CfnUser:
+        type: AWS::IAM::User
+
+    WebKeys:
+        type: AWS::IAM::AccessKey
+        properties:
+            UserName: { get_resource: CfnUser }
+
+    ScaleUpPolicy:
+        type: OS::Heat::ScalingPolicy
+        properties:
+            adjustment_type: change_in_capacity
+            auto_scaling_group_id: { get_resource: ScalingGroup }
+            cooldown: 60
+            scaling_adjustment: 1
+
+    ScaleDownPolicy:
+        type: OS::Heat::ScalingPolicy
+        properties:
+            adjustment_type: change_in_capacity
+            auto_scaling_group_id: { get_resource: ScalingGroup }
+            cooldown: 60
+            scaling_adjustment: -1
+
+    # Matching metadata is not compatible with cfn-push-stats
+    AlarmHigh:
+        type: OS::Ceilometer::Alarm
+        properties:
+            meter_name:
+                list_join:
+                    - "_"
+                    - - { get_param: 'OS::stack_name'}
+                      - { get_param: METER_NAME }
+            statistic: avg
+            period: 60
+            evaluation_periods: 1
+            threshold: { get_param: HIGH_VALUE }
+            alarm_actions:
+                - {get_attr: [ScaleUpPolicy, alarm_url]}
+            comparison_operator: gt
+
+    AlarmLow:
+        type: OS::Ceilometer::Alarm
+        properties:
+            meter_name:
+                list_join:
+                    - "_"
+                    - - { get_param: 'OS::stack_name'}
+                      - { get_param: METER_NAME }
+            statistic: avg
+            period: 60
+            evaluation_periods: 1
+            threshold: { get_param: LOW_VALUE }
+            alarm_actions:
+                - {get_attr: [ScaleDownPolicy, alarm_url]}
+            comparison_operator: lt
+
+
+    ScalingGroup:
+        type: OS::Heat::AutoScalingGroup
+        properties:
+            cooldown: 60
+            desired_capacity: 1
+            max_size: 3
+            min_size: 1
+            resource:
+                type: OS::Nova::Server
+                # Special Note: CFN related metadata is located at the resource
+                # level (not as a property)
+                metadata:
+                    wrs-groupindex-mode: true
+                    AWS::CloudFormation::Init:
+                        config:
+                            files:
+                                /etc/cfn/cfn-credentials:
+                                    content:
+                                        str_replace:
+                                            template: |
+                                                AWSAccessKeyId=_keyid_
+                                                AWSSecretKey=_secret_
+                                            params:
+                                                _keyid_:
+                                                    get_resource: WebKeys
+                                                _secret_:
+                                                    get_attr:
+                                                        - WebKeys
+                                                        - SecretAccessKey
+                                    mode: '000400'
+                                    owner: root
+                                    group: root
+                                /etc/cfn/make_load:
+                                    content: |
+                                         #!/bin/sh
+                                         # Generate maximum CPU load for a core
+                                         # Launch this X times for X cores
+                                         # to get 100% utilization
+                                         dd if=/dev/urandom of=/dev/null &
+                                    mode: '000700'
+                                    owner: root
+                                    group: root
+                                /etc/cfn/get_cpu_load:
+                                    content: |
+                                         #!/usr/bin/python
+                                         # Get the 1 minute CPU load average and
+                                         # divide by num cores
+                                         import os
+                                         cores = 1
+                                         n = os.sysconf("SC_NPROCESSORS_ONLN")
+                                         if isinstance(n, int) and n > 0:
+                                             cores = n
+                                         l_avg = float(os.getloadavg()[0])
+                                         # convert to a percentage
+                                         pct = (100 * l_avg) / float(cores)
+                                         print pct
+                                    mode: '000700'
+                                    owner: root
+                                    group: root
+                                /etc/cfn/send_guest_metrics:
+                                    content:
+                                        str_replace:
+                                            template: |
+                                                #!/bin/sh
+                                                METRIC=`/etc/cfn/get_cpu_load`
+                                                /opt/aws/bin/cfn-push-stats --metric _metername_ --value ${METRIC} --units _unit_
+                                            params:
+                                                _metername_:
+                                                    list_join:
+                                                        - "_"
+                                                        - - { get_param: 'OS::stack_name' }
+                                                          - { get_param: METER_NAME }
+                                                _unit_:
+                                                    get_param: METER_UNIT
+                                    mode: '000700'
+                                    owner: root
+                                    group: root
+                                /etc/cron.d/cfn_cron:
+                                    content: |
+                                      * * * * * root /etc/cfn/send_guest_metrics
+                                    mode: '000600'
+                                    owner: root
+                                    group: root
+
+                properties:
+                    name:
+                        list_join:
+                            - "_"
+                            - - { get_param: 'OS::stack_name'}
+                              - "vm"
+                              - ""
+                    key_name: { get_param: KEYPAIR }
+                    admin_user: { get_param: KEYPAIR_ADMIN_USER }
+                    flavor: { get_param: FLAVOR }
+                    image: { get_param: IMAGE }
+                    networks:
+                        - network: { get_param: PUBLIC_NETWORK }
+                        - network: { get_param: INTERNAL_NETWORK }
+                    # HEAT_CFNTOOLS includes Resource Metadata in the user-data
+                    # automatically and expects the format to comply with
+                    # AWS::CloudFormation::Init
+                    user_data_format: HEAT_CFNTOOLS
+                    user_data: |
+                          #!/bin/bash -v
+                          # Create sym links to standard location for cfn tools
+                          # in an aws environment
+                          echo "Setting up symlinks" >> /var/log/heat_setup.txt
+                          cfn-create-aws-symlinks --source /usr/bin
+                          # invoke cfn-init which will extract cloudformation
+                          # metadata from the userdata
+                          echo "Running cfn-init " >> /var/log/heat_setup.txt
+                          /usr/bin/cfn-init >> /var/log/heat_setup.txt
+                          echo "Done cfn-init setup" >> /var/log/heat_setup.txt
+
+
+outputs:
+    ceilometer_query:
+        value:
+            str_replace:
+                template: ceilometer statistics -m metername -p 60 -a avg
+                params:
+                    metername:
+                        list_join:
+                            - "_"
+                            - - { get_param: 'OS::stack_name' }
+                              - { get_param: METER_NAME }

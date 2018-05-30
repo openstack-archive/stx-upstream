@@ -1,0 +1,250 @@
+From 6da11c584cab0e2ff396cc0208453a3e19b4dc2d Mon Sep 17 00:00:00 2001
+From: Stefan Dinescu <stefan.dinescu@windriver.com>
+Date: Fri, 17 Nov 2017 15:50:23 +0000
+Subject: [PATCH 1/1] Add glance driver
+
+---
+ glance_store/_drivers/glance.py | 210 ++++++++++++++++++++++++++++++++++++++++
+ setup.cfg						 |	 2 +
+ 2 files changed, 212 insertions(+)
+ create mode 100644 glance_store/_drivers/glance.py
+
+diff --git a/glance_store/_drivers/glance.py b/glance_store/_drivers/glance.py
+new file mode 100644
+index 0000000..554a5a1
+--- /dev/null
++++ b/glance_store/_drivers/glance.py
+@@ -0,0 +1,210 @@
++# Copyright (c) 2013-2017 Wind River Systems, Inc.
++# SPDX-License-Identifier: Apache-2.0
++#
++#
++#
++#
++
++# vim: tabstop=4 shiftwidth=4 softtabstop=4
++
++# All Rights Reserved.
++#
++
++"""Storage backend for glance"""
++
++import contextlib
++import errno
++import hashlib
++import logging
++import math
++import os
++import socket
++import time
++
++from oslo_concurrency import processutils
++from oslo_config import cfg
++from oslo_utils import units
++
++from glance_store import capabilities
++from glance_store.common import utils
++import glance_store.driver
++from glance_store import exceptions
++from glance_store.i18n import _, _LE, _LW, _LI
++import glance_store.location
++from keystoneclient import exceptions as keystone_exc
++from keystoneclient import service_catalog as keystone_sc
++
++import keystoneauth1.loading
++import keystoneauth1.session
++
++from glanceclient import client as glance_client
++from cinderclient import exceptions as glance_exception
++
++CONF = cfg.CONF
++LOG = logging.getLogger(__name__)
++
++_GLANCE_OPTS = [
++     cfg.StrOpt('glance_endpoint_template',
++                default=None,
++                help=_("Glance Endpoint template")),
++     cfg.StrOpt('glance_catalog_info',
++                default='image:glance:internalURL',
++                help=_("Glance catalog info")),]
++
++def get_glanceclient(conf, remote_region, context=None):
++
++     glance_store = conf.glance_store
++
++     if glance_store.cinder_endpoint_template:
++         url = glance_store.glance_endpoint_template % context.to_dict()
++     else:
++         info = glance_store.glance_catalog_info
++         service_type, service_name, endpoint_type = info.split(':')
++         sc = {'serviceCatalog': context.service_catalog}
++         try:
++             url = keystone_sc.ServiceCatalogV2(sc).url_for(
++                     region_name=remote_region,
++                     service_type=service_type,
++                     service_name=service_name,
++                     endpoint_type=endpoint_type)
++         except keystone_exc.EndpointNotFound:
++             reason = _("Failed to find Glance from a service catalog.")
++             raise exceptions.BadStoreConfiguration(store_name="glance",
++                                                        reason=reason)
++
++     c = glance_client.Client('2',
++              endpoint=url,
++              token=context.auth_token)
++
++     return c
++
++
++class StoreLocation(glance_store.location.StoreLocation):
++
++     """Class describing a Glance URI."""
++
++     def process_specs(self):
++         self.scheme = self.specs.get('scheme', 'glance')
++         self.image_id = self.specs.get('image_id')
++         self.remote_region = self.specs.get('remote_region')
++
++     def get_uri(self):
++         return "glance://%s/%s" % (self.remote_region, self.image_id)
++
++     def parse_uri(self, uri):
++
++         if not uri.startswith('glance://'):
++             reason = _("URI must start with 'glance://'")
++             LOG.info(reason)
++             raise exceptions.BadStoreUri(message=reason)
++
++         self.scheme = 'glance'
++
++         sp = uri.split('/')
++
++         self.image_id = sp[-1]
++         self.remote_region=sp[-2]
++
++         if not utils.is_uuid_like(self.image_id):
++             reason = _("URI contains invalid image ID")
++             LOG.info(reason)
++             raise exceptions.BadStoreUri(message=reason)
++
++
++
++class Store(glance_store.driver.Store):
++
++     """Cinder backend store adapter."""
++
++     _CAPABILITIES = (capabilities.BitMasks.READ_ACCESS |
++                      capabilities.BitMasks.DRIVER_REUSABLE)
++     OPTIONS = _GLANCE_OPTS
++     EXAMPLE_URL = "glance://<remote_region>/<image_id>"
++
++     def __init__(self, *args, **kargs):
++         super(Store, self).__init__(*args, **kargs)
++
++     def get_schemes(self):
++         return ('glance',)
++
++     def _check_context(self, context, require_tenant=False):
++
++         if context is None:
++             reason = _("Glance storage requires a context.")
++             raise exceptions.BadStoreConfiguration(store_name="glance",
++                                                    reason=reason)
++         if context.service_catalog is None:
++             reason = _("glance storage requires a service catalog.")
++             raise exceptions.BadStoreConfiguration(store_name="glance",
++                                                    reason=reason)
++
++
++     @capabilities.check
++     def get(self, location, offset=0, chunk_size=None, context=None):
++         """
++         Takes a `glance_store.location.Location` object that indicates
++         where to find the image file, and returns a tuple of generator
++         (for reading the image file) and image_size
++
++         :param location `glance_store.location.Location` object, supplied
++                         from glance_store.location.get_location_from_uri()
++         :param offset: offset to start reading
++         :param chunk_size: size to read, or None to get all the image
++         :param context: Request context
++         :raises `glance_store.exceptions.NotFound` if image does not exist
++         """
++
++         loc = location.store_location
++         self._check_context(context)
++
++         try:
++             gc = get_glanceclient(self.conf, loc.remote_region, context)
++             img = gc.images.get(loc.image_id)
++
++             size = int(img.size/(1024*1024))
++             iterator = gc.images.data(loc.image_id)
++             return (iterator, chunk_size or size)
++         except glance_exception.NotFound:
++             reason = _("Failed to get image size due to "
++                        "volume can not be found: %s") % volume.id
++             LOG.error(reason)
++             raise exceptions.NotFound(reason)
++         except glance_exception.ClientException as e:
++             msg = (_('Failed to get image volume %(volume_id): %(error)s')
++                    % {'volume_id': loc.volume_id, 'error': e})
++             LOG.error(msg)
++             raise exceptions.BackendException(msg)
++
++     def get_size(self, location, context=None):
++         """
++         Takes a `glance_store.location.Location` object that indicates
++         where to find the image file and returns the image size
++
++         :param location: `glance_store.location.Location` object, supplied
++                         from glance_store.location.get_location_from_uri()
++         :raises: `glance_store.exceptions.NotFound` if image does not exist
++         :rtype int
++         """
++
++         loc = location.store_location
++
++         try:
++             self._check_context(context)
++             img = get_glanceclient(self.conf,
++                                       context).images.get(loc.image_id)
++             return int(img.size/1024 * 1024)
++         except glance_exception.NotFound:
++             raise exceptions.NotFound(image=loc.image_id)
++         except Exception:
++             LOG.exception(_LE("Failed to get image size due to "
++                               "internal error."))
++             return 0
++
++     @capabilities.check
++     def add(self, image_id, image_file, image_size, context=None,
++             verifier=None):
++        raise NotImplementedError
++
++     @capabilities.check
++     def delete(self, location, context=None):
++         raise NotImplementedError
+diff --git a/setup.cfg b/setup.cfg
+index b3054c4..8cc9fb7 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -32,6 +32,7 @@ glance_store.drivers =
+	sheepdog = glance_store._drivers.sheepdog:Store
+	cinder = glance_store._drivers.cinder:Store
+	vmware = glance_store._drivers.vmware_datastore:Store
++	glance = glance_store._drivers.glance:Store
+	# TESTS ONLY
+	no_conf = glance_store.tests.fakes:UnconfigurableStore
+	# Backwards compatibility
+@@ -42,6 +43,7 @@ glance_store.drivers =
+	glance.store.sheepdog.Store = glance_store._drivers.sheepdog:Store
+	glance.store.cinder.Store = glance_store._drivers.cinder:Store
+	glance.store.vmware_datastore.Store = glance_store._drivers.vmware_datastore:Store
++	glance.store.glance.Store = glance_store._drivers.glance:Store
+ oslo.config.opts = 
+	glance.store = glance_store.backend:_list_opts
+ console_scripts = 
+-- 
+1.8.3.1
+

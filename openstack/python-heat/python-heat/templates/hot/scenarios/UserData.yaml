@@ -1,0 +1,175 @@
+################################################################################
+# Copyright (c) 2017 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objectives:
+#   Boot a nova server with userdata
+#   Use stack-update to rebuild the server with new userdata
+#
+# Pre-Reqs:
+#   A keypair called:  controller-0  (nova keypair-list)
+#   A nova flavor called: m1.tiny (nova flavor-list)
+#   A glance image called: wrl6  (glance image-list)
+#   A networks called: private-net0 (neutron net-list)
+#
+# Mandatory Template Parameters:
+#   None
+#
+# Tenant Considerations:
+#    None
+#
+# Sample CLI syntax:
+#    heat stack-create -f UserData.yaml  STACK
+#    heat stack-update -f UserData.yaml -P USERDATA="new userdata"  STACK
+#
+# Expected Outcome:
+#   3 new nova instances called:  userdata-vm, userdata-vm_vol,
+#                                 userdata-vm_vol_v2
+#   2 new volumes called: userdata-vol, userdata-vol_v2
+#      nova list
+#   The stack-update should rebuild the nova VM with new userdata
+#   The userdata is base64 encoded attribute: OS-EXT-SRV-ATTR:user_data
+#
+################################################################################
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate launching an instance with updatable userdata
+
+parameters:
+
+    VM_NAME:
+        description: name for the new VM
+        type: string
+        default: userdata-vm
+
+    VM_VOL_NAME:
+        description: name for the new VM
+        type: string
+        default: userdata-vm_vol
+
+    VOL_V1_NAME:
+        description: name for the new VM
+        type: string
+        default: userdata-vol
+
+    VM_VOL_V2_NAME:
+        description: name for the new VM
+        type: string
+        default: userdata-vm_vol_v2
+
+    VOL_V2_NAME:
+        description: name for the new VM
+        type: string
+        default: userdata-vol_v2
+
+    KEYPAIR:
+        description: keypair to use. (nova keypair-list)
+        type: string
+        default: controller-0
+        constraints:
+            - custom_constraint: nova.keypair
+
+    KEYPAIR_ADMIN_USER:
+        type: string
+        description: Name of user account to inject ssh keys from keypair
+        default: 'ec2-user'
+
+    FLAVOR:
+        description: Nova flavor to use.   (nova flavor-list)
+        type: string
+        default: m1.tiny
+        constraints:
+            - custom_constraint: nova.flavor
+
+    IMAGE:
+        description: Glance image to use (glance image-list)
+        type: string
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    PRIVATE_NET:
+        description: private network to use (neutron net-list)
+        type: string
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    USERDATA:
+        description: Userdata for the new VM
+        type: string
+        default: "Sample Userdata"
+
+resources:
+
+    #####################
+    ## Host with image as boot source
+    ######################
+    RAW_Server:
+        type: OS::Nova::Server
+        properties:
+            admin_user: { get_param: KEYPAIR_ADMIN_USER }
+            flavor: { get_param: FLAVOR }
+            image: { get_param: IMAGE }
+            key_name: { get_param: KEYPAIR }
+            name: { get_param: VM_NAME }
+            networks:
+                - network: { get_param: PRIVATE_NET }
+            user_data: { get_param: USERDATA }
+            user_data_format: RAW
+            user_data_update_policy: REBUILD
+
+    #####################
+    ## Host with volume as boot source within the block_device_mapping field
+    ######################
+    RAW_vol:
+        type: OS::Cinder::Volume
+        properties:
+            name: { get_param: VOL_V1_NAME }
+            image: { get_param: IMAGE }
+            size: 2
+
+    RAW_Server_vol:
+        type: OS::Nova::Server
+        properties:
+            admin_user: { get_param: KEYPAIR_ADMIN_USER }
+            flavor: { get_param: FLAVOR }
+            block_device_mapping:
+                - device_name: vda
+                  volume_id: { get_resource: RAW_vol }
+            key_name: { get_param: KEYPAIR }
+            name: { get_param: VM_VOL_NAME }
+            networks:
+                - network: { get_param: PRIVATE_NET }
+            user_data: { get_param: USERDATA }
+            user_data_format: RAW
+            user_data_update_policy: REBUILD
+
+    #####################
+    ## Host with vol as boot source within the block_device_mapping_v2 field
+    ######################
+    RAW_vol_V2:
+        type: OS::Cinder::Volume
+        properties:
+            name: { get_param: VOL_V2_NAME }
+            image: { get_param: IMAGE }
+            size: 2
+
+    RAW_Server_vol_V2:
+        type: OS::Nova::Server
+        properties:
+            admin_user: { get_param: KEYPAIR_ADMIN_USER }
+            flavor: { get_param: FLAVOR }
+            block_device_mapping_v2:
+                - {device_name: vda, volume_id: { get_resource: RAW_vol_V2 } }
+            key_name: { get_param: KEYPAIR }
+            name: { get_param: VM_VOL_V2_NAME }
+            networks:
+                - network: { get_param: PRIVATE_NET }
+            user_data: { get_param: USERDATA }
+            user_data_format: RAW
+            user_data_update_policy: REBUILD

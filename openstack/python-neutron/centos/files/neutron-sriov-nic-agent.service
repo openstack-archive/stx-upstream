@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenStack Neutron SR-IOV NIC Agent
+After=syslog.target network.target openvswitch.service
+Before=pmon.service
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+ExecStart=/etc/rc.d/init.d/neutron-sriov-nic-agent start
+ExecStop=/etc/rc.d/init.d/neutron-sriov-nic-agent stop
+ExecReload=/etc/rc.d/init.d/neutron-sriov-nic-agent reload
+PIDFile=/var/run/neutron-sriov-nic-agent.pid
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

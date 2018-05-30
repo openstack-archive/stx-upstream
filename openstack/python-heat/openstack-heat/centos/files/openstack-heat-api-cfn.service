@@ -1,0 +1,11 @@
+[Unit]
+Description=Openstack Heat CFN-compatible API Service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/heat-api-cfn --config-file /usr/share/heat/heat-dist.conf --config-file /etc/heat/heat.conf
+
+[Install]
+WantedBy=multi-user.target

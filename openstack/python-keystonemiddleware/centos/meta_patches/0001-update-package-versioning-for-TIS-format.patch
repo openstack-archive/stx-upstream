@@ -1,0 +1,35 @@
+commit fd40ac6be0cb4e0dcc8295e9f9673fa5970e0035
+Author: Shoaib Nasir <shoaib.nasir@windriver.com>
+Date:   Wed Feb 14 17:00:55 2018 -0500
+
+    0001-update-package-versioning-for-TIS-format
+
+diff --git a/SPECS/python-keystonemiddleware.spec b/SPECS/python-keystonemiddleware.spec
+index 8ccc7b4..63e83d2 100644
+--- a/SPECS/python-keystonemiddleware.spec
++++ b/SPECS/python-keystonemiddleware.spec
+@@ -9,7 +9,7 @@
+ 
+ Name:           python-%{sname}
+ Version:        4.17.0
+-Release:        1%{?dist}
++Release:        1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:        Middleware for OpenStack Identity
+ 
+ License:        ASL 2.0
+@@ -133,6 +133,7 @@ rm -rf %{sname}.egg-info
+ sed -i 's/^warning-is-error.*/warning-is-error = 0/g' setup.cfg
+ 
+ %build
++export PBR_VERSION=%{version}
+ %py2_build
+ %if 0%{?with_python3}
+ %py3_build
+@@ -147,6 +148,7 @@ rm -rf doc/build/html/.{doctrees,buildinfo}
+ 
+ 
+ %install
++export PBR_VERSION=%{version}
+ %if 0%{?with_python3}
+ %py3_install
+ # Delete tests

@@ -1,0 +1,32 @@
+From 83649dfe12bf4b6263b2df663af1f87e54e7571a Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Fri, 27 Oct 2017 12:03:11 -0500
+Subject: [PATCH] WRS. Fix when building outside git tree
+
+---
+ openstackdocstheme/__init__.py | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/openstackdocstheme/__init__.py b/openstackdocstheme/__init__.py
+index d8fb2f5..e5974a7 100644
+--- a/openstackdocstheme/__init__.py
++++ b/openstackdocstheme/__init__.py
+@@ -49,9 +49,12 @@ def _html_page_context(app, pagename, templatename, context, doctree):
+     global _html_context_data
+     if _html_context_data is None:
+         _html_context_data = {}
+-        _html_context_data['gitsha'] = subprocess.check_output(
+-            ['git', 'rev-parse', 'HEAD'],
+-        ).decode('utf-8').strip()
++        try:
++            _html_context_data['gitsha'] = subprocess.check_output(
++                ['git', 'rev-parse', 'HEAD'],
++            ).decode('utf-8').strip()
++        except:
++            _html_context_data['gitsha'] = 'unknown'
+         repo_name = app.config.repository_name
+         if repo_name:
+             _html_context_data['giturl'] = _giturl.format(repo_name)
+-- 
+1.8.3.1
+

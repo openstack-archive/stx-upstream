@@ -1,0 +1,4 @@
+update-package-versioning-for-tis-format.patch
+spec-rabbit-increase-heartbeat-rate-to-decrease-polling-interval.patch
+fix-pifpaf-build-error.patch
+0004-disable-check-on-build.patch

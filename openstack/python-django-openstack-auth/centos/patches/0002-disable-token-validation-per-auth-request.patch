@@ -1,0 +1,28 @@
+From 3b6605b547bb27b272345b03797abc94a23469ab Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Mon, 12 Feb 2018 10:59:39 -0500
+Subject: [PATCH] disable token validation per auth request
+
+To prevent invalid tokens from being used, each request would previous
+attempt a token validation request. This causes 2x AUTH requests to
+Keystone which is affecting Host Swact/Lock and VM migration times
+---
+ openstack_auth/user.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/openstack_auth/user.py b/openstack_auth/user.py
+index c6f616c..f486bfa 100644
+--- a/openstack_auth/user.py
++++ b/openstack_auth/user.py
+@@ -254,7 +254,7 @@ class User(models.AbstractBaseUser, models.AnonymousUser):
+         self.password = None
+ 
+         # WRS: additional check to validate token prior to using
+-        self.validate_token = False
++        self.validate_token = True
+ 
+     def __unicode__(self):
+         return self.username
+-- 
+1.8.3.1
+

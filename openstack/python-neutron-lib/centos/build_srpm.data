@@ -1,0 +1,4 @@
+TAR_NAME=python-neutron-lib
+SRC_DIR="$CGCS_BASE/git/neutron-lib"
+TIS_BASE_SRCREV=f0d7e470c2ef1702b2715ceb2fd8a00fce2a23be
+TIS_PATCH_VER=GITREVCOUNT

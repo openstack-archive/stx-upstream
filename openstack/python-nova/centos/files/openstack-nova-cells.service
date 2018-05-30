@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenStack Nova Cells Server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+#NotifyAccess=all
+TimeoutStartSec=0
+#Restart=always
+User=root
+ExecStart=/usr/bin/nova-cells
+
+[Install]
+WantedBy=multi-user.target
+

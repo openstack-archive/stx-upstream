@@ -1,0 +1,55 @@
+From 8777fc48e9b3e2086e6a68eb3601bde8ec927d6b Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Mon, 20 Mar 2017 09:21:36 -0400
+Subject: [PATCH 2/4] WRS: 0002-meta-spec-remote-client.patch
+
+---
+ SPECS/python-keystoneauth1.spec | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/SPECS/python-keystoneauth1.spec b/SPECS/python-keystoneauth1.spec
+index fb9e8e1..dad6758 100644
+--- a/SPECS/python-keystoneauth1.spec
++++ b/SPECS/python-keystoneauth1.spec
+diff --git a/SPECS/python-keystoneauth1.spec b/SPECS/python-keystoneauth1.spec
+index 91968cc..578cc19 100644
+--- a/SPECS/python-keystoneauth1.spec
++++ b/SPECS/python-keystoneauth1.spec
+@@ -116,6 +116,12 @@ BuildRequires: python-fixtures
+ %description doc
+ Documentation for OpenStack Identity Authentication Library
+
++%package          sdk
++Summary:          SDK files for %{name}
++
++%description      sdk
++Contains SDK files for %{name} package
++
+ %prep
+ %autosetup -n %{pypi_name}-%{upstream_version} -S git
+
+@@ -142,6 +148,11 @@ rm -rf %{pypi_name}.egg-info
+ %{__python} setup.py build_sphinx -b html
+ rm -rf doc/build/html/.buildinfo
+
++
++# install SDK package
++mkdir -p %{buildroot}/usr/share/remote-clients
++tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' --transform="s/keystoneauth1-%{version}/%{name}-%{version}/" -C .. keystoneauth1-%{version}
++
+ %check
+ %{__python2} setup.py testr
+ %if 0%{?with_python3}
+@@ -168,6 +179,9 @@ rm -rf .testrepository
+ %license LICENSE
+ %doc doc/build/html
+
++%files sdk
++/usr/share/remote-clients/%{name}-%{version}.tgz
++
+ %changelog
+ * Fri Aug 11 2017 Alfredo Moralejo <amoralej@redhat.com> 3.1.0-1
+ - Update to 3.1.0
+-- 
+1.8.3.1
+

@@ -1,0 +1,137 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Neutron::Port
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#    An external network named: external-net0 (neutron net-list)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    The tenant (or admin) needs access to the network selected
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Neutron_Port.yaml  STACK
+#
+# Expected Outcome:
+#   A new port on that network named: sample_port
+#     neutron port-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Neutron::Port heat resource
+
+parameters:
+
+    NETWORK:
+        description: the external network to use when creating the port
+        type: string
+        default: external-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+
+    PORT_NAME:
+        description: Name for the port
+        type: string
+        default: sample_port
+
+resources:
+
+    OS_Neutron_Port:
+        type: OS::Neutron::Port
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+            # Requires network_id (uuid) or network (name or uuid)
+            # network_id:
+            network: {get_param: NETWORK }
+
+            #################################################
+            # Optional properties
+            #################################################
+            #  admin_state_up: {default: true, required: false, type: boolean}
+            admin_state_up: true
+
+            #  device_id: {required: false, type: string}
+            device_id: device_X
+
+            #  fixed_ips:
+            #    required: false
+            #    schema:
+            #      '*':
+            #        required: false
+            #        schema:
+            #          ip_address: {required: false, type: string}
+            #          subnet_id: {required: false, type: string}
+            #        type: map
+            #    type: list
+
+            #  mac_address: {required: false, type: string}
+
+            #  name: {required: false, type: string}
+            name: { get_param: PORT_NAME }
+
+            #  security_groups: {required: false, type: list}
+            #  value_specs:
+            #    default: {}
+            #    required: false
+            #    type: map
+
+
+outputs:
+    prt_admin_state_up:
+        description: The administrative state of this port.
+        value: { get_attr: [ OS_Neutron_Port, admin_state_up] }
+
+    prt_device_id:
+        description: Unique identifier for the device.
+        value: { get_attr: [ OS_Neutron_Port, device_id] }
+
+    prt_device_owner:
+        description: Name of the network owning the port.
+        value: { get_attr: [ OS_Neutron_Port, device_owner] }
+
+    prt_fixed_ips:
+        description: Fixed ip addresses.
+        value: { get_attr: [ OS_Neutron_Port, fixed_ips] }
+
+    prt_mac_address:
+        description: Mac address of the port.
+        value: { get_attr: [ OS_Neutron_Port, mac_address] }
+
+    prt_name:
+        description: Friendly name of the port.
+        value: { get_attr: [ OS_Neutron_Port, name] }
+
+    prt_network_id:
+        description: Unique identifier for the network owning the port.
+        value: { get_attr: [ OS_Neutron_Port, network_id] }
+
+    prt_security_groups:
+        description: A list of security groups for the port.
+        value: { get_attr: [ OS_Neutron_Port, security_groups] }
+
+    prt_show:
+        description: All attributes.
+        value: { get_attr: [ OS_Neutron_Port, show] }
+
+    prt_status:
+        description: The status of the port.
+        value: { get_attr: [ OS_Neutron_Port, status] }
+
+    prt_tenant_id:
+        description: Tenant owning the port
+        value: { get_attr: [ OS_Neutron_Port, tenant_id] }

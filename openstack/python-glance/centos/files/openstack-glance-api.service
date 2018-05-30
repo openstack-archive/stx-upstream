@@ -1,0 +1,19 @@
+[Unit]
+Description=OpenStack Image Service (code-named Glance) API server
+After=syslog.target network.target
+
+[Service]
+LimitNOFILE=131072
+LimitNPROC=131072
+Type=simple
+# WRS - use root user
+#User=glance
+User=root
+ExecStart=/usr/bin/glance-api
+PrivateTmp=true
+# WRS - managed by sm
+#Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,102 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Neutron::Router
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#    network named external-net0 (neutron net-list)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    The tenant (or admin) needs access to the network selected
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Neutron_Router.yaml STACK
+#
+# Expected Outcome:
+#   A new router for the network called:  sample_router
+#      neutron router-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Neutron::Router heat resource
+
+parameters:
+
+    NETWORK:
+        description: the external network to use when creating the Router
+        type: string
+        default: external-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+
+    ROUTER_NAME:
+        description: name for the new router
+        type: string
+        default: sample_router
+
+resources:
+
+    OS_Neutron_Router:
+        type: OS::Neutron::Router
+        properties:
+            #################################################
+            # Required properties: None
+            #################################################
+
+            #################################################
+            # Optional properties
+            #################################################
+            #  admin_state_up: {default: true, required: false, type: boolean}
+            admin_state_up: true
+
+            #  name: {required: false, type: string}
+            name: { get_param: ROUTER_NAME }
+
+            #  value_specs:
+            #    default: {}
+            #    required: false
+            #    type: map
+            # Possible valid keys are:
+            #   external_gateway_info (value is a dict)
+            external_gateway_info:
+                network: { get_param: NETWORK }
+                enable_snat: true
+
+outputs:
+
+    rt_admin_state_up:
+        description: Administrative state of the router.
+        value: { get_attr: [ OS_Neutron_Router, admin_state_up] }
+
+    rt_external_gateway_info:
+        description: Gateway network for the router.
+        value: { get_attr: [ OS_Neutron_Router, external_gateway_info] }
+
+    rt_name:
+        description: Friendly name of the router.
+        value: { get_attr: [ OS_Neutron_Router, name] }
+
+    rt_show:
+        description: All attributes.
+        value: { get_attr: [ OS_Neutron_Router, show] }
+
+    rt_status:
+        description: The status of the router.
+        value: { get_attr: [ OS_Neutron_Router, status] }
+
+    rt_tenant_id:
+        description: Tenant owning the router.
+        value: { get_attr: [ OS_Neutron_Router, tenant_id] }

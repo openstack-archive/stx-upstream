@@ -1,0 +1,25 @@
+From 645004eec0d66fdb5b76738a8077ea93ac7f7148 Mon Sep 17 00:00:00 2001
+From: Don Penney <don.penney@windriver.com>
+Date: Mon, 26 Sep 2016 17:32:55 -0400
+Subject: [PATCH] Update package versioning for TIS format
+
+---
+ SPECS/python-wsme.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/python-wsme.spec b/SPECS/python-wsme.spec
+index 8f7fd22..943c1cd 100644
+--- a/SPECS/python-wsme.spec
++++ b/SPECS/python-wsme.spec
+@@ -12,7 +12,7 @@
+ 
+ Name:           python-%{lpypi_name}
+ Version:        0.8.0
+-Release:        1%{?dist}
++Release:        1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:        Web Services Made Easy
+ 
+ License:        MIT
+-- 
+1.8.3.1
+

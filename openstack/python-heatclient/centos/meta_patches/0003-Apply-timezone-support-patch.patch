@@ -1,0 +1,37 @@
+From 2d0e1e8effaf3c83e137af5a79eb62f3e312bd94 Mon Sep 17 00:00:00 2001
+From: Al Bailey <Al.Bailey@windriver.com>
+Date: Thu, 26 Oct 2017 08:56:39 -0500
+Subject: [PATCH] WRS: 0003-Apply-timezone-support-patch.patch
+
+---
+ SPECS/python-heatclient.spec | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/SPECS/python-heatclient.spec b/SPECS/python-heatclient.spec
+index 1f44763..12ce333 100644
+--- a/SPECS/python-heatclient.spec
++++ b/SPECS/python-heatclient.spec
+@@ -15,6 +15,12 @@ License: ASL 2.0
+ URL:     https://launchpad.net/python-heatclientclient
+ Source0: https://tarballs.openstack.org/%{name}/%{name}-%{upstream_version}.tar.gz
+ 
++# WRS.
++Patch0001:  0001-timezone-support-for-heatclient.patch
++
++# BuildArch needs to be located below patches in the spec file
++
++
+ BuildArch: noarch
+ 
+ %description
+@@ -101,6 +107,7 @@ Contains SDK files for %{name} package
+ 
+ %prep
+ %autosetup -n %{name}-%{upstream_version} -S git
++# autosetup applies all patches automatically
+ 
+ rm -rf {test-,}requirements.txt tools/{pip,test}-requires
+ 
+-- 
+1.8.3.1
+

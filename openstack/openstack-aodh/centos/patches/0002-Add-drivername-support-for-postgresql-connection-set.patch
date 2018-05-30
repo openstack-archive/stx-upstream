@@ -1,0 +1,65 @@
+From c8afec630be24345ccae50db739949f964e9c580 Mon Sep 17 00:00:00 2001
+From: Al Bailey <Al.Bailey@windriver.com>
+Date: Thu, 21 Dec 2017 13:38:09 -0600
+Subject: [PATCH] Add drivername support for postgresql connection settings
+
+---
+ aodh/api/aodh-api.py       | 3 +--
+ aodh/cmd/data_migration.py | 2 +-
+ aodh/storage/__init__.py   | 2 +-
+ setup.cfg                  | 1 +
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/aodh/api/aodh-api.py b/aodh/api/aodh-api.py
+index 565f2e3..7c413d6 100644
+--- a/aodh/api/aodh-api.py
++++ b/aodh/api/aodh-api.py
+@@ -2,6 +2,5 @@ from aodh.api import app as build_wsgi_app
+ import sys
+ 
+ sys.argv = sys.argv[:1]
+-args = {'config_file' : 'etc/aodh/aodh.conf', }
++args = {'config_file': 'etc/aodh/aodh.conf', }
+ application = build_wsgi_app.build_wsgi_app(None, args)
+-
+diff --git a/aodh/cmd/data_migration.py b/aodh/cmd/data_migration.py
+index 6a9ea49..1a8df28 100644
+--- a/aodh/cmd/data_migration.py
++++ b/aodh/cmd/data_migration.py
+@@ -94,7 +94,7 @@ def _validate_conn_options(args):
+                               ), nosql_scheme)
+         sys.exit(1)
+     if sql_scheme not in ('mysql', 'mysql+pymysql', 'postgresql',
+-                          'sqlite'):
++                          'postgresql+psycopg2', 'sqlite'):
+         root_logger.error(_LE('Invalid destination DB type %s, the destination'
+                               ' database connection should be one of: '
+                               '[mysql, postgresql, sqlite]'), sql_scheme)
+diff --git a/aodh/storage/__init__.py b/aodh/storage/__init__.py
+index e1d1048..d8fcd54 100644
+--- a/aodh/storage/__init__.py
++++ b/aodh/storage/__init__.py
+@@ -59,7 +59,7 @@ def get_connection_from_config(conf):
+     url = conf.database.connection
+     connection_scheme = urlparse.urlparse(url).scheme
+     if connection_scheme not in ('mysql', 'mysql+pymysql', 'postgresql',
+-                                 'sqlite'):
++                                 'postgresql+psycopg2', 'sqlite'):
+         msg = ('Storage backend %s is deprecated, and all the NoSQL backends '
+                'will be removed in Aodh 4.0, please use SQL backend.' %
+                connection_scheme)
+diff --git a/setup.cfg b/setup.cfg
+index 76f5362..ca67a16 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -80,6 +80,7 @@ aodh.storage =
+ 	mysql = aodh.storage.impl_sqlalchemy:Connection
+ 	mysql+pymysql = aodh.storage.impl_sqlalchemy:Connection
+ 	postgresql = aodh.storage.impl_sqlalchemy:Connection
++	postgresql+psycopg2 = aodh.storage.impl_sqlalchemy:Connection
+ 	sqlite = aodh.storage.impl_sqlalchemy:Connection
+ 	hbase = aodh.storage.impl_hbase:Connection
+ aodh.alarm.rule = 
+-- 
+1.8.3.1
+

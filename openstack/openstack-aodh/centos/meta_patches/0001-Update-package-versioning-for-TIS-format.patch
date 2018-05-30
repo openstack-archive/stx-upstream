@@ -1,0 +1,27 @@
+From 4639ba8ff40214558ac25394ff2a3f4aaebe437a Mon Sep 17 00:00:00 2001
+From: Scott Little <scott.little@windriver.com>
+Date: Mon, 2 Oct 2017 14:28:46 -0400
+Subject: [PATCH 2/5] WRS: 0001-Update-package-versioning-for-TIS-format.patch
+
+Conflicts:
+	SPECS/openstack-aodh.spec
+---
+ SPECS/openstack-aodh.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/openstack-aodh.spec b/SPECS/openstack-aodh.spec
+index 5d0dedd..c844a28 100644
+--- a/SPECS/openstack-aodh.spec
++++ b/SPECS/openstack-aodh.spec
+@@ -4,7 +4,7 @@
+ 
+ Name:             openstack-aodh
+ Version:          3.0.4
+-Release:          1%{?dist}
++Release:          1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:          OpenStack Telemetry Alarming
+ License:          ASL 2.0
+ URL:              https://github.com/openstack/aodh.git
+-- 
+1.9.1
+

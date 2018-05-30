@@ -1,0 +1,70 @@
+commit c475ceb3658309e5c24bae2423e2ec1b125531d8
+Author: rpm-build <rpm-build>
+Date:   Wed Feb 14 18:41:21 2018 -0500
+
+     0002-Upstream-gnocchi-panko-bug
+     
+      
+     Expect paste.deploy and gnocchi/panko options
+    
+     The authtoken middleware has been printing warning log messages to
+     the API logs for all services, reporting unexpected conf keys. This
+     was traced back to paste.deploy adding 'here' and '__file__' and
+     both gnocchi and panko adding 'configkey' keys in wsgi apps though
+     these do not actually exist in the conf file. This change allows
+     for those keys without printing a warning that unnecessarily
+     confuses operators.
+    
+     But it's kind of a hack, especially the configkey bit. We shouldn't
+     have to know about gnocchi/panko specifics like this. And it doesn't
+     address the comment in the bug about what is seen for ironic. So I
+     think there will still be more to do here.
+    
+     Change-Id: I678482309c7dd35ce147bebf13ebefc84251fe91
+     Partial-Bug: 1722444
+     
+     Signed-of-by: Shoaib Nasir <shoaib.nasir@windriver.com>
+
+     #enter the commit message for your changes. Lines starting
+
+diff --git a/keystonemiddleware/_common/config.py b/keystonemiddleware/_common/config.py
+index 3e38eba..de701b0 100644
+--- a/keystonemiddleware/_common/config.py
++++ b/keystonemiddleware/_common/config.py
+@@ -49,17 +49,18 @@ def _conf_values_type_convert(group_name, all_options, conf):
+     for k, v in conf.items():
+         dest = k
+         try:
+-            if v is not None:
++            # 'here' and '__file__' come from paste.deploy
++            # 'configkey' is added by panko and gnocchi
++            if v is not None and k not in ['here', '__file__', 'configkey']:
+                 type_, dest = opt_types[k]
+                 v = type_(v)
+         except KeyError:  # nosec
+-            # This option is not known to auth_token. v is not converted.
+             _LOG.warning(
+-                'The option "%s" in conf is not known to auth_token', k)
++                'The option "%s" is not known to keystonemiddleware', k)
+         except ValueError as e:
+             raise exceptions.ConfigurationError(
+-                _('Unable to convert the value of %(key)s option into correct '
+-                  'type: %(ex)s') % {'key': k, 'ex': e})
++                _('Unable to convert the value of option "%(key)s" into '
++                  'correct type: %(ex)s') % {'key': k, 'ex': e})
+         opts[dest] = v
+ 
+     return opts
+diff --git a/keystonemiddleware/tests/unit/auth_token/test_auth_token_middleware.py b/keystonemiddleware/tests/unit/auth_token/test_auth_token_middleware.py
+index 6c66aee..b3aa8ff 100644
+--- a/keystonemiddleware/tests/unit/auth_token/test_auth_token_middleware.py
++++ b/keystonemiddleware/tests/unit/auth_token/test_auth_token_middleware.py
+@@ -495,7 +495,7 @@ class GeneralAuthTokenMiddlewareTest(BaseAuthTokenMiddlewareTest,
+         conf = {
+             'wrong_key': '123'
+         }
+-        log = 'The option "wrong_key" in conf is not known to auth_token'
++        log = 'The option "wrong_key" is not known to keystonemiddleware'
+         auth_token.AuthProtocol(self.fake_app, conf)
+         self.assertThat(self.logger.output, matchers.Contains(log))
+ 

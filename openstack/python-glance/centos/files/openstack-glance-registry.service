@@ -1,0 +1,17 @@
+[Unit]
+Description=OpenStack Image Service (code-named Glance) Registry server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+# WRS - use root user
+#User=glance
+User=root
+ExecStart=/usr/bin/glance-registry
+PrivateTmp=true
+# WRS - managed by sm
+#Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,16 @@
+[Unit]
+Description=Neutron networking agent
+After=network.target syslog.target openvswitch.service
+Before=pmon.service
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+ExecStart=/etc/rc.d/init.d/neutron-dhcp-agent start
+ExecStop=/etc/rc.d/init.d/neutron-dhcp-agent stop
+ExecReload=/etc/rc.d/init.d/neutron-dhcp-agent reload
+PIDFile=/var/run/neutron-dhcp-agent.pid
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

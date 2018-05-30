@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenStack Nova Compute Server Pre-Startup
+After=syslog.target compute-config-gate.service
+Before=nova-compute.service goenabled-compute.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+ExecStart=/usr/bin/d_nova_setup_cpusets start
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,52 @@
+From 7389923ee13be16dffcd7b1f68a5794ef5ecc248 Mon Sep 17 00:00:00 2001
+From: Andy Ning <andy.ning@windriver.com>
+Date: Wed, 6 Dec 2017 17:18:36 -0500
+Subject: [PATCH 1/1] CGTS-8470: update remote client to include osc-lib
+
+Currently remote client built from sdk doesn't include osc-lib.
+The patch added osc-lib in since it is patched.
+---
+ SPECS/python-osc-lib.spec | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/SPECS/python-osc-lib.spec b/SPECS/python-osc-lib.spec
+index e035b22..2ae8629 100644
+--- a/SPECS/python-osc-lib.spec
++++ b/SPECS/python-osc-lib.spec
+@@ -94,6 +94,12 @@ osc-lib is a package of common support modules for writing OSC plugins.
+ 
+ This package contains the documentation.
+ 
++%package          sdk
++Summary:          SDK files for %{library}
++
++%description      sdk
++Contains SDK files for %{library} package
++
+ %if 0%{?with_python3}
+ %package -n python3-%{library}
+ Summary:    OpenStack Example library
+@@ -192,6 +198,10 @@ rm -rf .testrepository
+ %endif
+ %{__python2} setup.py test
+ 
++# prep SDK package
++mkdir -p %{buildroot}/usr/share/remote-clients/%{name}
++tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{library}-%{upstream_version}
++
+ %files -n python2-%{library}
+ %license LICENSE
+ %{python2_sitelib}/%{module}
+@@ -218,6 +228,9 @@ rm -rf .testrepository
+ %{python3_sitelib}/%{module}/tests
+ %endif # with_python3
+ 
++%files sdk
++/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
++
+ %changelog
+ * Sat Aug 12 2017 Alfredo Moralejo <amoralej@redhat.com> 1.7.0-1
+ - Update to 1.7.0
+-- 
+1.8.3.1
+

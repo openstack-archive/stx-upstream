@@ -1,0 +1,144 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Cinder::Volume
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces, glance images)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    None
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Cinder_Volume.yaml STACK
+#
+# Expected Outcome:
+#    A new 1GB cinder volume.
+#        cinder list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+    Demonstrate the OS::Cinder::Volume heat resource
+
+parameters:
+
+    VOLUME_NAME:
+        description: Name of the newly created volume
+        type: string
+        default: sample_cinder_vol
+
+    VOLUME_SIZE:
+        description: size for the new cinder volume
+        type: number
+        default: 2
+
+resources:
+
+    OS_Cinder_Volume:
+        type: OS::Cinder::Volume
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+            # None
+
+            #################################################
+            # Optional properties
+            #################################################
+            #  availability_zone: {description: The availability zone in which
+            #  the volume will be created., required: false, type: string}
+
+            #  backup_id: {description: 'If specified, the backup to create
+            #  the volume from.', required: false, type: string}
+
+            #  description: {description: A description of the volume.,
+            #  required: false, type: string}
+            description: 'A sample cinder volume'
+
+            #  image: {description: 'If specified, the name or ID of the
+            #  glance image to create the volume from.',
+            #  required: false, type: string}
+
+            #  imageRef: {description: 'DEPRECATED: use "image" instead.',
+            #  required: false, type: string}
+
+            #  metadata: {description: Key/value pairs to associate with the
+            #  volume., required: false, type: map}
+
+            #  name: {description: A name used to distinguish the volume.,
+            #  required: false, type: string}
+            name: { get_param: VOLUME_NAME }
+
+            #  scheduler_hints: {description: 'Arbitrary key-value pairs
+            #  specified by the client to help the Cinder scheduler
+            #  creating a volume.', required: false, #    type: string}
+
+            #  size: {description: The size of the volume in GB.,
+            #  required: false, type: number}
+            size: { get_param: VOLUME_SIZE }
+
+            #  snapshot_id: {description: 'If specified, the cinder volume
+            #  to use as source.', #    required: false, type: string}
+
+            #  source_volid: {description: 'If specified, the volume to use as
+            #  source.', required: false, type: string}
+
+            #  volume_type: {description: 'If specified, the type of volume
+            #  to use, mapping to a specific backend cinder vtype.',
+            #  required: false, type: string}
+
+# Cinder Volume Attributes
+outputs:
+    vol_status:
+        description: The current status of the volume.
+        value: { get_attr: [ OS_Cinder_Volume, status] }
+    vol_metadata_values:
+        description: Key/value pairs associated with the volume in dict form.
+        value: { get_attr: [ OS_Cinder_Volume, metadata_values] }
+    vol_display_name:
+        description: Name of the volume.
+        value: { get_attr: [ OS_Cinder_Volume, display_name] }
+    vol_attachments:
+        description: The list of attachments of the volume
+        value: { get_attr: [ OS_Cinder_Volume, attachments] }
+    vol_availability_zone:
+        description: The availability zone in which the volume is  located.
+        value: { get_attr: [ OS_Cinder_Volume, availability_zone] }
+    vol_bootable:
+        description: Boolean indicating if the volume can be booted or not.
+        value: { get_attr: [ OS_Cinder_Volume, bootable] }
+    vol_encrypted:
+        description: Boolean indicating if the volume is encrypted or not.
+        value: { get_attr: [ OS_Cinder_Volume, encrypted] }
+    vol_created_at:
+        description: The timestamp indicating volume creation.
+        value: { get_attr: [ OS_Cinder_Volume, created_at] }
+    vol_display_description:
+        description: Description of the volume.
+        value: { get_attr: [ OS_Cinder_Volume, display_description] }
+    vol_source_volid:
+        description: The volume used as source, if any.
+        value: { get_attr: [ OS_Cinder_Volume, source_volid] }
+    vol_snapshot_id:
+        description: The snapshot the volume was created from, if any.
+        value: { get_attr: [ OS_Cinder_Volume, snapshot_id] }
+    vol_size:
+        description: The size of the volume in GB.
+        value: { get_attr: [ OS_Cinder_Volume, size] }
+    vol_volume_type:
+        description: The type of the volume mapping to a backend, if any.
+        value: { get_attr: [ OS_Cinder_Volume, volume_type] }
+    vol_metadata:
+        description: Key/value pairs associated with the volume.
+        value: { get_attr: [ OS_Cinder_Volume, metadata] }

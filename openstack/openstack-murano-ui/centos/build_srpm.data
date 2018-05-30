@@ -1,0 +1,5 @@
+TAR_NAME="murano-dashboard"
+SRC_DIR="$CGCS_BASE/git/murano-dashboard"
+
+TIS_BASE_SRCREV=c950e248c2dfdc7a040d6984d84ed19c82a04e7d
+TIS_PATCH_VER=1

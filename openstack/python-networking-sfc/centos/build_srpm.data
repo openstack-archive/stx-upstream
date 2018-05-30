@@ -1,0 +1,4 @@
+TAR_NAME=python-networking-sfc
+SRC_DIR="$CGCS_BASE/git/networking-sfc"
+TIS_BASE_SRCREV=af2ee0cf50e2295d2b0eee48640d81fcd6c472c8
+TIS_PATCH_VER=GITREVCOUNT

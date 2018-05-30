@@ -1,0 +1,144 @@
+Index: git/keystoneclient/shell.py
+===================================================================
+--- git.orig/keystoneclient/shell.py	2014-09-17 13:06:07.761186569 -0400
++++ git/keystoneclient/shell.py	2014-09-22 15:10:36.326737219 -0400
+@@ -24,6 +24,7 @@
+ 
+ from __future__ import print_function
+ 
++import os
+ import argparse
+ import getpass
+ import logging
+@@ -32,6 +33,8 @@
+ 
+ import six
+ 
++import keyring
++
+ import keystoneclient
+ from keystoneclient import access
+ from keystoneclient.contrib.bootstrap import shell as shell_bootstrap
+@@ -333,6 +336,11 @@
+                         '--os-username or env[OS_USERNAME]')
+ 
+                 if not args.os_password:
++                    # priviledge check (only allow Keyring retrieval if we are root)
++                    if os.geteuid() == 0:
++                        args.os_password = keyring.get_password('CGCS', args.os_username)
++
++                if not args.os_password:
+                     # No password, If we've got a tty, try prompting for it
+                     if hasattr(sys.stdin, 'isatty') and sys.stdin.isatty():
+                         # Check for Ctl-D
+Index: git/keystoneclient/probe.py
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ git/keystoneclient/probe.py	2014-09-23 10:41:57.758412311 -0400
+@@ -0,0 +1,106 @@
++#
++# Copyright (c) 2014 Wind River Systems, Inc.
++# SPDX-License-Identifier: Apache-2.0
++#
++#
++#
++#
++
++"""
++OCF sanity probe to prevent cleartext password
++"""
++
++import os
++import sys
++import json
++import urllib2
++import datetime
++import keyring
++import logging
++import logging.handlers
++
++_loggers = {}
++
++def get_logger(name):
++    """ Get a logger or create one  """
++    if name not in _loggers:
++        _loggers[name] = logging.getLogger(name)
++
++    return _loggers[name]
++
++
++def setup_logger(logger):
++    """ Setup a logger """
++    syslog_facility = logging.handlers.SysLogHandler.LOG_SYSLOG
++
++    formatter = logging.Formatter("probe_keyring[%(process)d] " +
++                                  "%(pathname)s:%(lineno)s " +
++                                  "%(levelname)8s [%(name)s] %(message)s")
++
++    handler = logging.handlers.SysLogHandler(address='/dev/log',
++                                             facility=syslog_facility)
++    handler.setLevel(logging.INFO)
++    handler.setFormatter(formatter)
++
++    logger.addHandler(handler)
++    logger.setLevel(logging.INFO)
++
++def configure():
++    """ Setup logging """
++    for logger in _loggers:
++        setup_logger(_loggers[logger])
++
++LOG = get_logger(__name__)
++
++def probe(auth_url, tenant, login):
++    """ Asks OpenStack Keystone for a token """
++
++    try:
++        url = auth_url + "tokens"
++        request_info = urllib2.Request(url)
++        request_info.add_header("Content-type", "application/json")
++        request_info.add_header("Accept", "application/json")
++        payload = json.dumps(
++            {"auth": {"tenantName": tenant,
++                      "passwordCredentials": {"username": login,
++                                              "password": keyring.get_password('CGCS',login)}}})
++        request_info.add_data(payload)
++
++        request = urllib2.urlopen(request_info)
++        response = json.loads(request.read())
++        request.close()
++        return response['access']['token']['id']
++
++    except Exception as e:
++        LOG.error("%s, %s" % (e.code, e.read()))
++        return None
++
++def main():
++
++    global cmd_auth_url
++    global cmd_tenant
++    global cmd_os_username
++
++    cmd_auth_url = "http://127.0.0.1:5000/v2.0/tokens"
++    cmd_tenant = "tenant"
++    cmd_os_username = "username"
++
++    configure()
++
++# priviledge check (only allow Keyring retrieval if we are root)
++    if os.geteuid() == 0:
++        arg = 1
++        cmd_auth_url = sys.argv[arg]
++        arg += 1
++        cmd_tenant = sys.argv[arg]
++        arg += 1
++        cmd_os_username = sys.argv[arg]
++
++        try:
++            token_id = probe(cmd_auth_url, cmd_tenant, cmd_os_username)
++            if token_id is None:
++                sys.exit(-1)
++            sys.exit(0)
++        except Exception as e:
++            sys.exit(-1)
++

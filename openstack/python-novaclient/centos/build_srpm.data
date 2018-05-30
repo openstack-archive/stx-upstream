@@ -1,0 +1,4 @@
+TAR_NAME=python-novaclient
+SRC_DIR=$CGCS_BASE/git/python-novaclient
+TIS_BASE_SRCREV=a1c00740c5b709a7d2bc4289fa6e28eac7909b8f
+TIS_PATCH_VER=GITREVCOUNT

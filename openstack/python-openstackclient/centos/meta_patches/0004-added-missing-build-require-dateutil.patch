@@ -1,0 +1,12 @@
+diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
+index 8cea3b8..dbb1daa 100644
+--- a/SPECS/python-openstackclient.spec
++++ b/SPECS/python-openstackclient.spec
+@@ -59,6 +59,7 @@ BuildRequires:    python-reno
+ BuildRequires:    python-requestsexceptions
+ BuildRequires:    python-openstacksdk
+ BuildRequires:    python-osprofiler
++BuildRequires:    python-dateutil
+ 
+ Requires:         python-pbr
+ Requires:         python-babel

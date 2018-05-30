@@ -1,0 +1,5 @@
+TAR_NAME="python-ironicclient"
+SRC_DIR="$CGCS_BASE/git/python-ironicclient"
+
+TIS_BASE_SRCREV=096834f09ae5d8cabc8c0b1ccbac271ddb13e2ee
+TIS_PATCH_VER=1

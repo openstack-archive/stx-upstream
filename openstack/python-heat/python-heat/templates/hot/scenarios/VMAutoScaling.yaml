@@ -1,0 +1,223 @@
+################################################################################
+# Copyright (c) 2014 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#   Demonstrates dynamically resize guest vcpus of a VM without
+#   service impact when policy criteria described in the template is met.
+#
+# Pre-Reqs:
+#   Normal lab setup.
+#   Ability to launch a VM
+#   A keypair called:  controller-0  (nova keypair-list)
+#   A flavor with special attributes
+#       hw:wrs:min_vcpus = 1
+#       hw:cpu_policy = dedicated
+#       a minimum of 2 vcpus
+#   A glance image called: wrl6 (glance image-list)
+#   Network called: private-net0  (neutron net-list)
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#   A tenant can use this template if using a keypair, subnet and network
+#   accessible to it
+#
+# Sample CLI syntax:
+#    heat stack-create -f VMAutoScaling.yaml STACK
+#
+# Expected Outcome:
+#  A new stack (heat stack-list)
+#  A new nova VM  (nova list)
+#  Two ceilometer alarms corresponding to high and low watermarks
+#    (ceilometer alarm-list)
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+    Creates a HEAT autoscaling stack and a VM instance which is able to scale
+    up/down the number of guest vpcu's using vcpu_util samples from the guest
+    instance.
+
+parameters:
+    KEYPAIR:
+        description: Name of existing KeyPair to enable SSH access to VMs
+        type: string
+        default: controller-0
+        constraints:
+            - custom_constraint: nova.keypair
+
+    KEYPAIR_ADMIN_USER:
+        description: Name of user account to inject ssh keys from keypair
+        type: string
+        default: 'ec2-user'
+
+    FLAVOR:
+        description: Nova flavor to use.   (nova flavor-list)
+        type: string
+        default: m1.small
+        constraints:
+            - custom_constraint: nova.flavor
+
+    IMAGE:
+        description: the name or uuid of the server image in glance
+        type: string
+        default: wrl6
+        constraints:
+            - custom_constraint: glance.image
+
+    NETWORK:
+        description: name of private network to use (neutron net-list)
+        type: string
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+    METER_NAME:
+        description: Ceilometer meter to query when determining autoscaling
+        type: string
+        default: vcpu_util
+
+    METER_PREFIX:
+        description: >
+            Ceilometer alarm query prefix. If a nova meter (user_metadata)
+            otherwise (metering)
+        type: string
+        default: user_metadata
+        constraints:
+            - allowed_values: [ user_metadata, metering ]
+
+    SCALE_UP_VALUE:
+        description: Metric value that will trigger a scale up if exceeded
+        type: string
+        default: '60'
+
+    SCALE_DOWN_VALUE:
+        description: Metric value that will trigger a scale down if below
+        type: string
+        default: '5'
+
+    VM_NAME:
+        description: Name to label the VM instance
+        type: string
+        default: 'guest-1'
+
+resources:
+
+    Srv:
+        type: OS::Nova::Server
+        properties:
+            name: { get_param: VM_NAME }
+            image: { get_param: IMAGE }
+            flavor: { get_param: FLAVOR }
+            key_name: { get_param: KEYPAIR }
+            admin_user: { get_param: KEYPAIR_ADMIN_USER }
+            metadata:
+                metering.stack: { get_param: "OS::stack_id" }
+            networks:
+                - { network: { get_param: NETWORK }, vif-model: virtio }
+
+    CPUAlarmHigh:
+        type: OS::Ceilometer::Alarm
+        properties:
+            description: Scale up if 1 minute avg of meter above threshold
+            meter_name: { get_param: METER_NAME }
+            statistic: avg
+            period: '60'
+            evaluation_periods: '1'
+            threshold: { get_param: SCALE_UP_VALUE }
+            repeat_actions: 'True'
+            alarm_actions:
+                - { get_attr: [SrvScaleUpPolicy, AlarmUrl] }
+            comparison_operator: gt
+            # ceilometer alarm resource will automatically prepend
+            #      metadata.metering
+            #  or  metadata.user_metadata
+            matching_metadata: { 'stack': { get_param: "OS::stack_id" }}
+
+    CPUAlarmLow:
+        type: OS::Ceilometer::Alarm
+        properties:
+            description: Scale down if 1 minute avg of meter below threshold
+            meter_name: { get_param: METER_NAME }
+            statistic: avg
+            period: '60'
+            evaluation_periods: '1'
+            threshold: { get_param: SCALE_DOWN_VALUE }
+            repeat_actions: 'True'
+            alarm_actions:
+                - { get_attr: [SrvScaleDownPolicy, AlarmUrl]}
+            comparison_operator: lt
+            # ceilometer alarm resource will automatically prepend
+            #      metadata.metering
+            #  or  metadata.user_metadata
+            matching_metadata: {'stack': { get_param: "OS::stack_id" }}
+
+    SrvScaleUpPolicy:
+        type: OS::WR::ScalingPolicy
+        properties:
+            ServerName: { get_resource: Srv }
+            ScalingResource: 'cpu'
+            ScalingDirection: 'up'
+            Cooldown: '60'
+
+    SrvScaleDownPolicy:
+        type: OS::WR::ScalingPolicy
+        properties:
+            ServerName: { get_resource: Srv }
+            ScalingResource: 'cpu'
+            ScalingDirection: 'down'
+            Cooldown: '60'
+
+outputs:
+
+    ceilometer_query:
+        value:
+            str_replace:
+                template: >
+                    ceilometer statistics -m metername
+                    -q metadata.prefix.stack=stackval
+                     -p 60 -a avg
+                params:
+                    metername: { get_param: METER_NAME }
+                    prefix: { get_param: METER_PREFIX }
+                    stackval: { get_param: "OS::stack_id" }
+
+    ceilometer_sample_create:
+        value:
+            str_replace:
+                template: >
+                    ceilometer sample-create
+                    -r server -m metername
+                    --meter-type gauge
+                    --meter-unit '%'
+                    --sample-volume 2
+                    --resource-metadata '{"prefix.stack":"stackval"}
+                params:
+                    server: { get_resource: Srv}
+                    metername: { get_param: METER_NAME }
+                    prefix: { get_param: METER_PREFIX }
+                    stackval: { get_param: "OS::stack_id" }
+
+    manual_scale_up:
+        value:
+            str_replace:
+                template: >
+                    curl -X POST "scale_up_url"
+                params:
+                    scale_up_url: { get_attr: [SrvScaleUpPolicy, AlarmUrl] }
+
+
+    manual_scale_down:
+        value:
+            str_replace:
+                template: >
+                    curl -X POST "scale_down_url"
+                params:
+                    scale_down_url: { get_attr: [SrvScaleDownPolicy, AlarmUrl] }

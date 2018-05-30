@@ -1,0 +1,316 @@
+################################################################################
+## Copyright (c) 2018 Wind River Systems, Inc.
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+#################################################################################
+
+heat_template_version: 2013-05-23
+
+################################################################################
+parameters:
+
+    FLAVOR:
+      description: Nova flavor to use for traffic-generator VM.   (nova flavor-list)
+      type: string
+      default: small.2c.2G.20G
+      constraints:
+        - custom_constraint: nova.flavor
+
+    SCALING_FLAVOR:
+      description: Nova flavor to use for network-appliance VM.   (nova flavor-list)
+      type: string
+      default: scalingFlavor
+      constraints:
+        - custom_constraint: nova.flavor
+
+    IMAGE:
+        description: Name of the glance image to create a cinder volume for (glance image-list) 
+                     NOTE - this MUST be an ubuntu 16.04 image with cloud-init and cfn-init
+        type: string
+        default: ubuntu-cfntools.img
+        constraints:
+          - custom_constraint: glance.image
+
+    EXT_NETWORK:
+        description: Name of the external network to use (neutron net-list)
+        type: string
+        default: external-net0
+        constraints:
+          - custom_constraint: neutron.network
+
+    INT_NETWORK:
+      description: Name of the internal network to use (neutron net-list)
+      type: string
+      default: admin-internal-net0
+      constraints:
+        - custom_constraint: neutron.network
+
+    METER_NAME:
+        description: Meter that VM will cfn-push, and 
+                     Ceilometer meter to query when determining autoscaling
+        type: string
+        default: net_appl_cpu_load
+    
+    METER_UNIT:
+        description: Unit for the meter 
+        type: string
+        default: '%'
+
+    HIGH_VALUE:
+      description: Metric value that will trigger a scale up if exceeded
+      type: string
+      default: '50'
+  
+    LOW_VALUE:
+      description: Metric value that will trigger a scale down if below
+      type: string
+      default: '20'
+
+
+################################################################################
+resources:
+
+
+  ################################################################################
+  # trafficGenerator VM
+  ################################################################################
+
+  TrafficGeneratorVolume:
+    type: OS::Cinder::Volume
+    properties:
+      name: traffic-generator-DISK
+      image: { get_param: IMAGE }
+      size: 20
+
+  TrafficGeneratorFloatingIP:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: EXT_NETWORK }
+
+  TrafficGeneratorVM:
+    type: OS::Nova::Server
+    metadata:
+      wrs-groupindex-mode: true
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            /usr/bin/gen-traffic.sh:
+              content: 
+                get_file: ./gen-traffic.sh
+              mode: '000700'
+              owner: root
+              group: root
+            /etc/init.d/gen-traffic-service:
+              content: 
+                get_file: ./gen-traffic-service
+              mode: '000700'
+              owner: root
+              group: root
+    properties:
+      name: traffic-generator
+      flavor: { get_param: FLAVOR }
+      block_device_mapping:
+        - device_name: vda
+          delete_on_termination: true
+          volume_id: { get_resource: TrafficGeneratorVolume }
+      networks:
+      - { network: { get_param: INT_NETWORK }  , fixed_ip: 10.10.10.40, vif-model: virtio}
+      user_data_format: HEAT_CFNTOOLS
+      user_data:
+        get_file: ./traffic-generator-install.sh
+
+  TrafficGeneratorFloatingIPAssoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: TrafficGeneratorFloatingIP }
+      port_id: { get_attr: [TrafficGeneratorVM, addresses, { get_param: INT_NETWORK }, 0, port] }
+
+
+
+
+
+  ################################################################################
+  # network-appliance VM
+  ################################################################################
+
+  CfnUser:
+    type: AWS::IAM::User
+
+  WebServerKeys:
+    type: AWS::IAM::AccessKey
+    properties:
+      UserName: { get_resource: CfnUser }
+
+  NetworkApplianceVolume:
+    type: OS::Cinder::Volume
+    properties:
+      name: network-appliance-DISK
+      image: { get_param: IMAGE }
+      size: 20
+
+  NetworkApplianceFloatingIP:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: EXT_NETWORK }
+
+  NetworkApplianceVM:
+    type: OS::Nova::Server
+    # Special Note: CFN related metadata is located at the resource level (not as a property)
+    metadata:
+      wrs-groupindex-mode: true
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            /etc/cfn/cfn-credentials:
+              content:
+                str_replace:
+                  template: |
+                    AWSAccessKeyId=_keyid_
+                    AWSSecretKey=_secret_
+                  params:
+                    _keyid_: { get_resource: WebServerKeys }
+                    _secret_: { get_attr: [WebServerKeys, SecretAccessKey] }
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/make_load:
+              content: 
+                get_file: ./make_load
+              mode: '000700'
+              owner: root
+              group: root
+            /etc/cfn/get_cpu_load:
+              content: 
+                get_file: ./get_cpu_load
+              mode: '000700'
+              owner: root
+              group: root
+            /etc/cfn/send_guest_metrics:
+              content:
+                str_replace:
+                  template: |
+                    #!/bin/sh
+                    METRIC=`/etc/cfn/get_cpu_load`
+                    /opt/aws/bin/cfn-push-stats --metric _metername_ --value ${METRIC} --units _unit_
+                    sleep 9
+                    METRIC=`/etc/cfn/get_cpu_load`
+                    /opt/aws/bin/cfn-push-stats --metric _metername_ --value ${METRIC} --units _unit_
+                    sleep 9
+                    METRIC=`/etc/cfn/get_cpu_load`
+                    /opt/aws/bin/cfn-push-stats --metric _metername_ --value ${METRIC} --units _unit_
+                    sleep 9
+                    METRIC=`/etc/cfn/get_cpu_load`
+                    /opt/aws/bin/cfn-push-stats --metric _metername_ --value ${METRIC} --units _unit_
+                    sleep 9
+                    METRIC=`/etc/cfn/get_cpu_load`
+                    /opt/aws/bin/cfn-push-stats --metric _metername_ --value ${METRIC} --units _unit_
+                    sleep 9
+                    METRIC=`/etc/cfn/get_cpu_load`
+                    /opt/aws/bin/cfn-push-stats --metric _metername_ --value ${METRIC} --units _unit_
+                  params:
+                    _metername_: { get_param: METER_NAME }
+                    _unit_: { get_param: METER_UNIT }
+              mode: '000700'
+              owner: root
+              group: root
+            /etc/cron.d/cfn_cron:
+              content:
+                get_file: ./cfn_cron
+              mode: '000600'
+              owner: root
+              group: root
+            /usr/bin/pkt-capture.sh:
+              content: 
+                get_file: ./pkt-capture.sh
+              mode: '000700'
+              owner: root
+              group: root
+            /usr/bin/gen-add-load.sh:
+              content: 
+                get_file: ./gen-add-load.sh
+              mode: '000700'
+              owner: root
+              group: root
+            /etc/init.d/gen-add-load-service:
+              content: 
+                get_file: ./gen-add-load-service
+              mode: '000700'
+              owner: root
+              group: root
+            /etc/init.d/iperf-server-service:
+              content: 
+                get_file: iperf-server-service
+              mode: '000700'
+              owner: root
+              group: root
+    properties:
+      name: network-appliance
+      flavor: { get_param: SCALING_FLAVOR }
+      metadata: {"metering.stack_id": {get_param: "OS::stack_id"} }
+      block_device_mapping:
+        - device_name: vda
+          delete_on_termination: true
+          volume_id: { get_resource: NetworkApplianceVolume }
+      networks:
+      - { network: { get_param: INT_NETWORK }  , fixed_ip: 10.10.10.50, vif-model: virtio}
+      user_data_format: HEAT_CFNTOOLS
+      user_data:
+        get_file: ./network-appliance-install.sh
+
+  NetworkApplianceFloatingIPAssoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: NetworkApplianceFloatingIP }
+      port_id: { get_attr: [NetworkApplianceVM, addresses, { get_param: INT_NETWORK }, 0, port] }
+
+
+  ################################################################################
+  # SETUP SCALING POLICIES
+
+  CPUAlarmHigh:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale up if the 1 minute avg for the meter is above the threshold
+      meter_name: { get_param: METER_NAME }
+      statistic: avg
+      period: '60'
+      evaluation_periods: '1'
+      threshold: { get_param: HIGH_VALUE }
+      repeat_actions: True
+      alarm_actions:
+      - {get_attr: [NetworkApplianceVmScaleUpPolicy, AlarmUrl]}
+      comparison_operator: gt
+      matching_metadata: {'stack_id': {get_param:  "OS::stack_id" }}
+
+  CPUAlarmLow:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale down if the 1 minute avg for the meter is below the threshold
+      meter_name: { get_param: METER_NAME }
+      statistic: avg
+      period: '60'
+      evaluation_periods: '1'
+      threshold: { get_param: LOW_VALUE }
+      repeat_actions: True
+      alarm_actions:
+      - {get_attr: [NetworkApplianceVmScaleDownPolicy, AlarmUrl]}
+      comparison_operator: lt
+      matching_metadata: {'stack_id': {get_param:  "OS::stack_id" }}
+
+  NetworkApplianceVmScaleUpPolicy:
+    type: OS::WR::ScalingPolicy
+    properties:
+      ServerName: {get_resource: NetworkApplianceVM}
+      ScalingResource: 'cpu'
+      ScalingDirection: 'up'
+      Cooldown: '60'
+
+  NetworkApplianceVmScaleDownPolicy:
+    type: OS::WR::ScalingPolicy
+    properties:
+      ServerName: {get_resource: NetworkApplianceVM}
+      ScalingResource: 'cpu'
+      ScalingDirection: 'down'
+      Cooldown: '60'
+

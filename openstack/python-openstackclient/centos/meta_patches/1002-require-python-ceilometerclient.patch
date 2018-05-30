@@ -1,0 +1,20 @@
+diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
+index 6b582ce..5d75107 100644
+--- a/SPECS/python-openstackclient.spec
++++ b/SPECS/python-openstackclient.spec
+@@ -55,6 +55,7 @@ BuildRequires:    python-keystoneclient
+ BuildRequires:    python-novaclient
+ BuildRequires:    python-cinderclient
+ BuildRequires:    python-neutronclient
++BuildRequires:    python-ceilometerclient
+ BuildRequires:    python-mock
+ BuildRequires:    python-requests-mock
+ BuildRequires:    python-os-client-config
+@@ -84,6 +85,7 @@ Requires:         python-keystoneclient
+ Requires:         python-novaclient
+ Requires:         python-cinderclient
+ Requires:         python-neutronclient
++Requires:         python-ceilometerclient
+ Requires:         python-six 
+ Requires:         python-osc-lib
+ Requires:         python-%{client}-lang = %{version}-%{release}

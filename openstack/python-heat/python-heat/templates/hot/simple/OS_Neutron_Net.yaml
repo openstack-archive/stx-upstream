@@ -1,0 +1,113 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Neutron::Net
+#
+# Pre-Reqs:
+#    None
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    None
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Neutron_Net.yaml STACK
+#
+# Expected Outcome:
+#  A new network called  sample-net
+#    neutron net-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Neutron::Net heat resource
+
+parameters:
+
+    NETWORK_NAME:
+        description: name of network to create
+        type: string
+        default: sample-net
+
+resources:
+
+    OS_Neutron_Net:
+        type: OS::Neutron::Net
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+
+            #################################################
+            # Optional properties
+            #################################################
+
+            # admin_state_up: {default: true, description: A boolean value
+            #  specifying the administrative status of the network.,
+            #  required: false, type: boolean}
+            admin_state_up: true
+
+            # name: A string specifying a symbolic name for the network, which
+            #  is not required to be unique.', required: false, type: string
+            name: { get_param: NETWORK_NAME }
+
+            # shared: {description: Whether this network should be shared
+            #  across all tenants. Note that the default policy setting
+            #  restricts usage of this attribute to administrative users only.
+            #  ,required: false, type: boolean}
+            shared: false
+
+            # tenant_id: {description: The ID of the tenant which will own the
+            #  network. Only administrative users can set the tenant
+            #  identifier; this cannot be changed using authorization policies.
+            #  , required: false, type: string}
+
+            # value_specs:
+            #   default: {}
+            #   description: Extra parameters to include in the "network"
+            #   object in the creation request. Parameters are often specific
+            #   to installed hardware or extensions.
+            #   required: false type: map
+            #
+            #  For example,
+            #
+            #  value_specs:
+            #    'provider:network_type': vlan
+            #    'provider:physical_network': group0-data0b
+            #    'router:external': false
+            #    vlan_transparent: false
+
+outputs:
+
+    nwk_admin_state_up:
+        description: The administrative status of the network.
+        value: { get_attr: [ OS_Neutron_Net, admin_state_up] }
+
+    nwk_name:
+        description: The name of the network.
+        value: { get_attr: [ OS_Neutron_Net, name] }
+
+    nwk_show:
+        description: All attributes.
+        value: { get_attr: [ OS_Neutron_Net, show] }
+
+    nwk_status:
+        description: The status of the network.
+        value: { get_attr: [ OS_Neutron_Net, status] }
+
+    nwk_subnets:
+        description: Subnets of this network.
+        value: { get_attr: [ OS_Neutron_Net, subnets] }
+
+    nwk_tenant_id:
+        description: The tenant owning this network.
+        value: { get_attr: [ OS_Neutron_Net, tenant_id] }

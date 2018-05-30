@@ -1,0 +1,77 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Heat::AccessPolicy
+#    This creates an accesspolicy which can be set for a User
+#
+# Pre-Reqs:
+#    Normal Lab Setup (networks, host interfaces)
+#    A network named private-net0 with permission to create ports
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    Cannot be run as tenant.
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Heat_AccessPolicy.yaml  STACK
+#
+# Expected Outcome:
+#    A newly created neutron port
+#        neutron port-list
+#    A new (v3) User with access to the port
+#      The user will not be visible using the CLI (v2) list commands
+#        heat resource-list STACK
+#        openstack user show <UUID of user>
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+   Demonstrate the OS::Heat::AccessPolicy heat resource
+
+parameters:
+
+    NETWORK:
+        description: Network used by the access policy (neutron net-list)
+        type: string
+        default: private-net0
+        constraints:
+            - custom_constraint: neutron.network
+
+
+resources:
+
+    # AccessPolicy grants access to resources created as part of the stack
+    OS_Heat_AccessPolicy:
+        type: OS::Heat::AccessPolicy
+        properties:
+            #################################################
+            # Required properties
+            #################################################
+            # AllowedResources: {
+            #    description: Resources that users are allowed to access by the
+            #           DescribeStackResource API., required: true, type: list}
+            # Note: that this is a list of names and not references
+            AllowedResources: [ some_port, ]
+
+            #################################################
+            # Optional properties: None
+            #################################################
+
+    some_user:
+        type: AWS::IAM::User
+        properties:
+            Policies: [ { get_resource: OS_Heat_AccessPolicy } ]
+
+    some_port:
+        type: OS::Neutron::Port
+        properties:
+            network: { get_param: NETWORK }

@@ -1,0 +1,16 @@
+#!/bin/bash
+# Extract the command being executed.  Basically we want everything up to the first blank.
+# There are lots of security issues still, but it's better than nothing.
+# Maybe later we can check the paths too.
+ORIG_CMD=${SSH_ORIGINAL_COMMAND%%[[:blank:]]*}
+case $ORIG_CMD in
+    scp|rsync|rm|touch|mkdir)
+        # Command is expected
+        $SSH_ORIGINAL_COMMAND
+        ;;
+    *)
+        # Command is not expected
+        logger -i -p auth.warning "$0: disallowing passwordless execution of command: ${SSH_ORIGINAL_COMMAND}"
+        exit 255
+        ;;
+esac

@@ -1,0 +1,379 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#   Demonstrates a simple lab setup
+#   Sets up networks, routers, glance images, flavors, keypairs
+#
+# Pre-Reqs:
+#   Image file located at /home/wrsroot/images/tis-centos-guest.img
+#   This is an R2 HEAT template version (2015-04-30)
+#
+# Mandatory Template Parameters:
+#   TENANT_ID:  The tenant ID  (keystone tenant-list)
+#
+# Tenant Considerations:
+#   Should be run as admin.
+#
+# Sample CLI syntax:
+#   heat stack-create -f LabSetup.yaml
+#     -P TENANT_ID=812b639cd3714d389a4e2662b114b72b  SETUP
+#
+# Expected Outcome:
+#   2 provider networks created called: physnet0 and physnet1 with ranges
+#    setup (neutron providernet-list)
+#   A new keypair called: controller-0  (nova keypair-list)
+#   A new glance image called: wrl6  (glance image-list)
+#   2 flavors created called: m1.tiny and m1.small  (nova flavor-list)
+#   4 networks created called:  external-net0, internal-net0, private-net0,
+#     public-net0  (neutron net-list)
+#   5 subnets created called: public-subnet0, external-subnet0,
+#    private-subnet0, internal-subnet0, tagged-subnet0 (neutron subnet-list)
+#   2 routers with gateways setup called:  public-router0,
+#     private-router0  (neutron router-list)
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+    Demonstrate a simple Lab Setup
+
+parameters:
+
+    TENANT_ID:
+        description: Tenant ID for the network. (openstack project list)
+        type: string
+        default: admin
+
+    IMAGE_NAME:
+        description: Name of the new glance image
+        type: string
+        default: wrl6
+
+    KEYPAIR_NAME:
+        description: Name of the new keypair
+        type: string
+        default: controller-0
+
+    PHYSNET0:
+        description: First physical network
+        type: string
+        default: physnet0
+
+    PHYSNET1:
+        description: Second physical network
+        type: string
+        default: physnet1
+
+    # Network names
+    PUBLICNET:
+        description: Name of the Public Network
+        type: string
+        default: public-net0
+
+    PRIVATENET:
+        description: Name of the Private Network
+        type: string
+        default: private-net0
+
+    INTERNALNET:
+        description: Name of the Internal Network
+        type: string
+        default: internal-net0
+
+    EXTERNALNET:
+        description: Name of the External Network
+        type: string
+        default: external-net0
+
+    # Subnet names
+    PUBLICSUBNET:
+        description: Name of the Public Subnet
+        type: string
+        default: public-subnet0
+
+    PRIVATESUBNET:
+        description: Name of the Private Subnet
+        type: string
+        default: private-subnet0
+
+    INTERNALSUBNET:
+        description: Name of the Internal Subnet
+        type: string
+        default: internal-subnet0
+
+    TAGGEDSUBNET:
+        description: Name of the Tagged Subnet
+        type: string
+        default: tagged-subnet0
+
+    EXTERNALSUBNET:
+        description: Name of the External Subnet
+        type: string
+        default: external-subnet0
+
+    PUBLIC_CIDR:
+        description: Cidr of the Public Subnet
+        type: string
+        default: '192.168.101.0/24'
+
+    PUBLIC_EXTERNAL_GWY:
+        description: External IP of public router on the external network
+        type: string
+        default: 192.168.1.2
+
+    PRIVATE_CIDR:
+        description: Cidr of the Private Subnet
+        type: string
+        default: '192.168.201.0/24'
+
+    PRIVATE_EXTERNAL_GWY:
+        description: External IP of private router on the external network
+        type: string
+        default: 192.168.1.3
+
+    INTERNAL_CIDR:
+        description: Cidr of the Internal Subnet
+        type: string
+        default: '10.10.0.0/24'
+
+    TAGGED_CIDR:
+        description: Cidr of the Tagged Subnet
+        type: string
+        default: '10.10.1.0/24'
+
+    EXTERNAL_CIDR:
+        description: Cidr of the External Subnet
+        type: string
+        default: '192.168.1.0/24'
+
+    EXTERNAL_GATEWAY:
+        description: Cidr of the External Subnet
+        type: string
+        default: '192.168.1.1'
+
+    # Router names
+    PUBLICROUTER:
+        description: Name of the Public Router
+        type: string
+        default: public-router0
+
+    PRIVATEROUTER:
+        description: Name of the Private Router
+        type: string
+        default: private-router0
+
+
+resources:
+
+    ProviderNet0:
+        type: WR::Neutron::ProviderNet
+        properties:
+            name: { get_param: PHYSNET0 }
+            type: vlan
+
+    ProviderNet1:
+        type: WR::Neutron::ProviderNet
+        properties:
+            name: { get_param: PHYSNET1 }
+            type: vlan
+
+    ProviderNetRange0A:
+        type: WR::Neutron::ProviderNetRange
+        properties:
+            providernet_id: { get_resource: ProviderNet0 }
+            name: { list_join: [ "-", [{ get_param: PHYSNET0}, "a"]]}
+            minimum: 400
+            maximum: 499
+            tenant_id: { get_param: TENANT_ID }
+
+    ProviderNetRange0B:
+        type: WR::Neutron::ProviderNetRange
+        properties:
+            # required properties
+            providernet_id: { get_resource: ProviderNet0 }
+            name: { list_join: [ "-", [{ get_param: PHYSNET0}, "b"]]}
+            minimum: 10
+            maximum: 10
+            shared: true
+
+    ProviderNetRange1A:
+        type: WR::Neutron::ProviderNetRange
+        properties:
+            # required properties
+            providernet_id: { get_resource: ProviderNet1 }
+            name: { list_join: [ "-", [{ get_param: PHYSNET1}, "a"]]}
+            minimum: 500
+            maximum: 599
+            tenant_id: { get_param: TENANT_ID }
+
+    OS_Nova_KeyPair:
+        type: OS::Nova::KeyPair
+        properties:
+            # required properties
+            name: {get_param: KEYPAIR_NAME }
+            # optional properties
+            save_private_key: false
+
+    wrl5_Glance_Image:
+        type: OS::Glance::Image
+        properties:
+            name: {get_param: IMAGE_NAME }
+            is_public: true
+            container_format: bare
+            disk_format: qcow2
+            location: file:///home/wrsroot/images/tis-centos-guest.img
+
+    m1.tiny:
+        type: OS::Nova::Flavor
+        properties:
+            name: m1.tiny
+            ram: 256
+            disk: 2
+            vcpus: 1
+            extra_specs:
+                'hw:cpu_policy': dedicated
+                'hw:mem_page_size': 2048
+
+    m1.small:
+        type: OS::Nova::Flavor
+        properties:
+            name: m1.small
+            ram: 512
+            disk: 2
+            vcpus: 1
+            extra_specs:
+                'hw:cpu_policy': shared
+                'hw:mem_page_size': 2048
+
+    external_network:
+        type: OS::Neutron::Net
+        depends_on: ProviderNetRange0B
+        properties:
+            name: { get_param: EXTERNALNET }
+            value_specs:
+                'provider:network_type': vlan
+                'provider:physical_network': { get_attr: [ProviderNet0, name] }
+                'provider:segmentation_id': 10
+                'router:external': 'True'
+            tenant_id: { get_param: TENANT_ID }
+
+    public_network:
+        type: OS::Neutron::Net
+        depends_on: ProviderNetRange0A
+        properties:
+            name: { get_param: PUBLICNET }
+            shared: false
+            tenant_id: { get_param: TENANT_ID }
+            value_specs:
+                'provider:network_type': vlan
+                'provider:physical_network': { get_attr: [ProviderNet0, name] }
+                'provider:segmentation_id': 400
+
+    private_network:
+        type: OS::Neutron::Net
+        depends_on: ProviderNetRange1A
+        properties:
+            name: { get_param: PRIVATENET }
+            shared: false
+            value_specs:
+                'provider:network_type': vlan
+                'provider:physical_network': { get_attr: [ProviderNet1, name] }
+                'provider:segmentation_id': 500
+            tenant_id: { get_param: TENANT_ID }
+
+    internal_network:
+        type: OS::Neutron::Net
+        depends_on: external_network
+        properties:
+            name: { get_param: INTERNALNET }
+            shared: false
+            tenant_id: { get_param: TENANT_ID }
+
+    public_subnet:
+        type: OS::Neutron::Subnet
+        properties:
+            cidr: { get_param: PUBLIC_CIDR }
+            network_id: { get_resource: public_network }
+            name: { get_param: PUBLICSUBNET }
+            tenant_id: { get_param: TENANT_ID }
+
+    private_subnet:
+        type: OS::Neutron::Subnet
+        properties:
+            cidr: { get_param: PRIVATE_CIDR }
+            network_id: { get_resource: private_network }
+            name: { get_param: PRIVATESUBNET }
+            enable_dhcp: true
+            tenant_id: { get_param: TENANT_ID }
+
+    internal_subnet:
+        type: OS::Neutron::Subnet
+        properties:
+            cidr: { get_param: INTERNAL_CIDR }
+            network_id: { get_resource: internal_network }
+            name: { get_param: INTERNALSUBNET }
+            enable_dhcp: true
+            tenant_id: { get_param: TENANT_ID }
+            # --no-gateway
+
+    tagged_subnet:
+        type: OS::Neutron::Subnet
+        properties:
+            cidr: { get_param: TAGGED_CIDR }
+            network_id: { get_resource: internal_network }
+            name: { get_param: TAGGEDSUBNET }
+            tenant_id: { get_param: TENANT_ID }
+            enable_dhcp: true
+            # --no-gateway
+
+    external_subnet:
+        type: OS::Neutron::Subnet
+        properties:
+            cidr: { get_param: EXTERNAL_CIDR }
+            network_id: { get_resource: external_network }
+            name: { get_param: EXTERNALSUBNET }
+            tenant_id: { get_param: TENANT_ID }
+            enable_dhcp: false
+            gateway_ip: { get_param: EXTERNAL_GATEWAY }
+
+    public_router:
+        type: OS::Neutron::Router
+        properties:
+            name: { get_param: PUBLICROUTER}
+            external_gateway_info:
+                network: { get_resource: external_network }
+                enable_snat: false
+                external_fixed_ips:
+                    - ip_address: { get_param: PUBLIC_EXTERNAL_GWY }
+                      subnet: { get_resource: external_subnet }
+            tenant_id: {get_param: TENANT_ID}
+
+    private_router:
+        type: OS::Neutron::Router
+        properties:
+            name: { get_param: PRIVATEROUTER}
+            external_gateway_info:
+                network: { get_resource: external_network }
+                enable_snat: false
+                external_fixed_ips:
+                    - ip_address: { get_param: PRIVATE_EXTERNAL_GWY }
+                      subnet: { get_resource: external_subnet }
+            tenant_id: {get_param: TENANT_ID}
+
+    public_router_interface:
+        type: OS::Neutron::RouterInterface
+        properties:
+            router_id: { get_resource: public_router }
+            subnet_id: { get_resource: public_subnet }
+
+    private_router_interface:
+        type: OS::Neutron::RouterInterface
+        properties:
+            router_id: { get_resource: private_router }
+            subnet_id: { get_resource: private_subnet }

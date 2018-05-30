@@ -1,0 +1,102 @@
+################################################################################
+# Copyright (c) 2013-2015 Wind River Systems, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+################################################################################
+#
+# Objective:
+#    Demonstrate constructing the heat resource OS::Ceilometer::Alarm
+#
+# Pre-Reqs:
+#    Normal Lab Setup
+#
+# Mandatory Template Parameters:
+#    None
+#
+# Tenant Considerations:
+#    None
+#
+# Sample CLI syntax:
+#    heat stack-create -f OS_Ceilometer_Alarm.yaml STACK
+#
+# Expected Outcome:
+#   A new alarm (trigger).
+#       ceilometer alarm-list
+#
+################################################################################
+
+heat_template_version: 2015-04-30
+
+description: >
+    Demonstrate the OS::Ceilometer::Alarm heat resource
+
+resources:
+
+    OS_Ceilometer_Alarm:
+        type: OS::Ceilometer::Alarm
+        properties:
+            #################################################
+            # Required properties
+            #  comparison_operator:
+            #    constraints:
+            #        - allowed_values: [ge, gt, eq, ne, lt, le]
+            #    description: Operator comparing specified stats with threshold
+            #    required: true
+            #    type: string
+            comparison_operator: 'ge'
+
+            # evaluation_periods: {description: num periods to evaluate over
+            # , required: true, type: string}
+            evaluation_periods: '3'
+
+            # meter_name: {description: Meter name watched by the alarm
+            # , required: true, type: string}
+            meter_name: 'cpu_util'
+
+            # period: {description: Period (seconds) to evaluate over
+            # , required: true, type: string}
+            period: '90'
+
+            #  statistic:
+            #    constraints:
+            #    - allowed_values: [count, avg, sum, min, max]
+            #    description: Meter statistic to evaluate
+            #    required: true
+            #    type: string
+            statistic: 'avg'
+
+            # threshold: {description: Threshold to evaluate against
+            # , required: true, type: string}
+            threshold: '60'
+
+            #################################################
+            # Optional properties
+            #  alarm_actions: {description: A list of URLs (webhooks) to invoke
+            #  when state transitions to alarm, required: false, type: list}
+
+            # description: {description: Description for the alarm
+            #  , required: false, type: string}
+            description: 'A Sample Alarm'
+
+            # enabled: {default: 'true', description: True if alarm
+            #  evaluation/actioning is enabled,
+            #  required: false, type: boolean}
+            enabled: false
+
+            # insufficient_data_actions: {description: A list of URLs
+            #  (webhooks) to invoke when state transitions to insufficient-data
+            #  , required: false, type: list}
+
+            # matching_metadata: {description: Meter should match this resource
+            #  metadata (key=value) additionally to the meter_name
+            #  , required: false, type: map}
+
+            # ok_actions: {description: A list of URLs (webhooks) to invoke
+            #  when state transitions to ok, required: false, type: list}
+
+            # repeat_actions: {default: 'false', description: 'True to trigger
+            #  actions each time the threshold is reached. By default, actions
+            #  are called when : the threshold is reached AND the alarm''s
+            #  state have changed', required: false, type: boolean}
+            repeat_actions: true

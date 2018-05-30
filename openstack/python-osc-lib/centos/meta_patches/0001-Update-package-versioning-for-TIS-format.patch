@@ -1,0 +1,26 @@
+From 0abdbd359af7c24e82fc4776084aa28c5e43a05e Mon Sep 17 00:00:00 2001
+From: Andy Ning <andy.ning@windriver.com>
+Date: Tue, 28 Nov 2017 09:16:37 -0500
+Subject: [PATCH 1/1] Update-package-versioning-for-TIS-format.
+
+Signed-off-by: Andy Ning <andy.ning@windriver.com>
+---
+ SPECS/python-osc-lib.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/python-osc-lib.spec b/SPECS/python-osc-lib.spec
+index 8e85dbd..568ad55 100644
+--- a/SPECS/python-osc-lib.spec
++++ b/SPECS/python-osc-lib.spec
+@@ -12,7 +12,7 @@
+ 
+ Name:       python-%{library}
+ Version:    1.7.0
+-Release:    1%{?dist}
++Release:    1.el7%{?_tis_dist}.%{tis_patch_ver}
+ Summary:    OpenStack library for writing OSC plugins
+ License:    ASL 2.0
+ URL:        https://github.com/openstack/%{library}/
+-- 
+1.8.3.1
+

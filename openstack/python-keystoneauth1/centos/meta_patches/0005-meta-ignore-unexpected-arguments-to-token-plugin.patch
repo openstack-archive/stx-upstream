@@ -1,0 +1,25 @@
+From 927307745579900e1f207a0df8b715a19fb36407 Mon Sep 17 00:00:00 2001
+From: Kam Nasim <kam.nasim@windriver.com>
+Date: Wed, 13 Dec 2017 18:59:08 -0500
+Subject: [PATCH] meta patch for ignoring unexpected arguments to token auth
+ plugin
+
+---
+ SPECS/python-keystoneauth1.spec | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/SPECS/python-keystoneauth1.spec b/SPECS/python-keystoneauth1.spec
+index 2375ec7..818488b 100644
+--- a/SPECS/python-keystoneauth1.spec
++++ b/SPECS/python-keystoneauth1.spec
+@@ -16,6 +16,7 @@ Source0:    https://tarballs.openstack.org/keystoneauth/keystoneauth1-%{upstream
+ 
+ # WRS
+ Patch0001:  fix-neutron-error-not-shown-to-user.patch
++Patch0002:  ignore-unexpected-arguments-to-token-auth-plugin.patch
+ 
+ BuildArch:  noarch
+ 
+-- 
+1.8.3.1
+

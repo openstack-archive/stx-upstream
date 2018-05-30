@@ -1,0 +1,10 @@
+TAR_NAME=python-ceilometerclient
+SRC_DIR=$CGCS_BASE/git/python-ceilometerclient
+
+# Tar everything found in this subdirectory. Define this if source need to be collected into a tarball in SOURCES. 
+# Tar file name and version are derived from PKG-INFO.  Alternatively you may define TAR_NAME ad VERSION
+
+# A Space separated list of paths to copy to .distro/centos7/rpmbuild/SOURCES.
+#COPY_LIST="$CGCS_BASE/downloads/$CLIENT_NAME-$CLIENT_VER.tar.gz $PKG_BASE/$CLIENT_NAME/*"
+TIS_BASE_SRCREV=d650f70d16b41b5f5bf65cc5685a30cae027d729
+TIS_PATCH_VER=GITREVCOUNT

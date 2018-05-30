@@ -1,0 +1,15 @@
+diff --git a/SPECS/python-oslo-concurrency.spec b/SPECS/python-oslo-concurrency.spec
+index a4a3883..cc9e799 100644
+--- a/SPECS/python-oslo-concurrency.spec
++++ b/SPECS/python-oslo-concurrency.spec
+@@ -16,6 +16,10 @@ Summary:        OpenStack Oslo concurrency library
+ License:        ASL 2.0
+ URL:            https://launchpad.net/oslo
+ Source0:        https://tarballs.openstack.org/%{pypi_name}/%{pypi_name}-%{upstream_version}.tar.gz
++
++# WRS
++Patch0001:      add-fair-lock.patch
++
+ BuildArch:      noarch
+ 
+ %description

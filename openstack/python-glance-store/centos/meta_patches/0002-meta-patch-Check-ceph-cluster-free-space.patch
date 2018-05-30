@@ -1,0 +1,34 @@
+From aef63b7fcf58613c233cbe519b814f5366522299 Mon Sep 17 00:00:00 2001
+From: Daniel Badea <daniel.badea@windriver.com>
+Date: Thu, 2 Nov 2017 18:29:54 +0200
+Subject: [PATCH 2/2] Check ceph cluster free space
+
+---
+ SPECS/python-glance-store.spec | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/SPECS/python-glance-store.spec b/SPECS/python-glance-store.spec
+index 387a326..b60bd97 100644
+--- a/SPECS/python-glance-store.spec
++++ b/SPECS/python-glance-store.spec
+@@ -13,6 +13,8 @@ Summary:        OpenStack Image Service Store Library
+ License:        ASL 2.0
+ URL:            https://github.com/openstack/%{upstream_name}
+ Source0:        https://tarballs.openstack.org/%{upstream_name}/%{upstream_name}-%{upstream_version}.tar.gz
++# WRS
++Patch0001: 0001-Check-ceph-cluster-free-space-before-creating-image.patch
+ 
+ BuildArch:      noarch
+ 
+@@ -84,6 +86,8 @@ Requires:       python3-oslo-privsep >= 1.9.0
+ %prep
+ %setup -q -n %{upstream_name}-%{upstream_version}
+ 
++# Apply WRS patches
++%patch0001 -p1
+ 
+ %build
+ %py2_build
+-- 
+2.7.4
+
