@@ -1,0 +1,32 @@
+From fc9b9d397b503eeff6585310d8de177b051a11e9 Mon Sep 17 00:00:00 2001
+From: Elena Taivan <elena.taivan@windriver.com>
+Date: Wed, 6 Jun 2018 10:02:56 +0000
+Subject: [PATCH 1/1] meta Add glance schedulre greenthreads
+
+---
+ SPECS/python-glance-store.spec | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/SPECS/python-glance-store.spec b/SPECS/python-glance-store.spec
+index 0c0d728..977b2bc 100644
+--- a/SPECS/python-glance-store.spec
++++ b/SPECS/python-glance-store.spec
+@@ -16,6 +16,7 @@ Source0:        https://tarballs.openstack.org/%{upstream_name}/%{upstream_name}
+ # WRS
+ Patch0001: 0001-Check-ceph-cluster-free-space-before-creating-image.patch
+ Patch0002: 0002-Add-glance-driver.patch
++Patch0003: 0003-Add-glance-schedule-greenthreads.patch
+ 
+ BuildArch:      noarch
+ 
+@@ -90,6 +91,7 @@ Requires:       python3-oslo-privsep >= 1.9.0
+ # Apply WRS patches
+ %patch0001 -p1
+ %patch0002 -p1
++%patch0003 -p1
+ 
+ %build
+ %py2_build
+-- 
+1.8.3.1
+

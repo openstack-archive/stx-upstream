@@ -1,0 +1,33 @@
+From 71f9d9555e0909cbc878d8852cd2c2243abd0b1c Mon Sep 17 00:00:00 2001
+From: Elena Taivan <elena.taivan@windriver.com>
+Date: Wed, 6 Jun 2018 09:41:42 +0000
+Subject: [PATCH 1/1] Add glance schedule greenthreads
+
+---
+ glance_store/_drivers/filesystem.py | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/glance_store/_drivers/filesystem.py b/glance_store/_drivers/filesystem.py
+index 5de011d..4a26d10 100644
+--- a/glance_store/_drivers/filesystem.py
++++ b/glance_store/_drivers/filesystem.py
+@@ -23,6 +23,7 @@ import hashlib
+ import logging
+ import os
+ import stat
++import time
+ 
+ import jsonschema
+ from oslo_config import cfg
+@@ -685,6 +686,8 @@ class Store(glance_store.driver.Store):
+                     if verifier:
+                         verifier.update(buf)
+                     f.write(buf)
++            # Give other greenthreads a chance to schedule.
++            time.sleep(0)
+         except IOError as e:
+             if e.errno != errno.EACCES:
+                 self._delete_partial(filepath, image_id)
+-- 
+1.8.3.1
+
