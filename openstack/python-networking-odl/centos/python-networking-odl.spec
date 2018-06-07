@@ -12,7 +12,7 @@ Release:        0%{?_tis_dist}.%{tis_patch_ver}
 Summary:        %{drv_vendor} OpenStack Neutron driver
 
 License:        ASL 2.0
-URL:            https://pypi.python.org/pypi/%{pkgname}
+URL:            https://pypi.org/project/%{pkgname}
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch

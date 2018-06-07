@@ -14,7 +14,7 @@ Release:       1%{?_tis_dist}.%{tis_patch_ver}
 Summary:       OpenStack Murano Service
 
 License:       ASL 2.0
-URL:           https://pypi.python.org/pypi/murano
+URL:           https://pypi.org/project/murano/
 Source0:       https://tarballs.openstack.org/%{pypi_name}/%{pypi_name}-%{upstream_version}.tar.gz
 #
 

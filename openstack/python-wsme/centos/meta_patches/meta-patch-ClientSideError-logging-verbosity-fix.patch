@@ -13,8 +13,8 @@ index 943c1cd..7f392b4 100644
 +++ b/SPECS/python-wsme.spec
 @@ -18,6 +18,10 @@ Summary:        Web Services Made Easy
  License:        MIT
- URL:            https://pypi.python.org/pypi/WSME
- Source0:        http://pypi.python.org/packages/source/W/%{pypi_name}/%{pypi_name}-%{version}.tar.gz
+ URL:            https://pypi.org/project/WSME/
+ Source0:        http://pypi.org/project/packages/source/W/%{pypi_name}/%{pypi_name}-%{version}.tar.gz
 +
 +# WRS
 +Patch0001: 0001-log-client-side-errors.patch
