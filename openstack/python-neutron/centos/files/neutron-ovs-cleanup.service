@@ -5,9 +5,9 @@ Before=neutron-openvswitch-agent.service neutron-dhcp-agent.service neutron-l3-a
 
 [Service]
 Type=oneshot
-User=neutron
-ExecStart=/usr/bin/neutron-ovs-cleanup --config-file /usr/share/neutron/neutron-dist.conf --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/openvswitch_agent.ini --config-dir /etc/neutron/conf.d/common --config-dir /etc/neutron/conf.d/neutron-ovs-cleanup --log-file /var/log/neutron/ovs-cleanup.log
-ExecStop=/usr/bin/neutron-ovs-cleanup --config-file /usr/share/neutron/neutron-dist.conf --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/openvswitch_agent.ini --config-dir /etc/neutron/conf.d/common --config-dir /etc/neutron/conf.d/neutron-ovs-cleanup --log-file /var/log/neutron/ovs-cleanup.log
+User=root
+ExecStart=/usr/bin/neutron-ovs-cleanup --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/openvswitch_agent.ini --config-dir /etc/neutron/conf.d/common --config-dir /etc/neutron/conf.d/neutron-ovs-cleanup
+ExecStop=/usr/bin/neutron-ovs-cleanup --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/openvswitch_agent.ini --config-dir /etc/neutron/conf.d/common --config-dir /etc/neutron/conf.d/neutron-ovs-cleanup
 PrivateTmp=true
 RemainAfterExit=yes
 
