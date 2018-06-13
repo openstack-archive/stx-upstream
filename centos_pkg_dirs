@@ -19,6 +19,8 @@ openstack/python-cinderclient
 openstack/python-glance
 openstack/python-glance-store
 openstack/python-glanceclient
+openstack/python-gnocchi
+openstack/python-gnocchiclient
 openstack/python-heat/openstack-heat
 openstack/python-heat/wrs-heat-template
 openstack/python-heatclient
