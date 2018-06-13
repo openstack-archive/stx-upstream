@@ -1,24 +1,23 @@
-From ab8fc2b85ab7b60bdfeca496a32e90bc8f575478 Mon Sep 17 00:00:00 2001
-From: Kam Nasim <kam.nasim@windriver.com>
-Date: Fri, 11 May 2018 13:13:15 -0400
+From ac2faa010188a6d824a8958c2971bcefe2a56ab9 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Fri, 8 Jun 2018 16:05:52 -0400
 Subject: [PATCH] meta patch for endpoint groups
 
-Signed-off-by: Kam Nasim <kam.nasim@windriver.com>
 ---
  SPECS/python-openstackclient.spec | 3 +++
  1 file changed, 3 insertions(+)
 
 diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
-index 5d75107..26941e4 100644
+index 4b1682e..c192b2b 100644
 --- a/SPECS/python-openstackclient.spec
 +++ b/SPECS/python-openstackclient.spec
-@@ -27,6 +27,9 @@ Patch0006:        0002-US101470-Openstackclient-implementation-of-novaclien.patc
+@@ -26,6 +26,9 @@ Patch0005:        0001-US101470-Openstackclient-implementation-of-novaclien.patc
+ Patch0006:        0002-US101470-Openstackclient-implementation-of-novaclien.patch
  Patch0007:        0001-US106901-Openstack-CLI-Adoption.patch
  Patch0008:        0002-US106901-Openstack-CLI-Adoption.patch
- Patch0009:        0003-US106901-Openstack-CLI-Adoption.patch
-+Patch0010:        0001-Optimize-getting-endpoint-list.patch
-+Patch0011:        0002-Add-support-for-endpoing-filter-commands.patch
-+Patch0012:        0003-Add-support-for-endpoint-group-commands.patch
++Patch0009:        0001-Optimize-getting-endpoint-list.patch
++Patch0010:        0002-Add-support-for-endpoing-filter-commands.patch
++Patch0011:        0003-Add-support-for-endpoint-group-commands.patch
  
  BuildArch:        noarch
  
