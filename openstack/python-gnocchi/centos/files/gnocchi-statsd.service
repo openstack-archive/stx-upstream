@@ -1,0 +1,12 @@
+[Unit]
+Description=Gnocchi statsd service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=gnocchi
+ExecStart=/usr/bin/gnocchi-statsd --log-file /var/log/gnocchi/statsd.log
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

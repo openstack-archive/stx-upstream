@@ -1,0 +1,12 @@
+[Unit]
+Description=Gnocchi metricd service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/gnocchi-metricd --log-file /var/log/gnocchi/metricd.log
+#Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
