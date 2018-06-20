@@ -1,0 +1,32 @@
+From e314323f74f4b434b812baccc444a0724abe507b Mon Sep 17 00:00:00 2001
+From: Andy Ning <andy.ning@windriver.com>
+Date: Thu, 14 Jun 2018 16:42:20 -0400
+Subject: [PATCH 1/1] Add image download support to DC config
+
+---
+ SPECS/python-glance-store.spec | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/SPECS/python-glance-store.spec b/SPECS/python-glance-store.spec
+index 977b2bc..54442bb 100644
+--- a/SPECS/python-glance-store.spec
++++ b/SPECS/python-glance-store.spec
+@@ -17,6 +17,7 @@ Source0:        https://tarballs.openstack.org/%{upstream_name}/%{upstream_name}
+ Patch0001: 0001-Check-ceph-cluster-free-space-before-creating-image.patch
+ Patch0002: 0002-Add-glance-driver.patch
+ Patch0003: 0003-Add-glance-schedule-greenthreads.patch
++Patch0004: 0004-Add-image-download-support-to-DC-config.patch
+ 
+ BuildArch:      noarch
+ 
+@@ -92,6 +93,7 @@ Requires:       python3-oslo-privsep >= 1.9.0
+ %patch0001 -p1
+ %patch0002 -p1
+ %patch0003 -p1
++%patch0004 -p1
+ 
+ %build
+ %py2_build
+-- 
+2.7.4
+
