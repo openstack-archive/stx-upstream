@@ -138,9 +138,6 @@ heat resources can be found in hot/scenarios/ directory.
                                           illustrate the creation of a Cinder Volume and then 
                                           the launching / creation of a VM Instance using this 
                                           Cinder Volume as its boot device.
-    CFNPushStatsAutoScaling.yaml        - An autoscaling stack of VMs that use cfn-push-stats 
-                                          to emit custom meters which are used by autoscaling
-                                          policies.
     CombinationAutoScaling.yaml         - A single template that creates a simple VM In/Out 
                                           auto-scaling use case. A single Load Balancer VM is 
                                           created and an AutoScalingGroup of server VMs is 
@@ -170,11 +167,6 @@ heat resources can be found in hot/scenarios/ directory.
                                           The Stack contains/creates 2 provider networks,
                                           a keypair, 2 flavors, 4 networks, 5 subnets and
                                           2 routers with gateways setup.
-
-A demo illustrating a complex environment can be found in the hot/demo/ directory.
-
-./hot/demo:
-    scaleUpDown.yaml                    - A demo to illustrate scale up and down 
 
 USAGE
 =====
