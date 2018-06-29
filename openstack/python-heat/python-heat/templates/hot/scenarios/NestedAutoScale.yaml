@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright (c) 2013 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -26,9 +26,8 @@
 #   FLAVOR: A nova flavor name or UUID for the VMs (nova flavor-list)
 #   IMAGE:  A glance image name or UUID for launching VMs (glance image-list)
 #   NETWORK: Name or UUID of the network to use for the VMs (neutron net-list)
-#   METER_NAME: Name of the ceilometer meter to use to trigger autoscaling
-#     (ceilometer meter-list)
-#   METER_PREFIX: user_metadata for a nova meter, metering for all other meters
+#   METER_NAME: Name of the gnocchi metric to use to trigger autoscaling
+#     (gnocchi metric list)
 #   HIGH_VALUE: Value for the meter to trigger a scale up.
 #   LOW_VALUE: Value for the meter to trigger a scale down.
 #
@@ -40,7 +39,7 @@
 #
 # Expected Outcome:
 #  VMs running the guest image (nova list)
-#  New ceilometer alarm triggers  (ceilometer alarm-list)
+#  New aodh alarm triggers  (aodh alarm list)
 #  New cinder volumes for each VM (cinder list)
 #  This template produces an output which shows the CLI syntax to help
 #   troubleshoot autoscaling
@@ -89,18 +88,14 @@ parameters:
             - custom_constraint: neutron.network
 
     METER_NAME:
-        description: Ceilometer meter to query when determining autoscaling
+        description: Gnocchi metric to query when determining autoscaling
         type: string
         default: cpu_util
 
-    METER_PREFIX:
-        description: >
-            Ceilometer alarm query prefix.
-            If a nova meter (user_metadata) otherwise (metering)
+    RESOURCE_TYPE:
+        description: Gnocchi resource type to use to query
         type: string
-        default: user_metadata
-        constraints:
-            - allowed_values: [ user_metadata, metering ]
+        default: instance
 
     HIGH_VALUE:
         description: Metric value that will trigger a scale up if exceeded
@@ -130,7 +125,7 @@ resources:
                     KEYPAIR: { get_param: KEYPAIR }
                     KEYPAIR_ADMIN_USER: { get_param: KEYPAIR_ADMIN_USER }
                     NETWORK: { get_param: NETWORK }
-                    METADATA: {"metering.stack": {get_param: "OS::stack_id"}}
+                    METADATA: {"metering.server_group": {get_param: "OS::stack_id"}}
 
     ScaleUpPolicy:
         type: OS::Heat::ScalingPolicy
@@ -149,51 +144,73 @@ resources:
             scaling_adjustment: -1
 
     AlarmHigh:
-        type: OS::Ceilometer::Alarm
+        type: OS::Aodh::GnocchiAggregationByResourcesAlarm
         properties:
-            meter_name: { get_param: METER_NAME }
-            statistic: avg
-            period: 60
+            description: Scale up if the meter above threshold for 5 minutes
+            metric: { get_param: METER_NAME }
+            aggregation_method: mean
+            granularity: 300
             evaluation_periods: 1
             threshold: { get_param: HIGH_VALUE }
+            resource_type: { get_param: RESOURCE_TYPE }
+            comparison_operator: gt
             alarm_actions:
                 - {get_attr: [ScaleUpPolicy, alarm_url]}
-            # ceilometer alarm resource will automatically prepend
-            # to the matching_metadata based on the meter type
-            #      metadata.metering
-            #  or  metadata.user_metadata
-            matching_metadata: {'stack': {get_param: "OS::stack_id"}}
-            comparison_operator: gt
+            # gnocchi alarm resource will automatically
+            # prepend to the query based on the meter type
+            #       metadata.metering
+            #   or  metadata.user_metadata    
+            query:
+                str_replace:
+                    template: '{"=": {"server_group": "stack_id"}}'
+                    params:
+                        stack_id: {get_param: "OS::stack_id"}
 
     AlarmLow:
-        type: OS::Ceilometer::Alarm
+        type: OS::Aodh::GnocchiAggregationByResourcesAlarm
         properties:
-            meter_name: { get_param: METER_NAME }
-            statistic: avg
-            period: 60
+            description: Scale down if the meter below threshold for 5 minutes
+            metric: { get_param: METER_NAME }
+            aggregation_method: mean
+            granularity: 300
             evaluation_periods: 1
             threshold: { get_param: LOW_VALUE }
+            resource_type: { get_param: RESOURCE_TYPE }
+            comparison_operator: lt
             alarm_actions:
                 - {get_attr: [ScaleDownPolicy, alarm_url]}
-            # ceilometer alarm resource will automatically prepend
-            # to the matching_metadata based on the meter type
-            #      metadata.metering
-            #  or  metadata.user_metadata
-            matching_metadata: {'stack': {get_param: "OS::stack_id"}}
-            comparison_operator: lt
+            # gnocchi alarm resource will automatically
+            # prepend to the query based on the meter type
+            #       metadata.metering
+            #   or  metadata.user_metadata
+            query:
+                str_replace:
+                    template: '{"=": {"server_group": "stack_id"}}'
+                    params:
+                        stack_id: {get_param: "OS::stack_id"}
 
 outputs:
-    ceilometer_query:
+    gnocchi_query:
         value:
             str_replace:
                 template: >
-                    ceilometer statistics -m metername
-                    -q metadata.prefix.stack=stackval
-                    -p 60 -a avg
+                    gnocchi measures aggregation --resource-type resourcetype
+                    --query '"server_group"="stackval"'
+                    --granularity 300 --aggregation mean -m metric
                 params:
-                    metername: { get_param: METER_NAME }
-                    prefix: { get_param: METER_PREFIX}
+                    resourcetype: { get_param: RESOURCE_TYPE }
+                    metric: { get_param: METER_NAME }
                     stackval: { get_param: "OS::stack_id" }
+        description: >
+            This is a Gnocchi query for statistics on the cpu_util measurements about
+            OS::Nova::Server instances in this stack. The --resource-type select the
+            type of Gnocchi resource. The --query parameter filters resources
+            according to its attributes. When a VM's metadata includes an item of the
+            form metering.server_group=X, the corresponding Gnocchi resource has a
+            attribute named server_group that can queried with 'server_group="X"' In
+            this case the nested stacks give their VMs metadata that is passed as a
+            nested stack parameter, and this stack passes a metadata of the form
+            metering.server_group=X, where X is this stack's ID.
 
     manual_scale_up:
         value:

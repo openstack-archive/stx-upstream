@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright (c) 2013-2014 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -26,16 +26,16 @@
 #   IMAGE: A glance image to use in launching the VMs (glance image-list)
 #   LB_IMAGE: A glance image to use in launching the load balancer
 #    (glance image-list)
-#   LB_NETWORK: name of the network to use for the load balancer VM
+#   LB_NETWORK: UUID of the network to use for the load balancer VM
 #      (neutron net-list)
-#   VM_NETWORK: name of the network to use for the scaling VMs
+#   VM_NETWORK: UUID of the network to use for the scaling VMs
 #     (neutron net-list)
-#   PUBLIC_NETWORK:  name of public network to use for all VMs
+#   PUBLIC_NETWORK:  UUID of public network to use for all VMs
 #    (neutron net-list)
-#   INTERNAL_NETWORK: name of the internal network to use for all VMs
+#   INTERNAL_NETWORK: UUID of the internal network to use for all VMs
 #    (neutron net-list)
-#   METER_NAME: name of the ceilometer meter to trigger autoscaling
-#    (ceilometer meter-list)
+#   METER_NAME: name of the gnocchi metric to trigger autoscaling
+#    (gnocchi metric list)
 #
 # Tenant Considerations:
 #    The default meters (vswitch) are not accessible to tenants
@@ -46,7 +46,7 @@
 # Expected Outcome:
 #  A VM running the load balancer (nova list)
 #  An auto-scaling stack of server VMs (nova list)
-#  New ceilometer alarm triggers  (ceilometer alarm-list)
+#  New aodh alarm triggers  (aodh alarm list)
 #
 #  Note: there is no communication between the load balancer and the VMs
 #
@@ -94,35 +94,36 @@ parameters:
     PUBLIC_NETWORK:
         type: string
         description: Public network name
-        default: public-net0
         constraints:
             - custom_constraint: neutron.network
 
     INTERNAL_NETWORK:
         type: string
         description: Internal network name
-        default: internal-net0
         constraints:
             - custom_constraint: neutron.network
 
     VM_NETWORK:
         type: string
         description: Server network name
-        default: private-net0
         constraints:
             - custom_constraint: neutron.network
 
     LB_NETWORK:
         type: string
         description: Load Balancer network name
-        default: internal-net0
         constraints:
             - custom_constraint: neutron.network
 
     METER_NAME:
         type: string
-        description: ceilometer meter to trigger autoscaling
+        description: gnocchi metric to trigger autoscaling
         default: vswitch.port.receive.util
+
+    RESOURCE_TYPE:
+        description: Gnocchi resource type to use to query
+        type: string
+        default: vswitch_interface_and_port 
 
     MinClusterSize:
         type: string
@@ -176,30 +177,54 @@ resources:
             cooldown: 30
 
     LINKAlarmHigh:
-        type: OS::Ceilometer::Alarm
+        type: OS::Aodh::GnocchiAggregationByResourcesAlarm
         properties:
-            description: Scale-out if the max link util > 50% for 30 secs
-            meter_name: { get_param: METER_NAME }
-            statistic: max
-            period: '30'
+            description: Scale-out if the avg link util > 50% for 5 minutes
+            metric: { get_param: METER_NAME }
+            aggregation_method: mean
+            granularity: 300
             evaluation_periods: '1'
             threshold: '50'
+            resource_type: { get_param: RESOURCE_TYPE }
+            comparison_operator: gt
             alarm_actions:
                 - {get_attr: [SrvScaleOutPolicy, alarm_url]}
-            comparison_operator: gt
+            query:
+                str_replace:
+                    template: '{"or": [{"=": {"network_uuid": "internal_net_id"}},
+                                       {"=": {"network_uuid": "public_net_id"}},
+                                       {"=": {"network_uuid": "lb_net_id"}},
+                                       {"=": {"network_uuid": "vm_net_id"}}]}'
+                    params:
+                        internal_net_id: {get_param: INTERNAL_NETWORK}
+                        public_net_id: {get_param: PUBLIC_NETWORK}
+                        lb_net_id: {get_param: LB_NETWORK}
+                        vm_net_id: {get_param: VM_NETWORK}
 
     LINKAlarmLow:
-        type: OS::Ceilometer::Alarm
+        type: OS::Aodh::GnocchiAggregationByResourcesAlarm
         properties:
-            description: Scale-in if the max link util < 20% for 30 secs
-            meter_name: { get_param: METER_NAME }
-            statistic: max
-            period: '30'
+            description: Scale-in if the avg link util < 20% for 5 minutes
+            metric: { get_param: METER_NAME }
+            aggregation_method: mean
+            granularity: 300
             evaluation_periods: '1'
             threshold: '20'
+            resource_type: { get_param: RESOURCE_TYPE }
+            comparison_operator: lt
             alarm_actions:
                 - {get_attr: [SrvScaleInPolicy, alarm_url]}
-            comparison_operator: lt
+            query:
+                str_replace:
+                    template: '{"or": [{"=": {"network_uuid": "internal_net_id"}},
+                                       {"=": {"network_uuid": "public_net_id"}},
+                                       {"=": {"network_uuid": "lb_net_id"}},
+                                       {"=": {"network_uuid": "vm_net_id"}}]}'
+                    params:
+                        internal_net_id: {get_param: INTERNAL_NETWORK}
+                        public_net_id: {get_param: PUBLIC_NETWORK}
+                        lb_net_id: {get_param: LB_NETWORK}
+                        vm_net_id: {get_param: VM_NETWORK}
 
     ServerGroup:
         type: OS::Heat::AutoScalingGroup
@@ -221,7 +246,7 @@ resources:
                     image: { get_param: IMAGE }
                     key_name: { get_param: KEYPAIR }
                     admin_user: {get_param: KEYPAIR_ADMIN_USER }
-                    metadata: {"metering.stack": {get_param: "OS::stack_id"}}
+                    metadata: {"metering.server_group": {get_param: "OS::stack_id"}}
                     networks:
                         - network: { get_param: PUBLIC_NETWORK }
                           vif-model: 'virtio'

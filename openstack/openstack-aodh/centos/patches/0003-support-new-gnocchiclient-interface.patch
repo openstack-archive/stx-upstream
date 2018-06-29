@@ -1,0 +1,202 @@
+From 25f0c1ab7cc1d9d22df01f1cd2d6c4fb2fe8b0f2 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Thu, 28 Jun 2018 12:26:52 -0400
+Subject: [PATCH 1/1] support new gnocchiclient interface
+
+---
+ aodh/api/controllers/v2/alarm_rules/gnocchi.py     | 37 +++++++---------------
+ aodh/evaluator/gnocchi.py                          | 22 ++++++++++---
+ .../functional/api/v2/test_alarm_scenarios.py      |  5 ---
+ aodh/tests/unit/evaluator/test_gnocchi.py          |  3 ++
+ 4 files changed, 32 insertions(+), 35 deletions(-)
+
+diff --git a/aodh/api/controllers/v2/alarm_rules/gnocchi.py b/aodh/api/controllers/v2/alarm_rules/gnocchi.py
+index 6e2e64d..419b6b0 100644
+--- a/aodh/api/controllers/v2/alarm_rules/gnocchi.py
++++ b/aodh/api/controllers/v2/alarm_rules/gnocchi.py
+@@ -74,9 +74,9 @@ class AlarmGnocchiThresholdRule(base.AlarmRule):
+         conf = pecan.request.cfg
+         gnocchi_client = client.Client(
+             '1', keystone_client.get_session(conf),
+-            interface=conf.service_credentials.interface,
+-            region_name=conf.service_credentials.region_name)
+-
++            adapter_options={
++                'interface': conf.service_credentials.interface,
++                'region_name': conf.service_credentials.region_name})
+         try:
+             return gnocchi_client.capabilities.list().get(
+                 'aggregation_methods', [])
+@@ -105,26 +105,6 @@ class MetricOfResourceRule(AlarmGnocchiThresholdRule):
+                                        'resource_type'])
+         return rule
+ 
+-    @classmethod
+-    def validate_alarm(cls, alarm):
+-        super(MetricOfResourceRule,
+-              cls).validate_alarm(alarm)
+-
+-        conf = pecan.request.cfg
+-        gnocchi_client = client.Client(
+-            '1', keystone_client.get_session(conf),
+-            interface=conf.service_credentials.interface,
+-            region_name=conf.service_credentials.region_name)
+-
+-        rule = alarm.gnocchi_resources_threshold_rule
+-        try:
+-            gnocchi_client.resource.get(rule.resource_type,
+-                                        rule.resource_id)
+-        except exceptions.ClientException as e:
+-            raise base.ClientSideError(e.message, status_code=e.code)
+-        except Exception as e:
+-            raise GnocchiUnavailable(e)
+-
+ 
+ class AggregationMetricByResourcesLookupRule(AlarmGnocchiThresholdRule):
+     metric = wsme.wsattr(wtypes.text, mandatory=True)
+@@ -200,9 +180,9 @@ class AggregationMetricByResourcesLookupRule(AlarmGnocchiThresholdRule):
+ 
+         gnocchi_client = client.Client(
+             '1', keystone_client.get_session(conf),
+-            interface=conf.service_credentials.interface,
+-            region_name=conf.service_credentials.region_name)
+-
++            adapter_options={
++                'interface': conf.service_credentials.interface,
++                'region_name': conf.service_credentials.region_name})
+         try:
+             gnocchi_client.metric.aggregation(
+                 metrics=rule.metric,
+@@ -211,6 +191,11 @@ class AggregationMetricByResourcesLookupRule(AlarmGnocchiThresholdRule):
+                 needed_overlap=0,
+                 resource_type=rule.resource_type)
+         except exceptions.ClientException as e:
++            if e.code == 404:
++                # NOTE(sileht): We are fine here, we just want to ensure the
++                # 'query' payload is valid for Gnocchi If the metric
++                # doesn't exists yet, it doesn't matter
++                return
+             raise base.ClientSideError(e.message, status_code=e.code)
+         except Exception as e:
+             raise GnocchiUnavailable(e)
+diff --git a/aodh/evaluator/gnocchi.py b/aodh/evaluator/gnocchi.py
+index 524b662..3632597 100644
+--- a/aodh/evaluator/gnocchi.py
++++ b/aodh/evaluator/gnocchi.py
+@@ -14,6 +14,7 @@
+ # under the License.
+ 
+ from gnocchiclient import client
++from gnocchiclient import exceptions
+ from oslo_log import log
+ from oslo_serialization import jsonutils
+ 
+@@ -34,8 +35,9 @@ class GnocchiBase(threshold.ThresholdEvaluator):
+         super(GnocchiBase, self).__init__(conf)
+         self._gnocchi_client = client.Client(
+             '1', keystone_client.get_session(conf),
+-            interface=conf.service_credentials.interface,
+-            region_name=conf.service_credentials.region_name)
++            adapter_options={
++                'interface': conf.service_credentials.interface,
++                'region_name': conf.service_credentials.region_name})
+ 
+     @staticmethod
+     def _sanitize(rule, statistics):
+@@ -58,12 +60,16 @@ class GnocchiResourceThresholdEvaluator(GnocchiBase):
+         try:
+             return self._gnocchi_client.metric.get_measures(
+                 metric=rule['metric'],
++                granularity=rule['granularity'],
+                 start=start, stop=end,
+                 resource_id=rule['resource_id'],
+                 aggregation=rule['aggregation_method'])
++        except exceptions.NotFound:
++            LOG.debug('metric %s or resource %s does not exists',
++                      rule['metric'], rule['resource_id'])
++            return []
+         except Exception as e:
+-            LOG.warning(_LW('alarm stats retrieval failed: %s'),
+-                        e)
++            LOG.warning(_LW('alarm stats retrieval failed: %s'), e)
+             return []
+ 
+ 
+@@ -80,9 +86,13 @@ class GnocchiAggregationMetricsThresholdEvaluator(GnocchiBase):
+             #   https://bugs.launchpad.net/gnocchi/+bug/1479429
+             return self._gnocchi_client.metric.aggregation(
+                 metrics=rule['metrics'],
++                granularity=rule['granularity'],
+                 start=start, stop=end,
+                 aggregation=rule['aggregation_method'],
+                 needed_overlap=0)
++        except exceptions.NotFound:
++            LOG.debug('metrics %s does not exists', rule['metrics'])
++            return []
+         except Exception as e:
+             LOG.warning(_LW('alarm stats retrieval failed: %s'), e)
+             return []
+@@ -101,12 +111,16 @@ class GnocchiAggregationResourcesThresholdEvaluator(GnocchiBase):
+         try:
+             return self._gnocchi_client.metric.aggregation(
+                 metrics=rule['metric'],
++                granularity=rule['granularity'],
+                 query=jsonutils.loads(rule['query']),
+                 resource_type=rule["resource_type"],
+                 start=start, stop=end,
+                 aggregation=rule['aggregation_method'],
+                 needed_overlap=0,
+             )
++        except exceptions.NotFound:
++            LOG.debug('metric %s does not exists', rule['metric'])
++            return []
+         except Exception as e:
+             LOG.warning(_LW('alarm stats retrieval failed: %s'), e)
+             return []
+diff --git a/aodh/tests/functional/api/v2/test_alarm_scenarios.py b/aodh/tests/functional/api/v2/test_alarm_scenarios.py
+index 8e3288a..5d30caa 100644
+--- a/aodh/tests/functional/api/v2/test_alarm_scenarios.py
++++ b/aodh/tests/functional/api/v2/test_alarm_scenarios.py
+@@ -2966,11 +2966,6 @@ class TestAlarmsRuleGnocchi(TestAlarmsBase):
+             c.capabilities.list.return_value = {
+                 'aggregation_methods': ['count']}
+             self.post_json('/alarms', params=json, headers=self.auth_headers)
+-            expected = [mock.call.capabilities.list(),
+-                        mock.call.resource.get(
+-                            "instance",
+-                            "209ef69c-c10c-4efb-90ff-46f4b2d90d2e")]
+-            self.assertEqual(expected, c.mock_calls)
+ 
+         alarms = list(self.alarm_conn.get_alarms(enabled=False))
+         self.assertEqual(1, len(alarms))
+diff --git a/aodh/tests/unit/evaluator/test_gnocchi.py b/aodh/tests/unit/evaluator/test_gnocchi.py
+index 6d00f4f..e4740e4 100644
+--- a/aodh/tests/unit/evaluator/test_gnocchi.py
++++ b/aodh/tests/unit/evaluator/test_gnocchi.py
+@@ -186,6 +186,7 @@ class TestGnocchiResourceThresholdEvaluate(TestGnocchiEvaluatorBase):
+ 
+         self.assertEqual(
+             [mock.call.get_measures(aggregation='mean', metric='cpu_util',
++                                    granularity=60,
+                                     resource_id='my_instance',
+                                     start=start_alarm, stop=end)],
+             self.client.metric.mock_calls)
+@@ -326,6 +327,7 @@ class TestGnocchiAggregationMetricsThresholdEvaluate(TestGnocchiEvaluatorBase):
+                                    metrics=[
+                                        '0bb1604d-1193-4c0a-b4b8-74b170e35e83',
+                                        '9ddc209f-42f8-41e1-b8f1-8804f59c4053'],
++                                   granularity=300,
+                                    needed_overlap=0,
+                                    start=start_alarm, stop=end)],
+             self.client.metric.mock_calls)
+@@ -443,6 +445,7 @@ class TestGnocchiAggregationResourcesThresholdEvaluate(
+         end = "2015-01-26T12:57:00"
+         self.assertEqual(
+             [mock.call.aggregation(aggregation='mean', metrics='cpu_util',
++                                   granularity=50,
+                                    needed_overlap=0,
+                                    query={"=": {"server_group":
+                                           "my_autoscaling_group"}},
+-- 
+1.8.3.1
+
