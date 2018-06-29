@@ -1,12 +1,12 @@
 ################################################################################
-# Copyright (c) 2013-2015 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
 ################################################################################
 #
 # Objective:
-#    Demonstrate constructing the heat resource OS::Ceilometer::Alarm
+#    Demonstrate constructing the heat resource OS::Aodh::GnocchiAggregationByResourcesAlarm
 #
 # Pre-Reqs:
 #    Normal Lab Setup
@@ -22,19 +22,19 @@
 #
 # Expected Outcome:
 #   A new alarm (trigger).
-#       ceilometer alarm-list
+#       aodh alarm list
 #
 ################################################################################
 
 heat_template_version: 2015-04-30
 
 description: >
-    Demonstrate the OS::Ceilometer::Alarm heat resource
+    Demonstrate the OS::Aodh::GnocchiAggregationByResourcesAlarm heat resource
 
 resources:
 
     OS_Ceilometer_Alarm:
-        type: OS::Ceilometer::Alarm
+        type: OS::Aodh::GnocchiAggregationByResourcesAlarm
         properties:
             #################################################
             # Required properties
@@ -50,21 +50,36 @@ resources:
             # , required: true, type: string}
             evaluation_periods: '3'
 
-            # meter_name: {description: Meter name watched by the alarm
+            # metric: {description: Meter name watched by the alarm
             # , required: true, type: string}
-            meter_name: 'cpu_util'
+            metric: 'cpu_util'
 
-            # period: {description: Period (seconds) to evaluate over
-            # , required: true, type: string}
-            period: '90'
+            # aggregation_method: 
+            #   description: The aggregation_method to compare to the threshold
+            #   required: true
+            #   type: string
+            #   default: mean
+            #   constraints:
+            #   - allowed_values: mean }
+            aggregation_method: 'mean'
 
-            #  statistic:
-            #    constraints:
-            #    - allowed_values: [count, avg, sum, min, max]
-            #    description: Meter statistic to evaluate
-            #    required: true
-            #    type: string
-            statistic: 'avg'
+            # granularity:
+            #   description: The time range in seconds over which to query
+            #   required: true
+            #   type: string
+            granularity: '300'
+
+            # resource_type: {description: The type of resource, required:true, type:string}
+            resource_type: 'instance'
+
+            # query:
+            #   description: A query to filter resource, it's a json string like
+            #   {"and": [{"=": {"ended_at": null}}, ...]}
+            query:
+                str_replace:
+                    template: '{"=": {"server_group": "stack_id"}}'
+                    params:
+                        stack_id: {get_param: "OS::stack_id"}
 
             # threshold: {description: Threshold to evaluate against
             # , required: true, type: string}
@@ -87,10 +102,6 @@ resources:
             # insufficient_data_actions: {description: A list of URLs
             #  (webhooks) to invoke when state transitions to insufficient-data
             #  , required: false, type: list}
-
-            # matching_metadata: {description: Meter should match this resource
-            #  metadata (key=value) additionally to the meter_name
-            #  , required: false, type: map}
 
             # ok_actions: {description: A list of URLs (webhooks) to invoke
             #  when state transitions to ok, required: false, type: list}
