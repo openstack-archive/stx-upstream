@@ -1,0 +1,32 @@
+From fe727c7baf89dab7e67244ba9c84c71d609c0389 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Thu, 28 Jun 2018 12:30:19 -0400
+Subject: [PATCH 1/1] meta support new gnocchiclient interface
+
+---
+ SPECS/openstack-aodh.spec | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/SPECS/openstack-aodh.spec b/SPECS/openstack-aodh.spec
+index 2fa77d0..a10e9e0 100644
+--- a/SPECS/openstack-aodh.spec
++++ b/SPECS/openstack-aodh.spec
+@@ -23,6 +23,7 @@ Source20:         aodh-expirer-active
+ #WRS: Include patches here: 
+ Patch1:           0001-modify-aodh-api.patch
+ Patch2:           0002-Add-drivername-support-for-postgresql-connection-set.patch
++Patch3:           0003-support-new-gnocchiclient-interface.patch
+ 
+ BuildArch:        noarch
+ 
+@@ -226,6 +227,7 @@ This package contains the Aodh test files.
+ #WRS: Apply patches here
+ %patch1 -p1
+ %patch2 -p1
++%patch3 -p1
+ 
+ find . \( -name .gitignore -o -name .placeholder \) -delete
+ 
+-- 
+1.8.3.1
+
