@@ -1,4 +1,7 @@
-SRC_DIR="$CGCS_BASE/git/gnocchi"
-COPY_LIST="$FILES_BASE/* $FILES_BASE/scripts/*"
-TIS_BASE_SRCREV=60e608f70c8e13b17973809e84ec4d00c845da56
-TIS_PATCH_VER=GITREVCOUNT
+VERSION=4.2.5
+TAR_NAME=gnocchi
+COPY_LIST="$FILES_BASE/* \
+           $FILES_BASE/scripts/* \
+           $DISTRO/patches/* \
+           $CGCS_BASE/downloads/$TAR_NAME-$VERSION.tar.gz"
+TIS_PATCH_VER=1
