@@ -5,7 +5,7 @@
 %{!?upstream_version: %global upstream_version %{version}%{?milestone}}
 
 Name:           %{service}
-Version:        4.2.4
+Version:        4.2.5
 Release:        1%{?_tis_dist}.%{tis_patch_ver}
 Summary:        Gnocchi is a API to store metrics and index resources
 
@@ -19,6 +19,9 @@ Source12:       %{name}-statsd.service
 # WRS
 Source13:       gnocchi-api.init
 Source14:       gnocchi-metricd.init
+# Include patches here
+Patch1:         Integrate-gnocchi-storage-backend.patch
+
 BuildArch:      noarch
 
 BuildRequires:  python2-setuptools
@@ -203,12 +206,16 @@ This package contains documentation files for %{service}.
 %prep
 %setup -q -n %{service}-%{upstream_version}
 
+# Apply patches here
+%patch1 -p1
+
 find . \( -name .gitignore -o -name .placeholder \) -delete
 find %{service} -name \*.py -exec sed -i '/\/usr\/bin\/env python/{d;q}' {} +
 sed -i '/setup_requires/d; /install_requires/d; /dependency_links/d' setup.py
 
-%py_req_cleanup
-
+# Remove the requirements file so that pbr hooks don't add it
+# to distutils requires_dist config
+rm -rf {test-,}requirements.txt tools/{pip,test}-requires
 
 %build
 # Generate config file
@@ -236,7 +243,7 @@ mkdir -p %{buildroot}/%{_sysconfdir}/%{service}/
 mkdir -p %{buildroot}/%{_var}/log/%{name}
 # WRS
 mkdir -p %{buildroot}%{_sysconfdir}/init.d
-install -p -D -m 640 %{service}/rest/%{service}-api.py %{buildroot}%{_datadir}/%{service}/%{service}-api.py
+install -p -D -m 640 %{service}/rest/wsgi.py %{buildroot}%{_datadir}/%{service}/%{service}-api.py
 install -p -D -m 775 %{SOURCE13} %{buildroot}%{_sysconfdir}/init.d/gnocchi-api
 install -p -D -m 775 %{SOURCE14} %{buildroot}%{_sysconfdir}/init.d/gnocchi-metricd
 
@@ -293,7 +300,6 @@ exit 0
 %{_bindir}/%{service}-config-generator
 %{_bindir}/%{service}-change-sack-size
 %{_bindir}/%{service}-upgrade
-%{_bindir}/%{service}-injector
 %dir %{_sysconfdir}/%{service}
 %{_datadir}/%{service}/%{service}-api.*
 %attr(-, root, %{service}) %{_datadir}/%{service}/%{service}-dist.conf

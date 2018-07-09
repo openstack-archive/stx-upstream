@@ -1,0 +1,47 @@
+From f56612a5d784e8f7de384f0e9b623adf50953ee6 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.Wang@windriver.com>
+Date: Mon, 9 Jul 2018 10:02:07 -0400
+Subject: [PATCH] Integrate gnocchi storage backend
+
+---
+ MANIFEST.in                                  | 2 ++
+ gnocchi/indexer/alembic/__init__.py          | 0
+ gnocchi/indexer/alembic/versions/__init__.py | 0
+ gnocchi/rest/wsgi.py                         | 5 ++++-
+ 4 files changed, 6 insertions(+), 1 deletion(-)
+ create mode 100644 gnocchi/indexer/alembic/__init__.py
+ create mode 100644 gnocchi/indexer/alembic/versions/__init__.py
+
+diff --git a/MANIFEST.in b/MANIFEST.in
+index 8f248e6..df1afd3 100644
+--- a/MANIFEST.in
++++ b/MANIFEST.in
+@@ -1 +1,3 @@
+ include etc/gnocchi/gnocchi.conf
++
++recursive-include gnocchi *.ini *.json *.xml *.cfg *.pem README *.po *.mo *.sql
+diff --git a/gnocchi/indexer/alembic/__init__.py b/gnocchi/indexer/alembic/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/gnocchi/indexer/alembic/versions/__init__.py b/gnocchi/indexer/alembic/versions/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/gnocchi/rest/wsgi.py b/gnocchi/rest/wsgi.py
+index 0ebe753..6bccf48 100644
+--- a/gnocchi/rest/wsgi.py
++++ b/gnocchi/rest/wsgi.py
+@@ -10,7 +10,10 @@
+ # implied.
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+-"""This file is loaded by gnocchi-api when executing uwsgi"""
++"""This file is loaded by gnocchi-api when executing uwsgi/gunicorn"""
+ from gnocchi.cli import api
+ from gnocchi.rest import app
++import sys
++
++sys.argv = sys.argv[:1]
+ application = app.load_app(api.prepare_service())
+-- 
+1.8.3.1
+
