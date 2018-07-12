@@ -926,7 +926,6 @@ OPENSTACK_API_VERSIONS={"identity":3}
 OPENSTACK_NEUTRON_NETWORK['enable_distributed_router'] = True
 
 
-# TODO(tsmith) remove this, only for HP custom, this isnt being used 
 # Load Region Config params, if present
 # Config OPENSTACK_HOST is still required in region mode since Titanium Cloud
 # does not use the local_settings populated via packstack
