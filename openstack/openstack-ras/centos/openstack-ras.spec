@@ -14,7 +14,8 @@ URL: https://github.com/madkiss/openstack-resource-agents/tree/stable-grizzly
 Requires: /usr/bin/env
 Requires: /bin/sh
 
-Source:  %{name}-%{version}.tar.gz
+Source0:  %{name}-%{version}.tar.gz
+Source1:  dcorch-identity-api-proxy
 
 %description
 OpenStack Resource Agents from Madkiss
@@ -27,6 +28,7 @@ OpenStack Resource Agents from Madkiss
 rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-agent-central
 rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-alarm-evaluator
 rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-alarm-notifier
+install -p -D -m 644 %{SOURCE1} ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/dcorch-identity-api-proxy
 
 %files
 %defattr(-,root,root,-)
