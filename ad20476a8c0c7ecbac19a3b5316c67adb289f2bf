@@ -1,0 +1,9 @@
+Code-Review+2: Al Bailey <al.bailey@windriver.com>
+Code-Review+2: Chris Friesen <chris.friesen@windriver.com>
+Workflow+1: Chris Friesen <chris.friesen@windriver.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 31 Jul 2018 22:22:41 +0000
+Reviewed-on: https://review.openstack.org/587419
+Project: openstack/stx-upstream
+Branch: refs/heads/master
