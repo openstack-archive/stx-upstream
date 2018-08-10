@@ -168,3 +168,9 @@ python2-django-openstack-auth
 
 # python-wsme
 python2-wsme
+
+# openstack-swift
+openstack-swift-object
+openstack-swift-account
+openstack-swift-container
+openstack-swift-proxy
