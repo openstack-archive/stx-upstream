@@ -1,4 +1,3 @@
-ceph-manager
 openstack/openstack-aodh
 openstack/openstack-murano
 openstack/python-muranoclient
