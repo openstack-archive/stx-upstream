@@ -396,11 +396,11 @@ done < %{SOURCE1}
 export PBR_VERSION=%{version}
 %{__python2} setup.py install -O1 --skip-build --root %{buildroot}
 
-# WRS:  Install sql migration cfg and sql files that were not installed by setup.py
+# Install sql migration cfg and sql files that were not installed by setup.py
 install -m 644 ceilometer/storage/sqlalchemy/migrate_repo/migrate.cfg %{buildroot}%{python_sitelib}/ceilometer/storage/sqlalchemy/migrate_repo/migrate.cfg
 install -m 644 ceilometer/storage/sqlalchemy/migrate_repo/versions/*.sql %{buildroot}%{python_sitelib}/ceilometer/storage/sqlalchemy/migrate_repo/versions/.
 
-# WRS Mitaka. Install non python files that were not installed by setup.py
+# Install non python files that were not installed by setup.py
 install -m 755 -d %{buildroot}%{python_sitelib}/ceilometer/hardware/pollsters/data
 install -m 644 ceilometer/hardware/pollsters/data/snmp.yaml %{buildroot}%{python_sitelib}/ceilometer/hardware/pollsters/data/snmp.yaml
 
@@ -447,8 +447,6 @@ install -p -D -m 640 etc/ceilometer/rootwrap.conf %{buildroot}%{_sysconfdir}/cei
 install -p -D -m 640 etc/ceilometer/rootwrap.d/ipmi.filters %{buildroot}/%{_sysconfdir}/ceilometer/rootwrap.d/ipmi.filters
 install -p -D -m 640 ceilometer/dispatcher/data/gnocchi_resources.yaml %{buildroot}%{_sysconfdir}/ceilometer/gnocchi_resources.yaml
 install -p -D -m 640 ceilometer/data/meters.d/meters.yaml %{buildroot}%{_sysconfdir}/ceilometer/meters.d/meters.yaml
-# WRS
-install -p -D -m 640 etc/ceilometer/controller.yaml %{buildroot}%{_sysconfdir}/ceilometer/controller.yaml
 install -p -D -m 640 ceilometer/api/ceilometer-api.py %{buildroot}%{_datadir}/ceilometer/ceilometer-api.py
 
 
@@ -612,8 +610,6 @@ exit 0
 %config(noreplace) %attr(-, root, ceilometer) %{_sysconfdir}/ceilometer/polling.yaml
 %config(noreplace) %attr(-, root, ceilometer) %{_sysconfdir}/ceilometer/api_paste.ini
 %config(noreplace) %attr(-, root, ceilometer) %{_sysconfdir}/ceilometer/gnocchi_resources.yaml
-
-%{_sysconfdir}/ceilometer/controller.yaml
 
 %dir %attr(0750, ceilometer, root) %{_localstatedir}/log/ceilometer
 
