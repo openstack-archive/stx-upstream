@@ -1,0 +1,8 @@
+Code-Review+2: Chris Friesen <chris.friesen@windriver.com>
+Workflow+1: Angie Wang <angie.wang@windriver.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 15 Aug 2018 19:17:32 +0000
+Reviewed-on: https://review.openstack.org/592143
+Project: openstack/stx-upstream
+Branch: refs/heads/master
