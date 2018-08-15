@@ -5,7 +5,7 @@ After=syslog.target network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/bin/python /usr/bin/gunicorn --config /usr/share/gnocchi/gnocchi-api.conf --pythonpath /usr/share/gnocchi gnocchi-api --log-file /var/log/gnocchi/api.log
+ExecStart=/bin/python /usr/bin/gunicorn --config /usr/share/gnocchi/gnocchi-api.conf --pythonpath /usr/share/gnocchi gnocchi-api --log-file /var/log/gnocchi/api.log --pid /var/run/gnocchi-api.pid
 #Restart=on-failure
 
 [Install]
