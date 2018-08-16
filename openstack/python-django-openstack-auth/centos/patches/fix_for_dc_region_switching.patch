@@ -1,0 +1,100 @@
+From d7f75aa87d7b476509b21f9c29162763a73a65af Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Fri, 29 Jun 2018 19:51:32 -0500
+Subject: [PATCH 1/1] Horizon Distributed Cloud subcloud switching
+ is broken
+
+-Fixed switching from RegionOne to SystemController
+-Fixed tenant list not being displayed on login
+---
+ openstack_auth/backend.py |  2 +-
+ openstack_auth/forms.py   | 14 +++++++++++++-
+ openstack_auth/views.py   | 21 ++++++++++++---------
+ 3 files changed, 26 insertions(+), 11 deletions(-)
+
+diff --git a/openstack_auth/backend.py b/openstack_auth/backend.py
+index cd15ca8..4fa7129 100644
+--- a/openstack_auth/backend.py
++++ b/openstack_auth/backend.py
+@@ -162,7 +162,7 @@ class KeystoneBackend(object):
+         # We want to try to use the same region we just logged into
+         # which may or may not be the default depending upon the order
+         # keystone uses
+-        region_name = None
++        region_name = kwargs.get('force_region', None)
+         id_endpoints = scoped_auth_ref.service_catalog.\
+             get_endpoints(service_type='identity')
+         for id_endpoint in [cat for cat in id_endpoints['identity']]:
+diff --git a/openstack_auth/forms.py b/openstack_auth/forms.py
+index 4834ab2..49b8d8b 100644
+--- a/openstack_auth/forms.py
++++ b/openstack_auth/forms.py
+@@ -138,11 +138,24 @@ class Login(django_auth_forms.AuthenticationForm):
+             if lockedout:
+                 raise forms.ValidationError("user currently locked out.")
+ 
++            # when logging in in DC mode we will force the region to
++            # be system controller since authenticate can't map our
++            # hostname to an endpoint/regionname.  Changing the hostname
++            # in settings to ip will work but will break region switching
++            # from RegionOne to SystemController since SystemController
++            # region maps back to RegionOne (same keystone)
++            force_region = None
++            if getattr(settings, 'DC_MODE', False) and \
++                  region == getattr(settings, 'OPENSTACK_KEYSTONE_URL', None):
++                force_region = utils.DC_SYSTEMCONTROLLER_REGION
++
+             self.user_cache = authenticate(request=self.request,
+                                            username=username,
+                                            password=password,
+                                            user_domain_name=domain,
+-                                           auth_url=region)
++                                           auth_url=region,
++                                           force_region=force_region)
++
+             msg = 'Login successful for user "%(username)s", remote address '\
+                 '%(remote_ip)s.' % {
+                     'username': username,
+diff --git a/openstack_auth/views.py b/openstack_auth/views.py
+index a680abf..0b1351d 100644
+--- a/openstack_auth/views.py
++++ b/openstack_auth/views.py
+@@ -293,15 +293,17 @@ def switch_region(request, region_name,
+         endpoint_dict = utils.get_internal_identity_endpoints(
+             request.user.service_catalog, region_filter=region_name)
+ 
+-        try:
++        # If we were on a subcloud, then the SystemController Identity
++        # endpoint will not be functional, therefore retrieve the
++        # RegionOne endpoint from the session (cached at login)
++        force_region = None
++        if region_name == utils.DC_SYSTEMCONTROLLER_REGION:
++            force_region = utils.DC_SYSTEMCONTROLLER_REGION
++            region_auth_url = request.session.get(
++                    'SystemController_endpoint', None)
++        else:
+             region_auth_url = endpoint_dict[region_name]
+-        except KeyError as e:
+-            # If we were on a subcloud, then the SystemController Identity
+-            # endpoint will not be available, therefore retrieve it from
+-            # the session (cached at login)
+-            if region_name == utils.DC_SYSTEMCONTROLLER_REGION:
+-                region_auth_url = request.session.get(
+-                        'SystemController_endpoint', None)
++
+ 
+         if not region_auth_url:
+             msg = _('Cannot switch to subcloud %s, no Identity available '
+@@ -324,7 +326,8 @@ def switch_region(request, region_name,
+         try:
+             request.user = auth.authenticate(
+                 request=request, auth_url=unscoped_auth.auth_url,
+-                token=unscoped_auth_ref.auth_token)
++                token=unscoped_auth_ref.auth_token,
++                force_region=force_region)
+         except exceptions.KeystoneAuthException as exc:
+             msg = 'Switching to Subcloud failed: %s' % six.text_type(exc)
+             res = django_http.HttpResponseRedirect(settings.LOGIN_URL)
+-- 
+1.8.3.1
+
