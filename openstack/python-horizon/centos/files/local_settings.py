@@ -991,9 +991,7 @@ OPERATION_LOG_OPTIONS = {
 
 
 # Wind River CGCS Branding Settings
-SITE_BRANDING = "Akraino Edge Stack"
-# To be deprecated
-HORIZON_CONFIG["help_url"] = "http://www.windriver.com/support/"
+SITE_BRANDING = "StarlingX"
 
 # Note (Eddie Ramirez): The theme name will be updated after r0
 AVAILABLE_THEMES = [
