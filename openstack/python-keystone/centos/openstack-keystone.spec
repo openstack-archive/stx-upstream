@@ -212,9 +212,6 @@ install -p -D -m 755 tools/sample_data.sh %{buildroot}%{_datadir}/keystone/sampl
 # Install apache configuration files
 install -p -D -m 644 httpd/wsgi-keystone.conf  %{buildroot}%{_datadir}/keystone/
 
-# WRS: install policy rules
-install -p -D -m 640 etc/policy.wrs.json %{buildroot}%{_sysconfdir}/keystone/policy.json
-
 # WRS install keystone cron script
 install -p -D -m 755 %{SOURCE101} %{buildroot}%{_bindir}/keystone-fernet-keys-rotate-active
 
@@ -282,7 +279,6 @@ exit 0
 %config(noreplace) %attr(0640, root, keystone) %{_sysconfdir}/keystone/logging.conf
 %config(noreplace) %attr(0640, root, keystone) %{_sysconfdir}/keystone/default_catalog.templates
 %config(noreplace) %attr(0640, keystone, keystone) %{_sysconfdir}/keystone/keystone.policy.yaml
-%config(noreplace) %attr(0640, keystone, keystone) %{_sysconfdir}/keystone/policy.json
 %config(noreplace) %attr(0640, keystone, keystone) %{_sysconfdir}/keystone/sso_callback_template.html
 # WRS: add password rules configuration
 %attr(0440, root, keystone) %{_sysconfdir}/keystone/password-rules.conf
