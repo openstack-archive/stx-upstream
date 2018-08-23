@@ -17,16 +17,16 @@ def worker_abort(worker):
     path = ("/proc/%s/fd") % os.getpid()
     contents = os.listdir(path)
     upload_dir = getattr(settings, 'FILE_UPLOAD_TEMP_DIR', '/tmp')
-    pattern = os.path.join(upload_dir, '*.upload') 
+    pattern = os.path.join(upload_dir, '*.upload')
 
     for i in contents:
         f = os.path.join(path, i)
         if os.path.exists(f):
             try:
-                l = os.readlink(f)
-                if fnmatch.fnmatch(l, pattern):
-                    worker.log.info(l)
-                    os.remove(l)
+                link = os.readlink(f)
+                if fnmatch.fnmatch(link, pattern):
+                    worker.log.info(link)
+                    os.remove(link)
             except OSError:
                 pass
 
