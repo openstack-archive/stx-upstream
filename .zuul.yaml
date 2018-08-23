@@ -3,4 +3,8 @@
     check:
       jobs:
         - openstack-tox-pep8:
-            voting: false
+            voting: true
+    gate:
+      jobs:
+        - openstack-tox-pep8
+      
