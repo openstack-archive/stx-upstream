@@ -16,7 +16,8 @@ import logging
 
 
 # logger
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s') 
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.getLogger('multiprocessing').setLevel(logging.DEBUG)
 LOG = logging.getLogger(__name__)
 
@@ -82,6 +83,7 @@ def get_l3_cache_allocation_info():
             _L3_CACHE[cache]['num_cbm_bits'] = None
     return _L3_CACHE
 
+
 def get_l3_cache_allocation_schemata(uuid=None):
     """Get resctrl L3 cache allocation technology schemata CBM corresponding
        to instance uuid, or the default schemata if uuid not provided.
@@ -135,6 +137,7 @@ def get_l3_cache_allocation_schemata(uuid=None):
                   {'file': filename, 'err': e})
 
     return schemata
+
 
 def get_all_l3_schemata():
     """Get L3 CLOS schemata CBM for all resctrl uuids.
@@ -238,8 +241,8 @@ def print_all_instance_schematas(l3_info=None, default_schemata=None, schematas=
     closids_used = 1 + len(schematas)
 
     print('%6s %4s : %*s : %8s : %20s : %4s : %s'
-        % ('cache', 'bank', uuid_len, 'uuid',
-           'CBM', 'bitarray', 'size', 'setbits'))
+          % ('cache', 'bank', uuid_len, 'uuid',
+             'CBM', 'bitarray', 'size', 'setbits'))
     for cache_type in cache_types:
         for bank in banks:
             default_s = hextoset(mask=default_schemata[cache_type][bank])
@@ -247,12 +250,12 @@ def print_all_instance_schematas(l3_info=None, default_schemata=None, schematas=
             default_d = int(default_h, 16)
             name = 'default'
             print('%6s %4d : %*s : %08x : %s : %4d : %s'
-                % (cache_type, bank, uuid_len, name, default_d,
-                   format(default_d, '020b'), bin(default_d).count('1'),
-                   list_to_range(input_list=default_s)))
+                  % (cache_type, bank, uuid_len, name, default_d,
+                     format(default_d, '020b'), bin(default_d).count('1'),
+                     list_to_range(input_list=default_s)))
 
             for name, schemata in sorted(schematas.items(),
-                    key=lambda x: msb(int(x[1][cache_type][bank], 16))):
+                                         key=lambda x: msb(int(x[1][cache_type][bank], 16))):
 
                 if schemata[cache_type][bank] == cbm_mask:
                     cbm_s = set()
@@ -261,10 +264,11 @@ def print_all_instance_schematas(l3_info=None, default_schemata=None, schematas=
                 cbm_h = settohex(setbits=cbm_s)
                 cbm_d = int(cbm_h, 16)
                 print('%6s %4d : %s : %08x : %s : %4d : %s'
-                    % (cache_type, bank, name, cbm_d,
-                       format(cbm_d, '020b'), bin(cbm_d).count('1'),
-                       list_to_range(input_list=cbm_s) or '-'))
+                      % (cache_type, bank, name, cbm_d,
+                         format(cbm_d, '020b'), bin(cbm_d).count('1'),
+                         list_to_range(input_list=cbm_s) or '-'))
     print('CLOSIDS/type: %d total, %d used' % (closids_total, closids_used))
+
 
 def main():
     l3_info = get_l3_cache_allocation_info()
@@ -275,6 +279,7 @@ def main():
     print_all_instance_schematas(l3_info=l3_info,
                                  default_schemata=default_schemata,
                                  schematas=schematas)
+
 
 if __name__ == '__main__':
     main()

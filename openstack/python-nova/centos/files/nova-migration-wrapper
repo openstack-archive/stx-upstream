@@ -11,12 +11,14 @@ if command is None:
 
 syslog.openlog('nova_migration_wrapper')
 
+
 def allow_command(user, args):
     syslog.syslog(syslog.LOG_INFO, "Allowing connection='{}' command={} ".format(
         ssh_connection,
         repr(args)
     ))
     os.execlp('sudo', 'sudo', '-u', user, *args)
+
 
 def deny_command(args):
     syslog.syslog(syslog.LOG_ERR, "Denying connection='{}' command={}".format(
@@ -26,13 +28,14 @@ def deny_command(args):
     sys.stderr.write('Forbidden\n')
     sys.exit(1)
 
+
 # Handle libvirt ssh tunnel script snippet
 # https://github.com/libvirt/libvirt/blob/f0803dae93d62a4b8a2f67f4873c290a76d978b3/src/rpc/virnetsocket.c#L890
 libvirt_sock = '/var/run/libvirt/libvirt-sock'
 live_migration_tunnel_cmd = "sh -c 'if 'nc' -q 2>&1 | grep \"requires an argument\" >/dev/null 2>&1; then " \
-                                "ARG=-q0;" \
+                            "ARG=-q0;" \
                             "else " \
-                                "ARG=;" \
+                            "ARG=;" \
                             "fi;" \
                             "'nc' $ARG -U {}'".format(libvirt_sock)
 
@@ -49,10 +52,12 @@ cold_migration_cmds = [
 ]
 rootwrap_args = ['/usr/bin/nova-rootwrap', '/etc/nova/migration/rootwrap.conf']
 
+
 def validate_cold_migration_cmd(args):
     target_path = os.path.normpath(args[-1])
     cmd = args[:-1]
     return cmd in cold_migration_cmds and target_path.startswith(cold_migration_root)
+
 
 # Rules
 args = command.split(' ')
