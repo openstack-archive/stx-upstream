@@ -1003,7 +1003,7 @@ DEFAULT_THEME = 'titanium'
 
 for root, dirs, files in os.walk('/opt/branding/applied'):
     if 'manifest.py' in files:
-        execfile(os.path.join(root, 'manifest.py'))
+        exec(compile(open(os.path.join(root, 'manifest.py')).read(), os.path.join(root, 'manifest.py'), 'exec'))
         AVAILABLE_THEMES = [
             ('default', 'Default', 'themes/default'),
             ('material', 'Material', 'themes/material'),
