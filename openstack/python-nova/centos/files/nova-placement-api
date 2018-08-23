@@ -1,5 +1,5 @@
 #!/usr/bin/python2
-#PBR Generated from u'wsgi_scripts'
+# PBR Generated from u'wsgi_scripts'
 
 import threading
 
@@ -61,4 +61,3 @@ else:
     with app_lock:
         if application is None:
             application = init_application()
-
