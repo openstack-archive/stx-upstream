@@ -1,0 +1,11 @@
+Code-Review+2: Al Bailey <al.bailey@windriver.com>
+Code-Review+2: Chris Friesen <chris.friesen@windriver.com>
+Code-Review+1: Austin Sun <austin.sun@intel.com>
+Code-Review+1: Yan Chen <yan.chen@intel.com>
+Workflow+1: Yi Wang <yi.c.wang@intel.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 27 Aug 2018 02:17:55 +0000
+Reviewed-on: https://review.openstack.org/595451
+Project: openstack/stx-upstream
+Branch: refs/heads/master
