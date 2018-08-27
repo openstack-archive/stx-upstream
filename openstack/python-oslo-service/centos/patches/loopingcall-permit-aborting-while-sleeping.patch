@@ -1,4 +1,4 @@
-From 4e07594552a7249c45bf12fb66c79faedace1721 Mon Sep 17 00:00:00 2001
+From a4de48a129ff6526ae19533af76730c4707d8a53 Mon Sep 17 00:00:00 2001
 From: Allain Legacy <allain.legacy@windriver.com>
 Date: Wed, 31 May 2017 16:18:19 -0400
 Subject: [PATCH] Permit aborting loopingcall while sleeping
@@ -37,18 +37,18 @@ Signed-off-by: Allain Legacy <allain.legacy@windriver.com>
  2 files changed, 20 insertions(+), 13 deletions(-)
 
 diff --git a/oslo_service/loopingcall.py b/oslo_service/loopingcall.py
-index 72eaab1..d1c12fd 100644
+index 1747fda..ee2813d 100644
 --- a/oslo_service/loopingcall.py
 +++ b/oslo_service/loopingcall.py
-@@ -17,6 +17,7 @@
- 
+@@ -18,6 +18,7 @@
  import random
  import sys
+ import time
 +import threading
  
  from eventlet import event
  from eventlet import greenthread
-@@ -84,19 +85,25 @@ class LoopingCallBase(object):
+@@ -85,19 +86,25 @@ class LoopingCallBase(object):
          self.args = args
          self.kw = kw
          self.f = f
@@ -77,7 +77,7 @@ index 72eaab1..d1c12fd 100644
  
      def _start(self, idle_for, initial_delay=None, stop_on_exception=True):
          """Start the looping
-@@ -113,8 +120,8 @@ class LoopingCallBase(object):
+@@ -114,8 +121,8 @@ class LoopingCallBase(object):
          """
          if self._thread is not None:
              raise RuntimeError(self._RUN_ONLY_ONE_MESSAGE)
@@ -87,7 +87,7 @@ index 72eaab1..d1c12fd 100644
          self._thread = greenthread.spawn(
              self._run_loop, idle_for,
              initial_delay=initial_delay, stop_on_exception=stop_on_exception)
-@@ -128,7 +135,7 @@ class LoopingCallBase(object):
+@@ -129,7 +136,7 @@ class LoopingCallBase(object):
          func = self.f if stop_on_exception else _safe_wrapper(self.f, kind,
                                                                func_name)
          if initial_delay:
@@ -96,7 +96,7 @@ index 72eaab1..d1c12fd 100644
          try:
              watch = timeutils.StopWatch()
              while self._running:
-@@ -142,7 +149,7 @@ class LoopingCallBase(object):
+@@ -143,7 +150,7 @@ class LoopingCallBase(object):
                            'for %(idle).02f seconds',
                            {'func_name': func_name, 'idle': idle,
                             'kind': kind})
@@ -106,10 +106,10 @@ index 72eaab1..d1c12fd 100644
              self.done.send(e.retvalue)
          except Exception:
 diff --git a/oslo_service/tests/test_loopingcall.py b/oslo_service/tests/test_loopingcall.py
-index c149506..b3c7842 100644
+index 7ac8025..218e9d1 100644
 --- a/oslo_service/tests/test_loopingcall.py
 +++ b/oslo_service/tests/test_loopingcall.py
-@@ -276,7 +276,7 @@ class DynamicLoopingCallTestCase(test_base.BaseTestCase):
+@@ -285,7 +285,7 @@ class DynamicLoopingCallTestCase(test_base.BaseTestCase):
          else:
              self.num_runs = self.num_runs - 1
  
@@ -118,7 +118,7 @@ index c149506..b3c7842 100644
      def test_timeout_task_without_return(self, sleep_mock):
          self.num_runs = 1
          timer = loopingcall.DynamicLoopingCall(
-@@ -285,7 +285,7 @@ class DynamicLoopingCallTestCase(test_base.BaseTestCase):
+@@ -294,7 +294,7 @@ class DynamicLoopingCallTestCase(test_base.BaseTestCase):
          timer.start(periodic_interval_max=5).wait()
          sleep_mock.assert_has_calls([mock.call(5)])
  
@@ -127,7 +127,7 @@ index c149506..b3c7842 100644
      def test_interval_adjustment(self, sleep_mock):
          self.num_runs = 2
  
-@@ -294,7 +294,7 @@ class DynamicLoopingCallTestCase(test_base.BaseTestCase):
+@@ -303,7 +303,7 @@ class DynamicLoopingCallTestCase(test_base.BaseTestCase):
  
          sleep_mock.assert_has_calls([mock.call(5), mock.call(1)])
  
@@ -136,7 +136,7 @@ index c149506..b3c7842 100644
      def test_initial_delay(self, sleep_mock):
          self.num_runs = 1
  
-@@ -306,7 +306,7 @@ class DynamicLoopingCallTestCase(test_base.BaseTestCase):
+@@ -315,7 +315,7 @@ class DynamicLoopingCallTestCase(test_base.BaseTestCase):
  
  class TestBackOffLoopingCall(test_base.BaseTestCase):
      @mock.patch('random.SystemRandom.gauss')
@@ -145,7 +145,7 @@ index c149506..b3c7842 100644
      def test_exponential_backoff(self, sleep_mock, random_mock):
          def false():
              return False
-@@ -330,7 +330,7 @@ class TestBackOffLoopingCall(test_base.BaseTestCase):
+@@ -366,7 +366,7 @@ class TestBackOffLoopingCall(test_base.BaseTestCase):
          self.assertEqual(expected_times, sleep_mock.call_args_list)
  
      @mock.patch('random.SystemRandom.gauss')
@@ -154,7 +154,7 @@ index c149506..b3c7842 100644
      def test_no_backoff(self, sleep_mock, random_mock):
          random_mock.return_value = 1
          func = mock.Mock()
-@@ -345,7 +345,7 @@ class TestBackOffLoopingCall(test_base.BaseTestCase):
+@@ -381,7 +381,7 @@ class TestBackOffLoopingCall(test_base.BaseTestCase):
          self.assertTrue(retvalue, 'return value')
  
      @mock.patch('random.SystemRandom.gauss')
@@ -163,7 +163,7 @@ index c149506..b3c7842 100644
      def test_no_sleep(self, sleep_mock, random_mock):
          # Any call that executes properly the first time shouldn't sleep
          random_mock.return_value = 1
-@@ -358,7 +358,7 @@ class TestBackOffLoopingCall(test_base.BaseTestCase):
+@@ -394,7 +394,7 @@ class TestBackOffLoopingCall(test_base.BaseTestCase):
          self.assertTrue(retvalue, 'return value')
  
      @mock.patch('random.SystemRandom.gauss')
@@ -173,5 +173,5 @@ index c149506..b3c7842 100644
          def false():
              return False
 -- 
-2.12.1
+2.7.4
 
