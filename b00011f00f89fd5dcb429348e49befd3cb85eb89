@@ -1,0 +1,10 @@
+Code-Review+1: Lin Shuicheng <shuicheng.lin@intel.com>
+Code-Review+2: Al Bailey <al.bailey@windriver.com>
+Code-Review+2: Don Penney <don.penney@windriver.com>
+Workflow+1: yong hu <yong.hu@intel.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 28 Aug 2018 01:05:28 +0000
+Reviewed-on: https://review.openstack.org/596703
+Project: openstack/stx-upstream
+Branch: refs/heads/f/centos75
