@@ -1,25 +1,25 @@
-From 7662bc5ed71f6704ffc90c7ad8ea040e6872e190 Mon Sep 17 00:00:00 2001
+From a3e86bdcd7a9507b7271c70aba5f9ac67ee6cdb6 Mon Sep 17 00:00:00 2001
 From: Scott Little <scott.little@windriver.com>
 Date: Mon, 2 Oct 2017 14:28:46 -0400
-Subject: [PATCH 1/5] WRS:
+Subject: [PATCH 1/6] WRS:
  0001-Modify-service-files-and-create-expirer-cron-script.patch
 
 Conflicts:
 	SPECS/openstack-aodh.spec
 ---
- SOURCES/aodh-expirer-active              | 28 ++++++++++++++++++++++++++++
- SOURCES/openstack-aodh-api.service       |  5 ++---
- SOURCES/openstack-aodh-evaluator.service |  5 ++---
- SOURCES/openstack-aodh-expirer.service   |  5 ++---
- SOURCES/openstack-aodh-listener.service  |  5 ++---
- SOURCES/openstack-aodh-notifier.service  |  5 ++---
- SPECS/openstack-aodh.spec                | 25 +++++++++++--------------
- 7 files changed, 49 insertions(+), 29 deletions(-)
+ SOURCES/aodh-expirer-active              | 61 ++++++++++++++++++++++++++++++++
+ SOURCES/openstack-aodh-api.service       |  5 ++-
+ SOURCES/openstack-aodh-evaluator.service |  5 ++-
+ SOURCES/openstack-aodh-expirer.service   |  5 ++-
+ SOURCES/openstack-aodh-listener.service  |  5 ++-
+ SOURCES/openstack-aodh-notifier.service  |  5 ++-
+ SPECS/openstack-aodh.spec                | 11 ++++--
+ 7 files changed, 80 insertions(+), 17 deletions(-)
  create mode 100644 SOURCES/aodh-expirer-active
 
 diff --git a/SOURCES/aodh-expirer-active b/SOURCES/aodh-expirer-active
 new file mode 100644
-index 0000000..373fa5d
+index 0000000..796a694
 --- /dev/null
 +++ b/SOURCES/aodh-expirer-active
 @@ -0,0 +1,61 @@
@@ -85,7 +85,7 @@ index 0000000..373fa5d
 +
 +exit 0
 diff --git a/SOURCES/openstack-aodh-api.service b/SOURCES/openstack-aodh-api.service
-index 2224261..b8b2921 100644
+index 29db382..b8b2921 100644
 --- a/SOURCES/openstack-aodh-api.service
 +++ b/SOURCES/openstack-aodh-api.service
 @@ -4,9 +4,8 @@ After=syslog.target network.target
@@ -93,7 +93,7 @@ index 2224261..b8b2921 100644
  [Service]
  Type=simple
 -User=aodh
--ExecStart=/usr/bin/aodh-api --logfile /var/log/aodh/api.log
+-ExecStart=/usr/bin/aodh-api -- --logfile /var/log/aodh/api.log
 -Restart=on-failure
 +User=root
 +ExecStart=/usr/bin/aodh-api
@@ -165,24 +165,20 @@ index d6135d7..68a96dd 100644
  [Install]
  WantedBy=multi-user.target
 diff --git a/SPECS/openstack-aodh.spec b/SPECS/openstack-aodh.spec
-index 203f2f0..5d0dedd 100644
+index 9fffb3c..cac691f 100644
 --- a/SPECS/openstack-aodh.spec
 +++ b/SPECS/openstack-aodh.spec
-@@ -18,8 +18,13 @@ Source12:         %{name}-notifier.service
+@@ -18,6 +18,9 @@ Source12:         %{name}-notifier.service
  Source13:         %{name}-expirer.service
  Source14:         %{name}-listener.service
  
-+#WRS
+
 +Source20:         aodh-expirer-active
 +
  BuildArch:        noarch
  
-+
-+
- BuildRequires:    python-setuptools
- BuildRequires:    python2-devel
- BuildRequires:    systemd
-@@ -263,7 +268,7 @@ install -p -D -m 640 etc/aodh/api_paste.ini %{buildroot}%{_sysconfdir}/aodh/api_
+ BuildRequires:    openstack-macros
+@@ -262,7 +265,7 @@ install -p -D -m 640 aodh/api/policy.json %{buildroot}%{_sysconfdir}/aodh/policy
  # Setup directories
  install -d -m 755 %{buildroot}%{_sharedstatedir}/aodh
  install -d -m 755 %{buildroot}%{_sharedstatedir}/aodh/tmp
@@ -191,32 +187,33 @@ index 203f2f0..5d0dedd 100644
  
  # Install logrotate
  install -p -D -m 644 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
-@@ -284,6 +289,9 @@ mv %{buildroot}%{python2_sitelib}/%{pypi_name}/locale %{buildroot}%{_datadir}/lo
+@@ -283,6 +286,9 @@ mv %{buildroot}%{python2_sitelib}/%{pypi_name}/locale %{buildroot}%{_datadir}/lo
  # Find language files
  %find_lang %{pypi_name} --all-name
  
-+# WRS
+
 +install -p -D -m 750 %{SOURCE20} %{buildroot}%{_bindir}/aodh-expirer-active
 +
  # Remove unused files
  rm -fr %{buildroot}/usr/etc
  
-@@ -346,13 +354,13 @@ exit 0
- %config(noreplace) %attr(-, root, aodh) %{_sysconfdir}/aodh/api_paste.ini
+@@ -345,7 +351,6 @@ exit 0
+ %config(noreplace) %attr(-, root, aodh) %{_sysconfdir}/aodh/policy.json
  %config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
- %dir %attr(0755, aodh, root)  %{_localstatedir}/log/aodh
+ %dir %attr(0750, aodh, root)  %{_localstatedir}/log/aodh
 -%{_bindir}/aodh-dbsync
+ %{_bindir}/aodh-config-generator
  
  %defattr(-, aodh, aodh, -)
- %dir %{_sharedstatedir}/aodh
+@@ -353,6 +358,7 @@ exit 0
  %dir %{_sharedstatedir}/aodh/tmp
  
  %files api
 +%{_bindir}/aodh-dbsync
  %{_bindir}/aodh-api
- %{_bindir}/aodh-data-migration
- %{_bindir}/aodh-combination-alarm-conversion
-@@ -373,22 +381,11 @@ exit 0
+ %{_unitdir}/%{name}-api.service
+ 
+@@ -371,6 +377,7 @@ exit 0
  
  %files expirer
  %{_bindir}/aodh-expirer
@@ -224,22 +221,6 @@ index 203f2f0..5d0dedd 100644
  %{_unitdir}/%{name}-expirer.service
  
  
- %changelog
--* Mon Aug 28 2017 rdo-trunk <javier.pena@redhat.com> 3.0.4-1
--- Update to 3.0.4
--
--* Mon Jul 24 2017 Pradeep Kilambi <pkilambi@redhat.com> 3.0.3-2
--- Move aodh-dbsync to openstack-aodh-common
--
--* Thu Jul 13 2017 Mehdi Abaakouk <sileht@redhat.com> 3.0.3-1
--- Update to 3.0.3
--
--* Tue Feb 28 2017 Alfredo Moralejo <amoralej@redhat.com> 3.0.2-1
--- Update to 3.0.2
--
- * Thu Oct 06 2016 Haikel Guemar <hguemar@fedoraproject.org> 3.0.0-1
- - Update to 3.0.0
- 
 -- 
-1.9.1
+2.7.4
 
