@@ -1,65 +1,192 @@
-From c8afec630be24345ccae50db739949f964e9c580 Mon Sep 17 00:00:00 2001
+From c86dfe19ba804938482b4ad8d4b39459fc2ce0f7 Mon Sep 17 00:00:00 2001
 From: Al Bailey <Al.Bailey@windriver.com>
 Date: Thu, 21 Dec 2017 13:38:09 -0600
-Subject: [PATCH] Add drivername support for postgresql connection settings
+Subject: [PATCH 2/2] Add drivername support for postgresql connection settings
 
+Signed-off-by: Hayde Martinez <hayde.martinez.landa@intel.com>
 ---
- aodh/api/aodh-api.py       | 3 +--
- aodh/cmd/data_migration.py | 2 +-
- aodh/storage/__init__.py   | 2 +-
- setup.cfg                  | 1 +
- 4 files changed, 4 insertions(+), 4 deletions(-)
+ aodh/api/aodh-api.py       |   2 +-
+ aodh/cmd/data_migration.py | 124 +++++++++++++++++++++++++++++++++++++++++++++
+ aodh/storage/__init__.py   |   5 ++
+ setup.cfg                  |   3 +-
+ 4 files changed, 132 insertions(+), 2 deletions(-)
+ create mode 100644 aodh/cmd/data_migration.py
 
 diff --git a/aodh/api/aodh-api.py b/aodh/api/aodh-api.py
-index 565f2e3..7c413d6 100644
+index 2cff0ec..7c413d6 100644
 --- a/aodh/api/aodh-api.py
 +++ b/aodh/api/aodh-api.py
-@@ -2,6 +2,5 @@ from aodh.api import app as build_wsgi_app
+@@ -2,5 +2,5 @@ from aodh.api import app as build_wsgi_app
  import sys
  
  sys.argv = sys.argv[:1]
 -args = {'config_file' : 'etc/aodh/aodh.conf', }
 +args = {'config_file': 'etc/aodh/aodh.conf', }
  application = build_wsgi_app.build_wsgi_app(None, args)
--
 diff --git a/aodh/cmd/data_migration.py b/aodh/cmd/data_migration.py
-index 6a9ea49..1a8df28 100644
---- a/aodh/cmd/data_migration.py
+new file mode 100644
+index 0000000..966ee1c
+--- /dev/null
 +++ b/aodh/cmd/data_migration.py
-@@ -94,7 +94,7 @@ def _validate_conn_options(args):
-                               ), nosql_scheme)
-         sys.exit(1)
-     if sql_scheme not in ('mysql', 'mysql+pymysql', 'postgresql',
--                          'sqlite'):
+@@ -0,0 +1,124 @@
++
++import argparse
++import logging
++import sys
++
++from oslo_config import cfg
++from oslo_db import exception
++from oslo_db import options as db_options
++from aodh.i18n import _LE, _LI, _LW
++import six.moves.urllib.parse as urlparse
++
++from aodh import storage
++
++root_logger = logging.getLogger('')
++
++
++def get_parser():
++    parser = argparse.ArgumentParser(
++        description='A tool for Migrating alarms and alarms history from'
++                    ' NoSQL to SQL',
++    )
++    parser.add_argument(
++        '--nosql-conn',
++        required=True,
++        type=str,
++        help='The source NoSQL database connection.',
++    )
++    parser.add_argument(
++        '--sql-conn',
++        required=True,
++        type=str,
++        help='The destination SQL database connection.',
++    )
++    parser.add_argument(
++        '--migrate-history',
++        default=True,
++        type=bool,
++        help='Migrate history data when migrate alarms or not,'
++             ' True as Default.',
++    )
++    parser.add_argument(
++        '--debug',
++        default=False,
++        action='store_true',
++        help='Show the debug level log messages.',
++    )
++    return parser
++
++
++def _validate_conn_options(args):
++    nosql_scheme = urlparse.urlparse(args.nosql_conn).scheme
++    sql_scheme = urlparse.urlparse(args.sql_conn).scheme
++    if nosql_scheme not in ('mongodb', 'hbase'):
++        root_logger.error(_LE('Invalid source DB type %s, the source database '
++                              'connection  should be one of: [mongodb, hbase]'
++                              ), nosql_scheme)
++        sys.exit(1)
++    if sql_scheme not in ('mysql', 'mysql+pymysql', 'postgresql',
 +                          'postgresql+psycopg2', 'sqlite'):
-         root_logger.error(_LE('Invalid destination DB type %s, the destination'
-                               ' database connection should be one of: '
-                               '[mysql, postgresql, sqlite]'), sql_scheme)
++        root_logger.error(_LE('Invalid destination DB type %s, the destination'
++                              ' database connection should be one of: '
++                              '[mysql, postgresql, sqlite]'), sql_scheme)
++        sys.exit(1)
++
++
++def main():
++    args = get_parser().parse_args()
++
++    # Set up logging to use the console
++    console = logging.StreamHandler(sys.stderr)
++    formatter = logging.Formatter(
++        '[%(asctime)s] %(levelname)-8s %(message)s')
++    console.setFormatter(formatter)
++    root_logger.addHandler(console)
++    if args.debug:
++        root_logger.setLevel(logging.DEBUG)
++    else:
++        root_logger.setLevel(logging.INFO)
++
++    _validate_conn_options(args)
++
++    nosql_conf = cfg.ConfigOpts()
++    db_options.set_defaults(nosql_conf, args.nosql_conn)
++    nosql_conf.register_opts(storage.OPTS, 'database')
++    nosql_conn = storage.get_connection_from_config(nosql_conf)
++
++    sql_conf = cfg.ConfigOpts()
++    db_options.set_defaults(sql_conf, args.sql_conn)
++    sql_conf.register_opts(storage.OPTS, 'database')
++    sql_conn = storage.get_connection_from_config(sql_conf)
++
++    root_logger.info(
++        _LI("Starting to migrate alarms data from NoSQL to SQL..."))
++
++    count = 0
++    for alarm in nosql_conn.get_alarms():
++        root_logger.debug("Migrating alarm %s..." % alarm.alarm_id)
++        try:
++            sql_conn.create_alarm(alarm)
++            count += 1
++        except exception.DBDuplicateEntry:
++            root_logger.warning(_LW("Duplicated alarm %s found, skipped."),
++                                alarm.alarm_id)
++        if not args.migrate_history:
++            continue
++
++        history_count = 0
++        for history in nosql_conn.get_alarm_changes(alarm.alarm_id, None):
++            history_data = history.as_dict()
++            root_logger.debug("    Migrating alarm history data with"
++                              " event_id %s..." % history_data['event_id'])
++            try:
++                sql_conn.record_alarm_change(history_data)
++                history_count += 1
++            except exception.DBDuplicateEntry:
++                root_logger.warning(
++                    _LW("    Duplicated alarm history %s found, skipped."),
++                    history_data['event_id'])
++        root_logger.info(_LI("    Migrated %(count)s history data of alarm "
++                             "%(alarm_id)s"),
++                         {'count': history_count, 'alarm_id': alarm.alarm_id})
++
++    root_logger.info(_LI("End alarms data migration from NoSQL to SQL, %s"
++                         " alarms have been migrated."), count)
 diff --git a/aodh/storage/__init__.py b/aodh/storage/__init__.py
-index e1d1048..d8fcd54 100644
+index 4d11aec..37c6f44 100644
 --- a/aodh/storage/__init__.py
 +++ b/aodh/storage/__init__.py
-@@ -59,7 +59,7 @@ def get_connection_from_config(conf):
+@@ -57,6 +57,11 @@ def get_connection_from_config(conf):
+     retries = conf.database.max_retries
      url = conf.database.connection
      connection_scheme = urlparse.urlparse(url).scheme
-     if connection_scheme not in ('mysql', 'mysql+pymysql', 'postgresql',
--                                 'sqlite'):
++    if connection_scheme not in ('mysql', 'mysql+pymysql', 'postgresql',
 +                                 'postgresql+psycopg2', 'sqlite'):
-         msg = ('Storage backend %s is deprecated, and all the NoSQL backends '
-                'will be removed in Aodh 4.0, please use SQL backend.' %
-                connection_scheme)
++         msg = ('Storage backend %s is deprecated, and all the NoSQL backends '
++                'will be removed in Aodh 4.0, please use SQL backend.' %
++                connection_scheme)
+     LOG.debug('looking for %(name)r driver in %(namespace)r',
+               {'name': connection_scheme, 'namespace': _NAMESPACE})
+     mgr = driver.DriverManager(_NAMESPACE, connection_scheme)
 diff --git a/setup.cfg b/setup.cfg
-index 76f5362..ca67a16 100644
+index 5bfc817..a9e55ac 100644
 --- a/setup.cfg
 +++ b/setup.cfg
-@@ -80,6 +80,7 @@ aodh.storage =
+@@ -1,4 +1,4 @@
+-[metadata]
++metadata]
+ name = aodh
+ url = http://launchpad.net/aodh
+ summary = OpenStack Telemetry Alarming
+@@ -63,6 +63,7 @@ aodh.storage =
+ 	log = aodh.storage.impl_log:Connection
  	mysql = aodh.storage.impl_sqlalchemy:Connection
  	mysql+pymysql = aodh.storage.impl_sqlalchemy:Connection
- 	postgresql = aodh.storage.impl_sqlalchemy:Connection
 +	postgresql+psycopg2 = aodh.storage.impl_sqlalchemy:Connection
+ 	postgresql = aodh.storage.impl_sqlalchemy:Connection
  	sqlite = aodh.storage.impl_sqlalchemy:Connection
- 	hbase = aodh.storage.impl_hbase:Connection
  aodh.alarm.rule = 
 -- 
-1.8.3.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From 98503ae07f4a3b6753c9c1dfc1cf7ed6573ca8e8 Mon Sep 17 00:00:00 2001
+From 9b56cfe88ed65a0d1ecbfacb33b3051e21364d33 Mon Sep 17 00:00:00 2001
 From: Scott Little <scott.little@windriver.com>
 Date: Mon, 2 Oct 2017 14:28:46 -0400
-Subject: [PATCH 5/5] WRS: 0001-meta-pass-aodh-api-config.patch
+Subject: [PATCH 5/6] WRS: 0001-meta-pass-aodh-api-config.patch
 
 ---
  SOURCES/openstack-aodh-api.service | 2 +-
@@ -21,5 +21,5 @@ index 06bcd12..a78eb32 100644
  [Install]
  WantedBy=multi-user.target
 -- 
-1.9.1
+2.7.4
 
