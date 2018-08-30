@@ -4,4 +4,3 @@ meta-remove-default-logrotate.patch
 0001-meta-modify-aodh-api.patch
 0001-meta-pass-aodh-api-config.patch
 0006-add-drivername-for-postgresql.patch
-0007-meta-support-new-gnocchiclient-interface.patch
