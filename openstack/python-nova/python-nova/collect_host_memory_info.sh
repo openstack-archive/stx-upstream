@@ -38,7 +38,7 @@ find /mnt/huge-1048576kB/|xargs ls -ld >> ${logfile} 2>> ${logfile}
 
 echo "Locked smaps" >> ${logfile}
 echo "------------" >> ${logfile}
-grep Locked: /proc/*/smaps 2>/dev/null| awk '($2 > 0) {a[$1]+=$2} END {for (i in a) print i,a[i]/1024.0, "MiB";}' >> ${logfile} 2>> ${logfile}
+grep Locked: /proc/*/smaps 2>/dev/null | awk '($2 > 0) {a[$1]+=$2} END {for (i in a) print i,a[i]/1024.0, "MiB";}' >> ${logfile} 2>> ${logfile}
 
 date '+%F %T' >> ${logfile} 2>> ${logfile}
 
