@@ -48,4 +48,3 @@ openstack/python-django-openstack-auth
 openstack/python-wsme
 openstack/distributedcloud
 openstack/distributedcloud-client
-openstack/openstack-swift
