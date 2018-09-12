@@ -81,3 +81,4 @@ install -p -D -m 755 %{SOURCE1} ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/opensta
 "/usr/lib/ocf/resource.d/openstack/dcorch-cinder-api-proxy"
 "/usr/lib/ocf/resource.d/openstack/dcorch-patch-api-proxy"
 "/usr/lib/ocf/resource.d/openstack/dcorch-identity-api-proxy"
+"/usr/lib/ocf/resource.d/openstack/cinder-backup"
