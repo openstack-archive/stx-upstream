@@ -28,6 +28,7 @@ declare -i GLOBAL_RC=$PATCH_STATUS_OK
 # Syntax:("<service_name>   <timeout>     <initialize_interval>      <behavior after timeout>"\)
 SERVICES=("cinder-volume    30            30                        kill"\
           "cinder-scheduler 50            20                        kill"\
+          "cinder-backup    30            30                        kill"\
           "cinder-api       30            20                        kill")
 # where:
 #   <service_name> = name of executable file reported by ps
