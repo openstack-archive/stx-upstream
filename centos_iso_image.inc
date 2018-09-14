@@ -93,6 +93,9 @@ wrs-heat-templates
 python-django-horizon
 openstack-dashboard
 
+# stx-dashboard
+starlingx-dashboard
+
 # openstack-keystone
 openstack-keystone
 
