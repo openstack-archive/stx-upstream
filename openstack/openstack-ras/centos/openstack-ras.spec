@@ -28,7 +28,7 @@ OpenStack Resource Agents from Madkiss
 rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-agent-central
 rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-alarm-evaluator
 rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-alarm-notifier
-install -p -D -m 644 %{SOURCE1} ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/dcorch-identity-api-proxy
+install -p -D -m 755 %{SOURCE1} ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/dcorch-identity-api-proxy
 
 %files
 %defattr(-,root,root,-)
