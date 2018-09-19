@@ -177,3 +177,6 @@ openstack-swift-object
 openstack-swift-account
 openstack-swift-container
 openstack-swift-proxy
+
+# stx-ocf-scripts
+stx-ocf-scripts
