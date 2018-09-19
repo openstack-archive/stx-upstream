@@ -15,7 +15,6 @@ Requires: /usr/bin/env
 Requires: /bin/sh
 
 Source0:  %{name}-%{version}.tar.gz
-Source1:  dcorch-identity-api-proxy
 
 %description
 OpenStack Resource Agents from Madkiss
@@ -28,7 +27,6 @@ OpenStack Resource Agents from Madkiss
 rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-agent-central
 rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-alarm-evaluator
 rm -rf ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/ceilometer-alarm-notifier
-install -p -D -m 755 %{SOURCE1} ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/dcorch-identity-api-proxy
 
 %files
 %defattr(-,root,root,-)
@@ -71,13 +69,3 @@ install -p -D -m 755 %{SOURCE1} ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/opensta
 "/usr/lib/ocf/resource.d/openstack/ceilometer-collector"
 "/usr/lib/ocf/resource.d/openstack/panko-api"
 "/usr/lib/ocf/resource.d/openstack/nova-placement-api"
-"/usr/lib/ocf/resource.d/openstack/dcorch-snmp"
-"/usr/lib/ocf/resource.d/openstack/dcmanager-manager"
-"/usr/lib/ocf/resource.d/openstack/dcorch-nova-api-proxy"
-"/usr/lib/ocf/resource.d/openstack/dcorch-sysinv-api-proxy"
-"/usr/lib/ocf/resource.d/openstack/dcmanager-api"
-"/usr/lib/ocf/resource.d/openstack/dcorch-engine"
-"/usr/lib/ocf/resource.d/openstack/dcorch-neutron-api-proxy"
-"/usr/lib/ocf/resource.d/openstack/dcorch-cinder-api-proxy"
-"/usr/lib/ocf/resource.d/openstack/dcorch-patch-api-proxy"
-"/usr/lib/ocf/resource.d/openstack/dcorch-identity-api-proxy"
