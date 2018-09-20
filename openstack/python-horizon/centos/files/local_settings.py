@@ -971,7 +971,7 @@ POLICY_FILES_PATH = "/etc/openstack-dashboard"
 OPERATION_LOG_ENABLED = True
 OPERATION_LOG_OPTIONS = {
     'mask_fields': ['password', 'bm_password', 'bm_confirm_password',
-                    'current_password', 'confirm_password', 'new_password'],
+                    'current_password', 'confirm_password', 'new_password', 'fake_password'],
     'target_methods': ['POST', 'PUT', 'DELETE'],
     'format': ("[%(project_name)s %(project_id)s] [%(user_name)s %(user_id)s]"
                " [%(method)s %(request_url)s %(http_status)s]"
