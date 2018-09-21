@@ -22,6 +22,8 @@ Source99:       openstack-keystone.service
 Source100:      keystone-all
 Source101:      keystone-fernet-keys-rotate-active
 Source102:      password-rules.conf      
+Source103:      public.py
+Source104:      admin.py
 
 BuildArch:      noarch
 BuildRequires:  openstack-macros
@@ -219,8 +221,8 @@ install -p -D -m 755 %{SOURCE101} %{buildroot}%{_bindir}/keystone-fernet-keys-ro
 install -p -D -m 440 %{SOURCE102} %{buildroot}%{_sysconfdir}/keystone/password-rules.conf
 
 # WRS: install keystone public and admin gunicorn apps
-install -p -D -m 755 etc/admin.py %{buildroot}/%{_datarootdir}/keystone/admin.py
-install -p -D -m 755 etc/public.py  %{buildroot}/%{_datarootdir}/keystone/public.py
+install -p -D -m 755 %{SOURCE104} %{buildroot}/%{_datarootdir}/keystone/admin.py
+install -p -D -m 755 %{SOURCE103}  %{buildroot}/%{_datarootdir}/keystone/public.py
 
 # WRS: install openstack-keystone service script
 install -p -D -m 644 %{SOURCE99} %{buildroot}%{_unitdir}/openstack-keystone.service
