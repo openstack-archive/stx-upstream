@@ -21,7 +21,8 @@ Source4:        openstack-keystone.defaultconf
 Source99:       openstack-keystone.service
 Source100:      keystone-all
 Source101:      keystone-fernet-keys-rotate-active
-Source102:      password-rules.conf      
+Source102:      password-rules.conf
+Source103:      public.py
 
 BuildArch:      noarch
 BuildRequires:  openstack-macros
@@ -54,7 +55,7 @@ BuildRequires:  python-testresources
 BuildRequires:  python-babel
 
 #WRS: Need these for build_sphinx
-BuildRequires:  tsconfig    
+BuildRequires:  tsconfig
 BuildRequires:  python2-pycodestyle
 
 Requires:       python-keystone = %{epoch}:%{version}-%{release}
@@ -218,9 +219,8 @@ install -p -D -m 755 %{SOURCE101} %{buildroot}%{_bindir}/keystone-fernet-keys-ro
 # WRS: install password rules(readable only)
 install -p -D -m 440 %{SOURCE102} %{buildroot}%{_sysconfdir}/keystone/password-rules.conf
 
-# WRS: install keystone public and admin gunicorn apps
-install -p -D -m 755 etc/admin.py %{buildroot}/%{_datarootdir}/keystone/admin.py
-install -p -D -m 755 etc/public.py  %{buildroot}/%{_datarootdir}/keystone/public.py
+# WRS: install keystone public gunicorn app
+install -p -D -m 755 %{SOURCE103}  %{buildroot}/%{_datarootdir}/keystone/public.py
 
 # WRS: install openstack-keystone service script
 install -p -D -m 644 %{SOURCE99} %{buildroot}%{_unitdir}/openstack-keystone.service
@@ -292,7 +292,6 @@ exit 0
 
 %files -n python-keystone
 %{_datarootdir}/keystone/public*.py*
-%{_datarootdir}/keystone/admin*.py*
 %defattr(-,root,root,-)
 %doc README.rst
 %license LICENSE
