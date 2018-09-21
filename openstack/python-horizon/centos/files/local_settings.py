@@ -1122,6 +1122,11 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
+        'starlingx_dashboard': {
+            'handlers': ['syslog'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
         'novaclient': {
             'handlers': ['syslog'],
             'level': 'DEBUG',
