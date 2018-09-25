@@ -1,0 +1,64 @@
+From 405e39f8a77c7f33dda80b2681ff53407b2aa256 Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Tue, 25 Sep 2018 14:53:18 -0400
+Subject: [PATCH] Allow setting wrs-binding:vif_model using osclient
+
+---
+ openstackclient/network/v2/port.py | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/openstackclient/network/v2/port.py b/openstackclient/network/v2/port.py
+index 4a29daf..22cba16 100644
+--- a/openstackclient/network/v2/port.py
++++ b/openstackclient/network/v2/port.py
+@@ -389,6 +389,12 @@ class CreatePort(command.ShowOne):
+                    "ip-address=<ip-address>[,mac-address=<mac-address>] "
+                    "(repeat option to set multiple allowed-address pairs)")
+         )
++        port_security.add_argument(
++            '--wrs-binding:vif_model',
++            dest='wrs_vif_model',
++            metavar='<wrs_vif_model>',
++            help=_("Set wrs-binding:vif_model for this port")
++        )
+         _tag.add_tag_option_to_parser_for_create(parser, _('port'))
+         return parser
+
+@@ -421,6 +427,11 @@ class CreatePort(command.ShowOne):
+         if parsed_args.qos_policy:
+             attrs['qos_policy_id'] = client.find_qos_policy(
+                 parsed_args.qos_policy, ignore_missing=False).id
++
++        if parsed_args.wrs_vif_model:
++            attrs['wrs-binding:vif_model'] = parsed_args.wrs_vif_model
++
++
+         obj = client.create_port(**attrs)
+         # tags cannot be set when created, so tags need to be set later.
+         _tag.update_tags_for_set(client, obj, parsed_args)
+@@ -705,6 +716,13 @@ class SetPort(command.Command):
+                    "Unset it to None with the 'port unset' command "
+                    "(requires data plane status extension)")
+         )
++        port_security.add_argument(
++            '--wrs-binding:vif_model',
++            dest='wrs_vif_model',
++            metavar='<wrs_vif_model>',
++            help=_("Set wrs-binding:vif_model for this port")
++        )
++
+         _tag.add_tag_option_to_parser_for_set(parser, _('port'))
+
+         return parser
+@@ -762,6 +780,9 @@ class SetPort(command.Command):
+         if parsed_args.data_plane_status:
+             attrs['data_plane_status'] = parsed_args.data_plane_status
+
++        if parsed_args.wrs_vif_model:
++            attrs['wrs-binding:vif_model'] = parsed_args.wrs_vif_model
++
+         if attrs:
+             client.update_port(obj, **attrs)
+
+--
+1.8.3.1

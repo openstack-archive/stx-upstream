@@ -13,3 +13,4 @@
 0001-meta-US106901-Openstack-CLI-Adoption.patch
 0002-meta-US106901-Openstack-CLI-Adoption.patch
 1003-meta-patch-for-endpoint-groups.patch
+0016-Allow-setting-wrs-binding-vif_model-using-osclient.patch
