@@ -1,7 +1,7 @@
-From cf0c831d31b970bf920f3152d50d849193e9154a Mon Sep 17 00:00:00 2001
+From 07bc9cce658f77307167398f3e555b1b50cf8caf Mon Sep 17 00:00:00 2001
 From: Kam Nasim <kam.nasim@windriver.com>
 Date: Tue, 3 Jan 2017 13:09:29 -0500
-Subject: [PATCH] change ClientSideError logging verbosity
+Subject: change ClientSideError logging verbosity
 
 Regression introduced in 16.10. Reverts the following
  upstream commit since WSME is used by SysInv-api to return ClientSideErrors,
@@ -24,10 +24,10 @@ Reverting commit 94cd1751c7b028898a38fda0689cfce15e2a96e2
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/wsme/api.py b/wsme/api.py
-index 4aab9a4..2ba70e0 100644
+index e5fe7c6..4c4c7ad 100644
 --- a/wsme/api.py
 +++ b/wsme/api.py
-@@ -218,7 +218,7 @@ def format_exception(excinfo, debug=False):
+@@ -219,7 +219,7 @@ def format_exception(excinfo, debug=False):
                         else six.text_type(error))
          r = dict(faultcode="Client",
                   faultstring=faultstring)
@@ -37,5 +37,5 @@ index 4aab9a4..2ba70e0 100644
          return r
      else:
 -- 
-1.8.3.1
+2.7.4
 
