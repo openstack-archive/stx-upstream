@@ -1,0 +1,9 @@
+Code-Review+2: Saul Wold <sgw@linux.intel.com>
+Code-Review+2: Al Bailey <al.bailey@windriver.com>
+Workflow+1: Al Bailey <al.bailey@windriver.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 01 Oct 2018 15:17:40 +0000
+Reviewed-on: https://review.openstack.org/606175
+Project: openstack/stx-upstream
+Branch: refs/heads/r/2018.10
