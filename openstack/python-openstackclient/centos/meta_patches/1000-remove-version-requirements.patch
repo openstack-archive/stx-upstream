@@ -1,8 +1,8 @@
 diff --git a/SPECS/python-openstackclient.spec b/SPECS/python-openstackclient.spec
-index 4791547..1db72f9 100644
+index 5d3d7b4..44dd46b 100644
 --- a/SPECS/python-openstackclient.spec
 +++ b/SPECS/python-openstackclient.spec
-@@ -69,17 +69,17 @@ BuildRequires:    python-dateutil
+@@ -70,17 +70,17 @@ BuildRequires:    python-dateutil
  Requires:         python-pbr
  Requires:         python-babel
  Requires:         python-cliff
