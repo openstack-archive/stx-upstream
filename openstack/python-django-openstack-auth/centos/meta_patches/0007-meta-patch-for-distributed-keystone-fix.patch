@@ -1,4 +1,4 @@
-From 4aafd598ace7fc1bf4c5aaf3591b8880e7642d69 Mon Sep 17 00:00:00 2001
+From c047aecf35d067390d0e80e0149725c3031a19c3 Mon Sep 17 00:00:00 2001
 From: Tyler Smith <tyler.smith@windriver.com>
 Date: Fri, 29 Jun 2018 20:07:09 -0500
 Subject: [PATCH 1/1] [PATCH] meta patch for distributed keystone fix
@@ -8,17 +8,17 @@ Subject: [PATCH 1/1] [PATCH] meta patch for distributed keystone fix
  1 file changed, 1 insertion(+)
 
 diff --git a/SPECS/python-django-openstack-auth.spec b/SPECS/python-django-openstack-auth.spec
-index 9e5aacb..73b87b5 100644
+index 8be7844..f98d7ba 100644
 --- a/SPECS/python-django-openstack-auth.spec
 +++ b/SPECS/python-django-openstack-auth.spec
 @@ -20,6 +20,7 @@ Patch0002: 0002-disable-token-validation-per-auth-request.patch
  Patch0003: 0003-cache-authorized-tenants-in-cookie-to-improve-performance.patch
- Patch0004: 0004-US112170-Distributed-Keystone.patch
+ Patch0004: 0004-Distributed-Keystone.patch
  Patch0005: fix_for_session_timeout.patch
 +Patch0006: fix_for_dc_region_switching.patch
  
  BuildArch:      noarch
  
 -- 
-1.8.3.1
+2.7.4
 
