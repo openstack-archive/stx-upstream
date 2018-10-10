@@ -8,9 +8,9 @@
 0008-CGTS-7947-add-os-keystone-region-name-to-identity-cl.patch
 1000-remove-version-requirements.patch
 1001-Turn-off-openstackclient-check.patch
-0001-meta-us101470.patch
-0002-meta-us101470.patch
-0001-meta-US106901-Openstack-CLI-Adoption.patch
-0002-meta-US106901-Openstack-CLI-Adoption.patch
-1003-meta-patch-for-endpoint-groups.patch
-0016-Allow-setting-wrs-binding-vif_model-using-osclient.patch
+1002-meta-us101470.patch
+1003-meta-us101470.patch
+1004-meta-US106901-Openstack-CLI-Adoption.patch
+1005-meta-US106901-Openstack-CLI-Adoption.patch
+1006-meta-patch-for-endpoint-groups.patch
+1007-Allow-setting-wrs-binding-vif_model-using-osclient.patch
