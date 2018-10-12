@@ -1187,3 +1187,16 @@ LOGGING = {
         },
     },
 }
+
+# Session timeout overrides
+
+# SESSION_TIMEOUT is a method to supersede the token timeout with a shorter
+# horizon session timeout (in seconds).  So if your token expires in 60
+# minutes, a value of 1800 will log users out after 30 minutes
+SESSION_TIMEOUT = 3000
+
+# TOKEN_TIMEOUT_MARGIN ensures the user is logged out before the token
+# expires. This parameter specifies the number of seconds before the
+# token expiry to log users out. If the token expires in 60 minutes, a
+# value of 600 will log users out after 50 minutes.
+TOKEN_TIMEOUT_MARGIN = 600
