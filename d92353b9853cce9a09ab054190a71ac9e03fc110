@@ -1,0 +1,10 @@
+Code-Review+2: Al Bailey <al.bailey@windriver.com>
+Code-Review+1: Filippo Inzaghi <zhao.daqing@99cloud.net>
+Code-Review+2: Bob Church <robert.church@windriver.com>
+Workflow+1: Bob Church <robert.church@windriver.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 15 Oct 2018 06:54:17 +0000
+Reviewed-on: https://review.openstack.org/608230
+Project: openstack/stx-upstream
+Branch: refs/heads/master
