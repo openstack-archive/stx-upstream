@@ -10,6 +10,7 @@ openstack/openstack-magnum-ui
 openstack/openstack-ras
 openstack/openstack-panko
 openstack/openstack-os-vif
+openstack/python-aodhclient
 openstack/python-ceilometer
 openstack/python-ceilometerclient
 openstack/python-cinder
