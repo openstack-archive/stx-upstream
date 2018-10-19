@@ -1,0 +1,27 @@
+From 68963043bb5b3423c03bf0e5e0f964646e88489d Mon Sep 17 00:00:00 2001
+From: Robert Church <robert.church@windriver.com>
+Date: Tue, 3 Jul 2018 07:41:30 +0000
+Subject: [PATCH 1/5] MariaDB: Update for ingress service-error port to match
+ 8081 override
+
+Verify still needed when native services are removed
+---
+ mariadb/templates/service-error.yaml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/mariadb/templates/service-error.yaml b/mariadb/templates/service-error.yaml
+index f889144..85b6bf0 100644
+--- a/mariadb/templates/service-error.yaml
++++ b/mariadb/templates/service-error.yaml
+@@ -26,7 +26,7 @@ metadata:
+ spec:
+   clusterIP: None
+   ports:
+-    - port: 80
++    - port: 8081
+       protocol: TCP
+       targetPort: 8080
+   selector:
+-- 
+1.8.3.1
+
