@@ -1,0 +1,40 @@
+From 9b3cf5e7eec3385f314ca10fc3762b826270a89e Mon Sep 17 00:00:00 2001
+From: Gerry Kopec <gerry.kopec@windriver.com>
+Date: Mon, 1 Oct 2018 19:55:11 +0000
+Subject: [PATCH 09/15] Temporarily remove nova upgrade_levels compute=auto
+ config default
+
+Upstream openstack-helm sets upgrade_levels/compute=auto as a default
+setting.  This interferes with a check in stx-nova which determines
+that an upgrade is in progress if upgrade_levels is not None.  This
+then causes various nova commands to be disabled.
+
+We want to delete this config option but helm v2.9 does not allow you
+to delete a config option by overriding it.  It currently keeps the
+option but sets it to null.  This in turn causes issues with generating
+per host overrides.  There is a change in helm v2.10 that should fix
+this issue:
+1850aead fix(pkg/strvals): evaluate "null" values
+
+Once we upgrade helm to v2.10, we should be able to revert this fix and
+override the option properly.
+---
+ nova/values.yaml | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/nova/values.yaml b/nova/values.yaml
+index 2dd76cc..099ff78 100644
+--- a/nova/values.yaml
++++ b/nova/values.yaml
+@@ -1546,8 +1546,6 @@ conf:
+       rbd_secret_uuid: 457eb676-33da-42ec-9a8c-9293d545c337
+       disk_cachemodes: "network=writeback"
+       hw_disk_discard: unmap
+-    upgrade_levels:
+-      compute: auto
+     cache:
+       enabled: true
+       backend: oslo_cache.memcache_pool
+-- 
+1.8.3.1
+

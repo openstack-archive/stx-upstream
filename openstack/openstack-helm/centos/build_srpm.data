@@ -1,0 +1,9 @@
+# https://github.com/openstack/openstack-helm/archive/b9fab949aaf9627be59487c35156428ca12f7442.tar.gz
+TAR_NAME=openstack-helm
+SHA=b9fab949aaf9627be59487c35156428ca12f7442
+VERSION=1.0.0
+TAR="$TAR_NAME-$SHA.tar.gz"
+
+COPY_LIST="${CGCS_BASE}/downloads/$TAR $PKG_BASE/files/* "
+
+TIS_PATCH_VER=18

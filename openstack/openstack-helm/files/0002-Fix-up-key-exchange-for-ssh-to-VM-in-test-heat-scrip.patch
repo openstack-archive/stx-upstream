@@ -1,0 +1,39 @@
+From 5b3498f3c5f4101baec21092eff33ff2223d16b0 Mon Sep 17 00:00:00 2001
+From: Gerry Kopec <gerry.kopec@windriver.com>
+Date: Wed, 25 Jul 2018 01:20:47 +0000
+Subject: [PATCH 02/15] Fix up key exchange for ssh to VM in test heat script
+
+---
+ tools/deployment/developer/common/900-use-it.sh | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/tools/deployment/developer/common/900-use-it.sh b/tools/deployment/developer/common/900-use-it.sh
+index 46a3f78..a550c90 100755
+--- a/tools/deployment/developer/common/900-use-it.sh
++++ b/tools/deployment/developer/common/900-use-it.sh
+@@ -87,17 +87,18 @@ function wait_for_ssh_port {
+   done
+   set -x
+ }
+-wait_for_ssh_port $FLOATING_IP
++#wait_for_ssh_port $FLOATING_IP
++sleep 30
+ 
+ # SSH into the VM and check it can reach the outside world
+ ssh-keyscan "$FLOATING_IP" >> ~/.ssh/known_hosts
+-ssh -i ${HOME}/.ssh/osh_key cirros@${FLOATING_IP} ping -q -c 1 -W 2 ${OSH_BR_EX_ADDR%/*}
++ssh -i ${HOME}/.ssh/osh_key -o KexAlgorithms=diffie-hellman-group14-sha1 cirros@${FLOATING_IP} ping -q -c 1 -W 2 ${OSH_BR_EX_ADDR%/*}
+ 
+ # Check the VM can reach the metadata server
+-ssh -i ${HOME}/.ssh/osh_key cirros@${FLOATING_IP} curl --verbose --connect-timeout 5 169.254.169.254
++ssh -i ${HOME}/.ssh/osh_key -o KexAlgorithms=diffie-hellman-group14-sha1 cirros@${FLOATING_IP} curl --verbose --connect-timeout 5 169.254.169.254
+ 
+ # Check the VM can reach the keystone server
+-ssh -i ${HOME}/.ssh/osh_key cirros@${FLOATING_IP} curl --verbose --connect-timeout 5 keystone.openstack.svc.cluster.local
++ssh -i ${HOME}/.ssh/osh_key -o KexAlgorithms=diffie-hellman-group14-sha1 cirros@${FLOATING_IP} curl --verbose --connect-timeout 5 keystone.openstack.svc.cluster.local
+ 
+ # Check to see if cinder has been deployed, if it has then perform a volume attach.
+ if openstack service list -f value -c Type | grep -q "^volume"; then
+-- 
+1.8.3.1
+

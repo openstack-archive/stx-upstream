@@ -1,0 +1,39 @@
+From b9703901064883593bd344b82a8ef1c4b42c7bdd Mon Sep 17 00:00:00 2001
+From: Robert Church <robert.church@windriver.com>
+Date: Sat, 14 Jul 2018 19:43:48 +0000
+Subject: [PATCH 01/15] Fix neutron to use first local ip
+
+---
+ neutron/templates/bin/_neutron-linuxbridge-agent-init.sh.tpl | 2 +-
+ neutron/templates/bin/_neutron-openvswitch-agent-init.sh.tpl | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/neutron/templates/bin/_neutron-linuxbridge-agent-init.sh.tpl b/neutron/templates/bin/_neutron-linuxbridge-agent-init.sh.tpl
+index e89765a..4e85212 100644
+--- a/neutron/templates/bin/_neutron-linuxbridge-agent-init.sh.tpl
++++ b/neutron/templates/bin/_neutron-linuxbridge-agent-init.sh.tpl
+@@ -41,7 +41,7 @@ if [ -z "${tunnel_interface}" ] ; then
+ fi
+ 
+ # determine local-ip dynamically based on interface provided but only if tunnel_types is not null
+-LOCAL_IP=$(ip a s $tunnel_interface | grep 'inet ' | awk '{print $2}' | awk -F "/" '{print $1}')
++LOCAL_IP=$(ip a s $tunnel_interface | grep 'inet ' | awk '{print $2}' | awk -F "/" '{print $1}' | head -n 1)
+ if [ -z "${LOCAL_IP}" ] ; then
+   echo "Var LOCAL_IP is empty"
+   exit 1
+diff --git a/neutron/templates/bin/_neutron-openvswitch-agent-init.sh.tpl b/neutron/templates/bin/_neutron-openvswitch-agent-init.sh.tpl
+index 08c82e0..52d42c1 100644
+--- a/neutron/templates/bin/_neutron-openvswitch-agent-init.sh.tpl
++++ b/neutron/templates/bin/_neutron-openvswitch-agent-init.sh.tpl
+@@ -52,7 +52,7 @@ if [ -z "${tunnel_interface}" ] ; then
+ fi
+ 
+ # determine local-ip dynamically based on interface provided but only if tunnel_types is not null
+-LOCAL_IP=$(ip a s $tunnel_interface | grep 'inet ' | awk '{print $2}' | awk -F "/" '{print $1}')
++LOCAL_IP=$(ip a s $tunnel_interface | grep 'inet ' | awk '{print $2}' | awk -F "/" '{print $1}' | head -n 1)
+ if [ -z "${LOCAL_IP}" ] ; then
+   echo "Var LOCAL_IP is empty"
+   exit 1
+-- 
+1.8.3.1
+

@@ -1,0 +1,74 @@
+From 9b6a01c9bafc3e6744f9d56f3a91d809f941fb09 Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.wang@windriver.com>
+Date: Fri, 19 Oct 2018 15:04:28 -0400
+Subject: [PATCH 15/15] ceilometer: fix syntax from last commit
+
+---
+ ceilometer/templates/bin/_ceilometer-ipmi.sh.tpl  |  2 +-
+ ceilometer/templates/deployment-notification.yaml |  2 +-
+ ceilometer/values.yaml                            | 26 +++++++++++------------
+ 3 files changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/ceilometer/templates/bin/_ceilometer-ipmi.sh.tpl b/ceilometer/templates/bin/_ceilometer-ipmi.sh.tpl
+index 53a615c..ad280c3 100644
+--- a/ceilometer/templates/bin/_ceilometer-ipmi.sh.tpl
++++ b/ceilometer/templates/bin/_ceilometer-ipmi.sh.tpl
+@@ -10,4 +10,4 @@ set -ex
+ 
+ exec ceilometer-polling \
+   --polling-namespaces ipmi \
+-  --config-file /etc/ceilometer/ceilometer.conf
+\ No newline at end of file
++  --config-file /etc/ceilometer/ceilometer.conf
+diff --git a/ceilometer/templates/deployment-notification.yaml b/ceilometer/templates/deployment-notification.yaml
+index 02c4a00..f61c5e8 100644
+--- a/ceilometer/templates/deployment-notification.yaml
++++ b/ceilometer/templates/deployment-notification.yaml
+@@ -125,5 +125,5 @@ spec:
+           configMap:
+             name: panko-etc
+             defaultMode: 0444
+-  {{ if $mounts_ceilometer_notification.volumes }}{{ toYaml $mounts_ceilometer_notification.volumes | indent 8 }}{{ end }}
++{{ if $mounts_ceilometer_notification.volumes }}{{ toYaml $mounts_ceilometer_notification.volumes | indent 8 }}{{ end }}
+ {{- end }}
+diff --git a/ceilometer/values.yaml b/ceilometer/values.yaml
+index c97d59a..728504e 100644
+--- a/ceilometer/values.yaml
++++ b/ceilometer/values.yaml
+@@ -1555,20 +1555,20 @@ dependencies:
+           service: metric
+     ipmi:
+       jobs:
+-      - ceilometer-db-init-mongodb
+-      - ceilometer-db-sync
+-      - ceilometer-rabbit-init
+-      - ceilometer-ks-user
+-      - ceilometer-ks-endpoints
++        - ceilometer-db-init-mongodb
++        - ceilometer-db-sync
++        - ceilometer-rabbit-init
++        - ceilometer-ks-user
++        - ceilometer-ks-endpoints
+       services:
+-      - endpoint: internal
+-        service: identity
+-      - endpoint: internal
+-        service: oslo_db
+-      - endpoint: internal
+-        service: mongodb
+-      - endpoint: internal
+-        service: metric
++        - endpoint: internal
++          service: identity
++        - endpoint: internal
++          service: oslo_db
++        - endpoint: internal
++          service: mongodb
++        - endpoint: internal
++          service: metric
+     collector:
+       jobs:
+         - ceilometer-db-init-mongodb
+-- 
+1.8.3.1
+

@@ -1,0 +1,36 @@
+From 2bbf14949ffd692d20c8ce9493bc3798182d661d Mon Sep 17 00:00:00 2001
+From: Chris Friesen <chris.friesen@windriver.com>
+Date: Mon, 1 Oct 2018 10:42:08 -0600
+Subject: [PATCH 12/15] Undo mapping compute_extend.conf into nova-compute
+ container
+
+In e4ce696 we customized the helm chart to map additional files into
+the nova-compute container.  To avoid the need for custom helm chart
+changes we're now reworking those changes.
+
+This is a partial reversion of the above commit, where we will no
+longer map compute_extend.conf into the container.  Instead, the
+relevent options will simply be specified via helm chart overrides
+affecting the standard nova.conf file.
+---
+ nova/templates/daemonset-compute.yaml | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/nova/templates/daemonset-compute.yaml b/nova/templates/daemonset-compute.yaml
+index dceae41..70084b7 100644
+--- a/nova/templates/daemonset-compute.yaml
++++ b/nova/templates/daemonset-compute.yaml
+@@ -258,10 +258,6 @@ spec:
+               subPath: compute_reserved.conf
+               readOnly: true
+             - name: etc-nova-host
+-              mountPath: /etc/nova/compute_extend.conf
+-              subPath: compute_extend.conf
+-              readOnly: true
+-            - name: etc-nova-host
+               mountPath: /etc/nova/compute_host.conf
+               subPath: compute_host.conf
+               readOnly: true
+-- 
+1.8.3.1
+
