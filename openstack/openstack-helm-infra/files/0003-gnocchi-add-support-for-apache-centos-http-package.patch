@@ -1,0 +1,75 @@
+From e2eb863ae0438dabe000838998bf1212a31907ad Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.wang@windriver.com>
+Date: Wed, 26 Sep 2018 17:00:09 +0000
+Subject: [PATCH 3/6] gnocchi: add support for apache centos http package
+
+---
+ gnocchi/templates/bin/_gnocchi-api.sh.tpl | 19 +++++++++++++++----
+ gnocchi/templates/deployment-api.yaml     |  2 +-
+ gnocchi/values.yaml                       |  6 ++++++
+ 3 files changed, 22 insertions(+), 5 deletions(-)
+
+diff --git a/gnocchi/templates/bin/_gnocchi-api.sh.tpl b/gnocchi/templates/bin/_gnocchi-api.sh.tpl
+index 4cbdcc8..0993a2b 100644
+--- a/gnocchi/templates/bin/_gnocchi-api.sh.tpl
++++ b/gnocchi/templates/bin/_gnocchi-api.sh.tpl
+@@ -20,11 +20,22 @@ set -ex
+ COMMAND="${@:-start}"
+ 
+ function start () {
+-  if [ -f /etc/apache2/envvars ]; then
+-    # Loading Apache2 ENV variables
+-    source /etc/apache2/envvars
++  . /etc/os-release
++  if [ "x$ID" == "xubuntu" ]; then
++
++    if [ -f /etc/apache2/envvars ]; then
++        # Loading Apache2 ENV variables
++        source /etc/apache2/envvars
++    fi
++    APACHE_BINARY='apache2'
++
++  else
++
++    APACHE_BINARY='httpd'
++
+   fi
+-  exec apache2 -DFOREGROUND
++
++  exec $APACHE_BINARY -DFOREGROUND
+ }
+ 
+ function stop () {
+diff --git a/gnocchi/templates/deployment-api.yaml b/gnocchi/templates/deployment-api.yaml
+index 6425d46..b35a72e 100644
+--- a/gnocchi/templates/deployment-api.yaml
++++ b/gnocchi/templates/deployment-api.yaml
+@@ -101,7 +101,7 @@ spec:
+               subPath: policy.json
+               readOnly: true
+             - name: gnocchi-etc
+-              mountPath: /etc/apache2/conf-enabled/wsgi-gnocchi.conf
++              mountPath: /etc{{ .Values.deployment.apache.path }}{{ .Values.deployment.apache.conf_path }}/wsgi-gnocchi.conf
+               subPath: wsgi-gnocchi.conf
+               readOnly: true
+             - name: etcceph
+diff --git a/gnocchi/values.yaml b/gnocchi/values.yaml
+index e32693a..74badc2 100644
+--- a/gnocchi/values.yaml
++++ b/gnocchi/values.yaml
+@@ -16,6 +16,12 @@
+ # This is a YAML-formatted file.
+ # Declare variables to be passed into your templates.
+ 
++deployment:
++  apache:
++    path: /apache2
++    conf_path: /conf-enabled
++    modules_path: /mods-available
++
+ labels:
+   api:
+     node_selector_key: openstack-control-plane
+-- 
+1.8.3.1
+

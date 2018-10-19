@@ -1,0 +1,26 @@
+From 3534c7c10bdc61f04053691da18e0105cf52b4ac Mon Sep 17 00:00:00 2001
+From: Irina Mihai <irina.mihai@windriver.com>
+Date: Wed, 5 Sep 2018 20:29:22 +0000
+Subject: [PATCH 05/18] Cinder chart update
+
+- since we are not using a k8s ceph cluster, the chart should
+  take no action to change any pool config
+---
+ cinder/templates/bin/_storage-init.sh.tpl | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/cinder/templates/bin/_storage-init.sh.tpl b/cinder/templates/bin/_storage-init.sh.tpl
+index 9bea1f9..4af064f 100644
+--- a/cinder/templates/bin/_storage-init.sh.tpl
++++ b/cinder/templates/bin/_storage-init.sh.tpl
+@@ -38,7 +38,6 @@ if [ "x$STORAGE_BACKEND" == "xcinder.volume.drivers.rbd.RBDDriver" ]; then
+     ceph osd pool set $1 size ${RBD_POOL_REPLICATION}
+     ceph osd pool set $1 crush_rule "${RBD_POOL_CRUSH_RULE}"
+   }
+-  ensure_pool ${RBD_POOL_NAME} ${RBD_POOL_CHUNK_SIZE} "cinder-volume"
+ 
+   if USERINFO=$(ceph auth get client.${RBD_POOL_USER}); then
+     KEYSTR=$(echo $USERINFO | sed 's/.*\( key = .*\) caps mon.*/\1/')
+-- 
+1.8.3.1
+

@@ -1,0 +1,81 @@
+From 54e53400c418d72701147c550154d3c0ae09976b Mon Sep 17 00:00:00 2001
+From: Robert Church <robert.church@windriver.com>
+Date: Thu, 30 Aug 2018 01:42:58 -0400
+Subject: [PATCH 09/18] nova: add support for apache centos http package
+
+---
+ nova/templates/bin/_nova-placement-api.sh.tpl | 20 +++++++++++++++-----
+ nova/templates/deployment-placement.yaml      |  2 +-
+ nova/values.yaml                              |  6 ++++++
+ 3 files changed, 22 insertions(+), 6 deletions(-)
+
+diff --git a/nova/templates/bin/_nova-placement-api.sh.tpl b/nova/templates/bin/_nova-placement-api.sh.tpl
+index f9c8d7c..02bff79 100644
+--- a/nova/templates/bin/_nova-placement-api.sh.tpl
++++ b/nova/templates/bin/_nova-placement-api.sh.tpl
+@@ -23,17 +23,27 @@ function start () {
+ 
+   cp -a $(type -p nova-placement-api) /var/www/cgi-bin/nova/
+ 
+-  if [ -f /etc/apache2/envvars ]; then
+-     # Loading Apache2 ENV variables
+-     source /etc/apache2/envvars
++  . /etc/os-release
++  if [ "x$ID" == "xubuntu" ]; then
++
++    if [ -f /etc/apache2/envvars ]; then
++       # Loading Apache2 ENV variables
++       source /etc/apache2/envvars
++    fi
++    APACHE_BINARY='apache2'
++
++  else
++
++    APACHE_BINARY='httpd'
++
+   fi
+ 
+   # Start Apache2
+-  exec apache2 -DFOREGROUND
++  exec $APACHE_BINARY -DFOREGROUND
+ }
+ 
+ function stop () {
+-  apachectl -k graceful-stop
++    kill -TERM 1
+ }
+ 
+ $COMMAND
+diff --git a/nova/templates/deployment-placement.yaml b/nova/templates/deployment-placement.yaml
+index db62d75..d8a5f3b 100644
+--- a/nova/templates/deployment-placement.yaml
++++ b/nova/templates/deployment-placement.yaml
+@@ -99,7 +99,7 @@ spec:
+               subPath: policy.yaml
+               readOnly: true
+             - name: nova-etc
+-              mountPath: /etc/apache2/conf-enabled/wsgi-nova-placement.conf
++              mountPath: /etc{{ .Values.deployment.apache.path }}{{ .Values.deployment.apache.conf_path }}/wsgi-nova-placement.conf
+               subPath: wsgi-nova-placement.conf
+               readOnly: true
+ {{- if $mounts_nova_placement.volumeMounts }}{{ toYaml $mounts_nova_placement.volumeMounts | indent 12 }}{{ end }}
+diff --git a/nova/values.yaml b/nova/values.yaml
+index 2dd76cc..2af5f06 100644
+--- a/nova/values.yaml
++++ b/nova/values.yaml
+@@ -17,6 +17,12 @@
+ # Declare name/value pairs to be passed into your templates.
+ # name: value
+ 
++deployment:
++  apache:
++    path: /apache2
++    conf_path: /conf-enabled
++    modules_path: /mods-available
++
+ release_group: null
+ 
+ labels:
+-- 
+1.8.3.1
+

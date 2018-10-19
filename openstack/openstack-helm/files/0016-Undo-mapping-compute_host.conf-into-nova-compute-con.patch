@@ -1,0 +1,54 @@
+From 4e2499eb66643b675f7d749ac8f2146d0f8256b8 Mon Sep 17 00:00:00 2001
+From: Gerry Kopec <gerry.kopec@windriver.com>
+Date: Tue, 9 Oct 2018 10:45:39 +0000
+Subject: [PATCH 16/18] Undo mapping compute_host.conf into nova-compute
+ container
+
+Revert portions of commit e4ce696 related to compute_host.conf.
+The config options that were previously given in the file are now
+specified in per host overrides to the helm chart and will be
+applied to the standard nova.conf file in the container.
+---
+ nova/templates/bin/_nova-compute.sh.tpl | 10 +---------
+ nova/templates/daemonset-compute.yaml   |  4 ----
+ 2 files changed, 1 insertion(+), 13 deletions(-)
+
+diff --git a/nova/templates/bin/_nova-compute.sh.tpl b/nova/templates/bin/_nova-compute.sh.tpl
+index cecb43a..84596a5 100644
+--- a/nova/templates/bin/_nova-compute.sh.tpl
++++ b/nova/templates/bin/_nova-compute.sh.tpl
+@@ -18,15 +18,7 @@ limitations under the License.
+ 
+ set -ex
+ 
+-if [ -f /etc/nova/compute_host.conf ]; then
+-    exec nova-compute \
+-      --config-file /etc/nova/nova.conf \
+-      --config-file /tmp/pod-shared/nova-console.conf \
+-      --config-file /tmp/pod-shared/nova-libvirt.conf \
+-      --config-file /etc/nova/compute_host.conf
+-else
+-    exec nova-compute \
++exec nova-compute \
+       --config-file /etc/nova/nova.conf \
+       --config-file /tmp/pod-shared/nova-console.conf \
+       --config-file /tmp/pod-shared/nova-libvirt.conf
+-fi
+diff --git a/nova/templates/daemonset-compute.yaml b/nova/templates/daemonset-compute.yaml
+index 70084b7..5e56e45 100644
+--- a/nova/templates/daemonset-compute.yaml
++++ b/nova/templates/daemonset-compute.yaml
+@@ -257,10 +257,6 @@ spec:
+               mountPath: /etc/nova/compute_reserved.conf
+               subPath: compute_reserved.conf
+               readOnly: true
+-            - name: etc-nova-host
+-              mountPath: /etc/nova/compute_host.conf
+-              subPath: compute_host.conf
+-              readOnly: true
+             - name: etc-nova-instances
+               mountPath: /etc/nova/instances
+             - name: cpuset-base
+-- 
+1.8.3.1
+

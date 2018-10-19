@@ -1,0 +1,108 @@
+From c22a4b64f46be6c8149ee3b1453c0bb2791da894 Mon Sep 17 00:00:00 2001
+From: Robert Church <robert.church@windriver.com>
+Date: Sat, 25 Aug 2018 02:57:18 -0400
+Subject: [PATCH 08/18] keystone: add support for apache centos http package
+
+---
+ keystone/templates/bin/_keystone-api.sh.tpl | 21 ++++++++++++++++-----
+ keystone/templates/deployment-api.yaml      | 10 +++++-----
+ keystone/values.yaml                        |  6 ++++++
+ 3 files changed, 27 insertions(+), 10 deletions(-)
+
+diff --git a/keystone/templates/bin/_keystone-api.sh.tpl b/keystone/templates/bin/_keystone-api.sh.tpl
+index 217d942..ca33526 100644
+--- a/keystone/templates/bin/_keystone-api.sh.tpl
++++ b/keystone/templates/bin/_keystone-api.sh.tpl
+@@ -26,17 +26,28 @@ function start () {
+     cp -a $(type -p ${KEYSTONE_WSGI_SCRIPT}) /var/www/cgi-bin/keystone/
+   done
+ 
+-  if [ -f /etc/apache2/envvars ]; then
+-     # Loading Apache2 ENV variables
+-     source /etc/apache2/envvars
++  . /etc/os-release
++  if [ "x$ID" == "xubuntu" ]; then
++
++    if [ -f /etc/apache2/envvars ]; then
++        # Loading Apache2 ENV variables
++        source /etc/apache2/envvars
++    fi
++    APACHE_BINARY='apache2'
++
++  else
++
++    APACHE_BINARY='httpd'
++
+   fi
+ 
+   # Start Apache2
+-  exec apache2 -DFOREGROUND
++  exec $APACHE_BINARY -DFOREGROUND
++
+ }
+ 
+ function stop () {
+-  apachectl -k graceful-stop
++    kill -TERM 1
+ }
+ 
+ $COMMAND
+diff --git a/keystone/templates/deployment-api.yaml b/keystone/templates/deployment-api.yaml
+index c985cad..4dbe04b 100644
+--- a/keystone/templates/deployment-api.yaml
++++ b/keystone/templates/deployment-api.yaml
+@@ -83,9 +83,9 @@ spec:
+           - name: etckeystone
+             mountPath: /etc/keystone
+           - name: logs-apache
+-            mountPath: /var/log/apache2
++            mountPath: /var/log{{ .Values.deployment.apache.path }}
+           - name: run-apache
+-            mountPath: /var/run/apache2
++            mountPath: /var/run{{ .Values.deployment.apache.path }}
+           - name: wsgi-keystone
+             mountPath: /var/www/cgi-bin/keystone
+           - name: keystone-etc
+@@ -93,7 +93,7 @@ spec:
+             subPath: keystone.conf
+             readOnly: true
+           - name: keystone-etc
+-            mountPath: /etc/apache2/ports.conf
++            mountPath: /etc{{ .Values.deployment.apache.path }}/ports.conf
+             subPath: ports.conf
+             readOnly: true
+           - name: keystone-etc
+@@ -113,11 +113,11 @@ spec:
+             subPath: sso_callback_template.html
+             readOnly: true
+           - name: keystone-etc
+-            mountPath: /etc/apache2/conf-enabled/wsgi-keystone.conf
++            mountPath: /etc{{ .Values.deployment.apache.path }}{{ .Values.deployment.apache.conf_path }}/wsgi-keystone.conf
+             subPath: wsgi-keystone.conf
+             readOnly: true
+           - name: keystone-etc
+-            mountPath: /etc/apache2/mods-available/mpm_event.conf
++            mountPath: /etc{{ .Values.deployment.apache_path }}{{ .Values.deployment.apache.modules_path }}/mpm_event.conf
+             subPath: mpm_event.conf
+             readOnly: true
+           - name: keystone-bin
+diff --git a/keystone/values.yaml b/keystone/values.yaml
+index 7ac8c92..c25163e 100644
+--- a/keystone/values.yaml
++++ b/keystone/values.yaml
+@@ -17,6 +17,12 @@
+ # Declare name/value pairs to be passed into your templates.
+ # name: value
+ 
++deployment:
++  apache:
++    path: /apache2
++    conf_path: /conf-enabled
++    modules_path: /mods-available
++
+ labels:
+   api:
+     node_selector_key: openstack-control-plane
+-- 
+1.8.3.1
+

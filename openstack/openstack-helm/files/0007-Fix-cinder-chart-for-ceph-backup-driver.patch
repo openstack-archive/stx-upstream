@@ -1,0 +1,26 @@
+From 504daa277c31ddb196858b2f12323807b6494722 Mon Sep 17 00:00:00 2001
+From: Irina Mihai <irina.mihai@windriver.com>
+Date: Mon, 10 Sep 2018 19:41:08 +0000
+Subject: [PATCH 07/18] Fix cinder chart for ceph backup driver
+
+- fix wrong command for setting the crush ruleset
+---
+ cinder/templates/bin/_backup-storage-init.sh.tpl | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cinder/templates/bin/_backup-storage-init.sh.tpl b/cinder/templates/bin/_backup-storage-init.sh.tpl
+index a932ef3..03180ba 100644
+--- a/cinder/templates/bin/_backup-storage-init.sh.tpl
++++ b/cinder/templates/bin/_backup-storage-init.sh.tpl
+@@ -39,7 +39,7 @@ elif [ "x$STORAGE_BACKEND" == "xcinder.backup.drivers.ceph" ]; then
+       ceph osd pool application enable $1 $3
+     fi
+     ceph osd pool set $1 size ${RBD_POOL_REPLICATION}
+-    ceph osd pool set $1 crush_rule "${RBD_POOL_CRUSH_RULE}"
++    ceph osd pool set $1 crush_ruleset "${RBD_POOL_CRUSH_RULE}"
+   }
+   ensure_pool ${RBD_POOL_NAME} ${RBD_POOL_CHUNK_SIZE} "cinder-backup"
+ 
+-- 
+1.8.3.1
+

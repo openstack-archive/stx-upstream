@@ -1,0 +1,84 @@
+From f50497520c044aa97a36dd2973269580dab2b529 Mon Sep 17 00:00:00 2001
+From: Gerry Kopec <gerry.kopec@windriver.com>
+Date: Wed, 15 Aug 2018 01:04:39 +0000
+Subject: [PATCH 03/18] Enable nova containers to look at files/directories on
+ host
+
+nova:
+- /etc/nova/instances directory
+- /etc/nova/files: compute_reserved.conf, compute_extend.conf, compute_host.conf
+- /dev/cpuset/floating -- need by wrs/starlingx to handle floating/dedicated
+                          instances on same compute host
+- launch nova-compute process with compute_host.conf as a config file if it exists
+---
+ nova/templates/bin/_nova-compute.sh.tpl | 10 +++++++++-
+ nova/templates/daemonset-compute.yaml   | 25 +++++++++++++++++++++++++
+ 2 files changed, 34 insertions(+), 1 deletion(-)
+
+diff --git a/nova/templates/bin/_nova-compute.sh.tpl b/nova/templates/bin/_nova-compute.sh.tpl
+index 84596a5..cecb43a 100644
+--- a/nova/templates/bin/_nova-compute.sh.tpl
++++ b/nova/templates/bin/_nova-compute.sh.tpl
+@@ -18,7 +18,15 @@ limitations under the License.
+ 
+ set -ex
+ 
+-exec nova-compute \
++if [ -f /etc/nova/compute_host.conf ]; then
++    exec nova-compute \
++      --config-file /etc/nova/nova.conf \
++      --config-file /tmp/pod-shared/nova-console.conf \
++      --config-file /tmp/pod-shared/nova-libvirt.conf \
++      --config-file /etc/nova/compute_host.conf
++else
++    exec nova-compute \
+       --config-file /etc/nova/nova.conf \
+       --config-file /tmp/pod-shared/nova-console.conf \
+       --config-file /tmp/pod-shared/nova-libvirt.conf
++fi
+diff --git a/nova/templates/daemonset-compute.yaml b/nova/templates/daemonset-compute.yaml
+index 850f0b0..a9b0556 100644
+--- a/nova/templates/daemonset-compute.yaml
++++ b/nova/templates/daemonset-compute.yaml
+@@ -253,6 +253,22 @@ spec:
+             - name: machine-id
+               mountPath: /etc/machine-id
+               readOnly: true
++            - name: etc-nova-host
++              mountPath: /etc/nova/compute_reserved.conf
++              subPath: compute_reserved.conf
++              readOnly: true
++            - name: etc-nova-host
++              mountPath: /etc/nova/compute_extend.conf
++              subPath: compute_extend.conf
++              readOnly: true
++            - name: etc-nova-host
++              mountPath: /etc/nova/compute_host.conf
++              subPath: compute_host.conf
++              readOnly: true
++            - name: etc-nova-instances
++              mountPath: /etc/nova/instances
++            - name: cpuset-base
++              mountPath: /dev/cpuset/floating
+ {{ if $mounts_nova_compute.volumeMounts }}{{ toYaml $mounts_nova_compute.volumeMounts | indent 12 }}{{ end }}
+         - name: nova-compute-ssh
+ {{ tuple $envAll "nova_compute_ssh" | include "helm-toolkit.snippets.image" | indent 10 }}
+@@ -328,6 +344,15 @@ spec:
+         - name: machine-id
+           hostPath:
+             path: /etc/machine-id
++        - name: etc-nova-host
++          hostPath:
++            path: /etc/nova
++        - name: etc-nova-instances
++          hostPath:
++            path: /etc/nova/instances
++        - name: cpuset-base
++          hostPath:
++            path: /dev/cpuset/floating
+ {{ if $mounts_nova_compute.volumes }}{{ toYaml $mounts_nova_compute.volumes | indent 8 }}{{ end }}
+ {{- end }}
+ {{- end }}
+-- 
+1.8.3.1
+
