@@ -27,6 +27,8 @@ BuildRequires:  python-oslo-sphinx
 BuildRequires:  python-oslotest
 BuildRequires:  python-pbr
 BuildRequires:  python-setuptools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python-sphinx
 BuildRequires:  python-subunit
 BuildRequires:  python-testrepository
@@ -87,6 +89,8 @@ PYTHONPATH=. oslo-config-generator --config-file=./etc/oslo-config-generator/bgp
 # remove the sphinx-build leftovers
 rm -rf html/.{doctrees,buildinfo}
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 
@@ -96,6 +100,8 @@ install -m 755 %{SOURCE1} %{buildroot}%{_sysconfdir}/init.d/neutron-bgp-dragent
 install -d %{buildroot}%{_sysconfdir}/%{service}/pmon
 install -m 755 %{SOURCE3} %{buildroot}%{_sysconfdir}/%{service}/pmon/neutron-bgp-dragent.conf
 %py2_install
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 mkdir -p %{buildroot}%{_sysconfdir}/%{service}/policy.d
 mv %{buildroot}/usr/etc/%{service}/policy.d/dynamic_routing.conf %{buildroot}%{_sysconfdir}/%{service}/policy.d/
@@ -123,6 +129,15 @@ mv etc/bgp_dragent.ini.sample %{buildroot}%{_sysconfdir}/%{service}/bgp_dragent.
 %files -n python-%{pypi_name}-tests
 %license LICENSE
 %{python2_sitelib}/%{sname}/tests
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 
 %changelog

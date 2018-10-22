@@ -31,6 +31,8 @@ BuildRequires:  python-testresources
 BuildRequires:  python-testscenarios
 BuildRequires:  python-neutron-lib-tests
 BuildRequires:  python-neutron-tests
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 
 %description
 This project provides APIs and implementations to support Service Function
@@ -137,10 +139,13 @@ rm -rf doc/build/html/.{doctrees,buildinfo}
 # generate the configuration file
 PYTHONPATH=. oslo-config-generator --config-file etc/oslo-config-generator/networking-sfc.conf
 
+%py2_build_wheel
 
 %install
 export PBR_VERSION=%{version}
 %py2_install
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Create a fake tempest plugin entrypoint
 %py2_entrypoint %{module} %{pypi_name}
@@ -175,6 +180,15 @@ mv etc/networking-sfc.conf.sample %{buildroot}%{_sysconfdir}/neutron/conf.d/neut
 %{python2_sitelib}/%{module}_tests.egg-info
 %{python2_sitelib}/%{module}/tests/tempest_plugin
 %{python2_sitelib}/%{module}/tests/__init__.py*
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Wed Aug 30 2017 rdo-trunk <javier.pena@redhat.com> 5.0.0-1

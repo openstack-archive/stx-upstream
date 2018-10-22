@@ -20,6 +20,8 @@ BuildArch:     noarch
 
 BuildRequires: python2-devel
 BuildRequires: python-setuptools
+BuildRequires: python2-pip
+BuildRequires: python2-wheel
 BuildRequires: python-jsonschema >= 2.0.0
 BuildRequires: python-keystonemiddleware
 BuildRequires: python-oslo-concurrency
@@ -75,10 +77,13 @@ rm -rf {test-,}requirements.txt tools/{pip,test}-requires
 %build
 export PBR_VERSION=%{version}
 %{__python2} setup.py build
+%py2_build_wheel
 
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # prep SDK package
 mkdir -p %{buildroot}/usr/share/remote-clients
@@ -94,3 +99,11 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --excl
 %files sdk
 /usr/share/remote-clients/%{pypi_name}-%{version}.tgz
 
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*

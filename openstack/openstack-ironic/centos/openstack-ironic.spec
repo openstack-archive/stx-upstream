@@ -21,6 +21,8 @@ Source4:        ironic-dist.conf
 BuildArch:      noarch
 BuildRequires:  openstack-macros
 BuildRequires:  python-setuptools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python2-devel
 BuildRequires:  python-pbr
 BuildRequires:  openssl-devel
@@ -97,10 +99,13 @@ export PBR_VERSION=%{version}
 %{__python2} setup.py build
 # Generate i18n files
 %{__python2} setup.py compile_catalog -d build/lib/ironic/locale
+%py2_build_wheel
 
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install -O1 --skip-build --root=%{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Create fake egg-info for the tempest plugin
 # TODO switch to %{service} everywhere as in openstack-example.spec
@@ -272,6 +277,15 @@ This package contains the Ironic test files.
 %{python2_sitelib}/ironic_tempest_plugin
 %{python2_sitelib}/%{service}_tests.egg-info
 
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
+
 %changelog
 * Fri Nov 03 2017 RDO <dev@lists.rdoproject.org> 1:9.1.2-1
 - Update to 9.1.2
@@ -281,4 +295,3 @@ This package contains the Ironic test files.
 
 * Thu Aug 24 2017 Alfredo Moralejo <amoralej@redhat.com> 1:9.1.0-1
 - Update to 9.1.0
-

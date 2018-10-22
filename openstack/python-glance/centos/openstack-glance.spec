@@ -49,6 +49,8 @@ BuildArch:        noarch
 BuildRequires:    git
 BuildRequires:    python2-devel
 BuildRequires:    python-setuptools
+BuildRequires:    python2-pip
+BuildRequires:    python2-wheel
 BuildRequires:    python-pbr
 BuildRequires:    intltool
 # Required for config generation
@@ -214,9 +216,13 @@ export PBR_VERSION=%{version}
 # Generate i18n files
 %{__python2} setup.py compile_catalog -d build/lib/%{service}/locale
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install -O1 --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 export PYTHONPATH="$( pwd ):$PYTHONPATH"
 %if 0%{?with_doc}
@@ -393,6 +399,15 @@ exit 0
 %files doc
 %doc doc/build/html
 %endif
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Wed Aug 30 2017 rdo-trunk <javier.pena@redhat.com> 1:15.0.0-1

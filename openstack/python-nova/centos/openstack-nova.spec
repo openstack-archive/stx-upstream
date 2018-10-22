@@ -85,6 +85,8 @@ BuildRequires:    python-oslo-cache
 BuildRequires:    python-openstackdocstheme
 BuildRequires:    python-os-traits
 BuildRequires:    python-setuptools
+BuildRequires:    python2-pip
+BuildRequires:    python2-wheel
 BuildRequires:    python-netaddr
 BuildRequires:    python-pbr
 BuildRequires:    python-d2to1
@@ -502,10 +504,14 @@ while read name eq value; do
   sed -i "0,/^# *$name=/{s!^# *$name=.*!#$name=$value!}" etc/nova/nova.conf.sample
 done < %{SOURCE1}
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 
 %{__python2} setup.py install -O1 --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # WRS
 # Install sql migration stuff that wasn't installed by setup.py
@@ -877,6 +883,15 @@ fi
 %files doc
 %doc LICENSE doc/build/html
 %endif
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Wed Oct 25 2017 rdo-trunk <javier.pena@redhat.com> 1:16.0.2-1

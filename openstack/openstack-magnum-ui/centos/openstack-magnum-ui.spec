@@ -17,6 +17,8 @@ BuildArch:  noarch
 BuildRequires:  python2-devel
 BuildRequires:  python-pbr
 BuildRequires:  python-setuptools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  git
 
 Requires:   python-pbr
@@ -59,6 +61,7 @@ rm -f *requirements.txt
 %build
 export PBR_VERSION=%{version}
 %{__python2} setup.py build
+%py2_build_wheel
 
 # generate html docs
 export PYTHONPATH=/usr/share/openstack-dashboard
@@ -69,6 +72,8 @@ export PYTHONPATH=/usr/share/openstack-dashboard
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Move config to horizon
 install -p -D -m 640 %{module}/enabled/_1370_project_container_infra_panel_group.py %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/local/enabled/_1370_project_container_infra_panel_group.py
@@ -85,6 +90,15 @@ install -p -D -m 640 %{module}/enabled/_1372_project_container_infra_cluster_tem
 %files -n python-%{library}-doc
 %license LICENSE
 #%doc doc/build/html README.rst
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 
 %changelog

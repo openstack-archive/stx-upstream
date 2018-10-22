@@ -46,6 +46,8 @@ BuildRequires:    openstack-macros
 BuildRequires:    python-cotyledon
 BuildRequires:    python-sphinx
 BuildRequires:    python-setuptools
+BuildRequires:    python2-pip
+BuildRequires:    python2-wheel
 BuildRequires:    python-pbr >= 1.10.0
 BuildRequires:    git
 BuildRequires:    python-d2to1
@@ -392,9 +394,13 @@ while read name eq value; do
   sed -i "0,/^# *$name=/{s!^# *$name=.*!#$name=$value!}" etc/ceilometer/ceilometer.conf
 done < %{SOURCE1}
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install -O1 --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Install sql migration cfg and sql files that were not installed by setup.py
 install -m 644 ceilometer/storage/sqlalchemy/migrate_repo/migrate.cfg %{buildroot}%{python_sitelib}/ceilometer/storage/sqlalchemy/migrate_repo/migrate.cfg
@@ -685,6 +691,14 @@ exit 0
 %{_sysconfdir}/ceilometer/ceilometer-polling-compute.conf.pmon
 %{_unitdir}/%{name}-polling.service
 
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Tue Sep 12 2017 rdo-trunk <javier.pena@redhat.com> 1:9.0.1-1

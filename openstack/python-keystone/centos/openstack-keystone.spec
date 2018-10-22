@@ -146,6 +146,8 @@ BuildRequires:  python-oslo-sphinx
 BuildRequires:  python-passlib
 BuildRequires:  python-pysaml2
 BuildRequires:  python-memcached
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 
 %description doc
 OpenStack Keystone documentaion.
@@ -180,10 +182,14 @@ oslo-config-generator --config-file config-generator/keystone.conf \
 # policy file generation
 oslopolicy-sample-generator --config-file config-generator/keystone-policy-generator.conf --output-file etc/keystone.policy.yaml
 
+%py2_build_wheel
+
 %install
 # WRS: export PBR version
 export PBR_VERSION=%{version}
 %{__python2} setup.py install --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 mkdir -p %{buildroot}%{_mandir}/man1
 install -d -m 755 %{buildroot}%{_sysconfdir}/keystone
@@ -301,5 +307,14 @@ exit 0
 %files doc
 %license LICENSE
 %doc doc/build/html
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog

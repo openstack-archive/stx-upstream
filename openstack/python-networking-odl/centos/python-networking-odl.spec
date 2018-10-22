@@ -29,6 +29,8 @@ BuildRequires:  python-pbr
 BuildRequires:  python-sphinx
 BuildRequires:  python-testrepository
 BuildRequires:  python-testtools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 
 Requires:       openstack-neutron-ml2
 Requires:       python-babel
@@ -54,6 +56,7 @@ rm requirements.txt test-requirements.txt
 %{__python2} setup.py build_sphinx -b html
 rm %{docpath}/.buildinfo
 
+%py2_build_wheel
 
 #%check
 #%{__python2} setup.py testr
@@ -63,6 +66,8 @@ rm %{docpath}/.buildinfo
 export PBR_VERSION=%{version}
 export SKIP_PIP_INSTALL=1
 %{__python2} setup.py install --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 %files
 %license LICENSE
@@ -70,6 +75,15 @@ export SKIP_PIP_INSTALL=1
 %{_bindir}/neutron-odl-ovs-hostconfig
 %{python2_sitelib}/%{srcname}
 %{python2_sitelib}/%{srcname}-%{version}-py%{python2_version}.egg-info
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Wed Aug 30 2017 rdo-trunk <javier.pena@redhat.com> 1:11.0.0-1

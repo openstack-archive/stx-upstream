@@ -28,6 +28,8 @@ Summary:        An SDK for building applications to work with OpenStack
 %{?python_provide:%python_provide python2-%{pypi_name}}
 
 BuildRequires:  python2-devel
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python-pbr >= 2.0.0
 BuildRequires:  python-sphinx
 BuildRequires:  python-oslo-sphinx
@@ -135,6 +137,7 @@ clouds - documentation.
 %build
 export PBR_VERSION=%{version}
 %py2_build
+%py2_build_wheel
 
 %if 0%{?with_python3}
 %{py3_build}
@@ -150,6 +153,8 @@ rm -rf html/.{doctrees,buildinfo}
 %install
 export PBR_VERSION=%{version}
 %py2_install
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 %if 0%{?with_python3}
 %{py3_install}
@@ -200,6 +205,15 @@ export PBR_VERSION=%{version}
 
 %files sdk
 /usr/share/remote-clients/%{name}-%{version}.tgz
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Mon Sep 12 2016 Haikel Guemar <hguemar@fedoraproject.org> 0.9.5-1

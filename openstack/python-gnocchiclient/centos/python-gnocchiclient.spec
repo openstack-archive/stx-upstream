@@ -31,6 +31,8 @@ Summary:          Python API and CLI for OpenStack Gnocchi
 
 
 BuildRequires:    python2-setuptools
+BuildRequires:    python2-pip
+BuildRequires:    python2-wheel
 BuildRequires:    python2-devel
 BuildRequires:    python2-pbr
 BuildRequires:    python2-tools
@@ -148,6 +150,7 @@ rm -f test-requirements.txt
 %build
 export PBR_VERSION=%{version}
 %py2_build
+%py2_build_wheel
 %if 0%{?with_python3}
 pushd %{py3dir}
 LANG=en_US.UTF-8 %{__python3} setup.py build
@@ -165,6 +168,8 @@ popd
 %endif
 
 %{__python2} setup.py install --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # rename binaries, make compat symlinks
 install -m 755 -d %{buildroot}/%{_bindir}
@@ -227,6 +232,15 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --excl
 
 %files sdk
 /usr/share/remote-clients/%{pypi_name}-%{version}.tgz
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Tue Feb 13 2018 RDO <dev@lists.rdoproject.org> 7.0.1-1

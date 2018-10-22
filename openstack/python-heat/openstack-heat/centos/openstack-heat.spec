@@ -36,6 +36,8 @@ BuildRequires: python-oslo-middleware
 BuildRequires: python-oslo-policy
 BuildRequires: python-oslo-messaging
 BuildRequires: python-setuptools
+BuildRequires: python2-pip
+BuildRequires: python2-wheel
 BuildRequires: python-openstackdocstheme
 BuildRequires: python-oslo-i18n
 BuildRequires: python-oslo-db
@@ -164,9 +166,13 @@ export PBR_VERSION=%{version}
 # oslo-config-generator doesn't skip heat's entry points.
 PYTHONPATH=. oslo-config-generator --config-file=config-generator.conf
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 %{__python} setup.py install -O1 --skip-build --root=%{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 sed -i -e '/^#!/,1 d' %{buildroot}/%{python_sitelib}/heat/db/sqlalchemy/migrate_repo/manage.py
 
 # Create fake egg-info for the tempest plugin
@@ -526,6 +532,15 @@ running the Heat service in general.
 
 %postun monolith
 %systemd_postun_with_restart openstack-heat-all.service
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 
 %changelog

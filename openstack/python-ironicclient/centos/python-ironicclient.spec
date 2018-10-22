@@ -25,6 +25,8 @@ A python and command line client library for Ironic.
 Summary:        Python client for Ironic
 
 BuildRequires:  python2-devel
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python-pbr >= 2.0.0
 BuildRequires:  python-setuptools
 
@@ -90,6 +92,7 @@ rm -rf {test-,}requirements.txt tools/{pip,test}-requires
 %build
 export PBR_VERSION=%{version}
 %py2_build
+%py2_build_wheel
 %if 0%{?with_python3}
 %py3_build
 %endif
@@ -111,6 +114,9 @@ ln -s ./ironic-2 %{buildroot}%{_bindir}/ironic
 
 install -p -D -m 644 tools/ironic.bash_completion %{buildroot}%{_sysconfdir}/bash_completion.d/ironic.bash_completion
 
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
+
 %files -n python2-%{sname}
 %doc README.rst
 %license LICENSE
@@ -130,6 +136,15 @@ install -p -D -m 644 tools/ironic.bash_completion %{buildroot}%{_sysconfdir}/bas
 %{python3_sitelib}/ironicclient*
 %{python3_sitelib}/python_ironicclient*
 %endif
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 
 %changelog

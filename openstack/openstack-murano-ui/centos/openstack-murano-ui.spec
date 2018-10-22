@@ -29,6 +29,8 @@ BuildRequires:  python-oslo-config >= 2:3.14.0
 BuildRequires:  python-pbr >= 1.6
 BuildRequires:  python-semantic-version
 BuildRequires:  python-setuptools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python-testtools
 BuildRequires:  python-yaql >= 1.1.0
 BuildRequires:  tsconfig
@@ -94,10 +96,13 @@ export OSLO_PACKAGE_VERSION=%{upstream_version}
 %{__python2} setup.py build_sphinx -b html
 # remove the sphinx-build leftovers
 rm -rf doc/build/html/.{doctrees,buildinfo}
+%py2_build_wheel
 
 %install
 export PBR_VERSION=%{version}
 %py2_install
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 mkdir -p %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/local/enabled
 mkdir -p %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/local/local_settings.d
 mkdir -p %{buildroot}/var/cache/murano-dashboard
@@ -137,6 +142,15 @@ fi
 %files doc
 %license LICENSE
 %doc doc/build/html
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Wed Aug 30 2017 rdo-trunk <javier.pena@redhat.com> 4.0.0-1

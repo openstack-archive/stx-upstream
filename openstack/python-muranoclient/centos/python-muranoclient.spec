@@ -28,6 +28,8 @@ API (the muranoclient module) and a command-line tool (murano).
 BuildRequires:  git
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python-pbr >= 2.0.0
 
 Requires:       python-babel >= 2.3.4
@@ -137,6 +139,8 @@ popd
 # remove the sphinx-build leftovers
 rm -rf doc/build/html/.{doctrees,buildinfo}
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 %if 0%{?with_python3}
@@ -147,6 +151,8 @@ popd
 %endif
 
 %{__python2} setup.py install --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 install -p -D -m 644 tools/murano.bash_completion %{buildroot}%{_sysconfdir}/bash_completion.d/murano.bash_completion
 
@@ -188,6 +194,15 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='
 
 %files sdk
 /usr/share/remote-clients/%{name}-%{version}.tgz
+
+%package wheels
+Summary: %{name} wheels
+
+%description wheels
+Contains python wheels for %{name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Mon Aug 14 2017 Alfredo Moralejo <amoralej@redhat.com> 0.14.0-1
