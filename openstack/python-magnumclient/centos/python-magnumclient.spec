@@ -30,6 +30,8 @@ Summary:        Client library for Magnum API
 
 BuildRequires:  python2-devel
 BuildRequires:  python-setuptools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python-pbr
 BuildRequires:  git
 
@@ -165,6 +167,8 @@ export PBR_VERSION=%{version}
 # Fix hidden-file-or-dir warnings
 rm -rf doc/build/html/.{doctrees,buildinfo}
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 
@@ -178,6 +182,8 @@ mv %{buildroot}%{_bindir}/magnum ./magnum.py3
 %endif
 
 %py2_install
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 %if 0%{?default_python} >= 3
 mv magnum.py3 %{buildroot}%{_bindir}/magnum
@@ -225,6 +231,15 @@ mv magnum.py3 %{buildroot}%{_bindir}/magnum
 %files -n python3-%{pname}-tests
 %{python3_sitelib}/%{pname}/tests
 %endif
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Fri Aug 11 2017 Alfredo Moralejo <amoralej@redhat.com> 2.7.0-1

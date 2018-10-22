@@ -65,6 +65,8 @@ BuildArch:      noarch
 BuildRequires:  git
 BuildRequires:  openstack-macros
 BuildRequires:  python2-devel
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python-babel
 BuildRequires:  python-d2to1
 BuildRequires:  python-keystoneauth1 >= 3.1.0
@@ -399,9 +401,13 @@ while read name eq value; do
   fi
 done < %{SOURCE30}
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install -O1 --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Remove unused files
 rm -rf %{buildroot}%{python2_sitelib}/bin
@@ -786,6 +792,15 @@ fi
 %config(noreplace) %attr(0640, root, %{service}) %{_sysconfdir}/%{service}/pmon/neutron-sriov-nic-agent.conf
 %dir %{_sysconfdir}/%{service}/conf.d/%{service}-sriov-nic-agent
 %{_sysconfdir}/init.d/%{service}-sriov-nic-agent
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 
 %changelog

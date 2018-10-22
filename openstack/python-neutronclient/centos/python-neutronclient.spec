@@ -30,6 +30,8 @@ Summary:    Python API and CLI for OpenStack Neutron
 BuildRequires: git
 BuildRequires: python2-devel
 BuildRequires: python-setuptools
+BuildRequires: python2-pip
+BuildRequires: python2-wheel
 BuildRequires: python-pbr
 
 Requires: python-babel >= 2.3.4
@@ -122,6 +124,7 @@ rm -f test-requirements.txt requirements.txt
 %build
 export PBR_VERSION=%{version}
 %py2_build
+%py2_build_wheel
 %if 0%{?with_python3}
 %py3_build
 %endif
@@ -137,6 +140,8 @@ rm -fr %{buildroot}%{python3_sitelib}/neutronclient/tests
 %endif
 
 %py2_install
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 mv %{buildroot}%{_bindir}/neutron %{buildroot}%{_bindir}/neutron-%{python2_version}
 ln -s ./neutron-%{python2_version} %{buildroot}%{_bindir}/neutron-2
 
@@ -183,6 +188,15 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --e
 
 %files sdk
 /usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Mon Aug 14 2017 Alfredo Moralejo <amoralej@redhat.com> 6.5.0-1

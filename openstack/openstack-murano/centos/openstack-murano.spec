@@ -27,6 +27,8 @@ BuildArch:     noarch
 BuildRequires: git
 BuildRequires: python2-devel
 BuildRequires: python-setuptools
+BuildRequires: python2-pip
+BuildRequires: python2-wheel
 BuildRequires: python-jsonschema >= 2.0.0
 BuildRequires: python-keystonemiddleware
 BuildRequires: python-oslo-config
@@ -162,10 +164,13 @@ export PBR_VERSION=%{version}
 # oslo-config-generator doesn't skip heat's entry points.
 PYTHONPATH=. oslo-config-generator --config-file=./etc/oslo-config-generator/murano.conf
 PYTHONPATH=. oslo-config-generator --config-file=./etc/oslo-config-generator/murano-cfapi.conf
+%py2_build_wheel
 
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install -O1 --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Create fake egg-info for the tempest plugin
 # TODO switch to %{service} everywhere as in openstack-example.spec
@@ -277,6 +282,15 @@ mv %{buildroot}%{python2_sitelib}/%{pypi_name}/locale %{buildroot}%{_datadir}/lo
 %{python2_sitelib}/murano/tests
 %{python2_sitelib}/murano_tempest_tests
 %{python2_sitelib}/%{service}_tests.egg-info
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Wed Aug 30 2017 rdo-trunk <javier.pena@redhat.com> 4.0.0-1

@@ -25,6 +25,8 @@ Patch1:         Integrate-gnocchi-storage-backend.patch
 BuildArch:      noarch
 
 BuildRequires:  python2-setuptools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python2-sphinx
 BuildRequires:  python2-pbr
 BuildRequires:  python2-devel
@@ -234,9 +236,13 @@ while read name eq value; do
   sed -i "0,/^# *$name=/{s!^# *$name=.*!#$name=$value!}" %{service}/%{service}.conf
 done < %{SOURCE1}
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 mkdir -p %{buildroot}/%{_sysconfdir}/sysconfig/
 mkdir -p %{buildroot}/%{_sysconfdir}/%{service}/
@@ -326,6 +332,15 @@ exit 0
 %files doc
 %doc doc/source/
 %endif
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Tue Mar 27 2018 Jon Schlueter <jschluet@redhat.com> 4.2.1-1

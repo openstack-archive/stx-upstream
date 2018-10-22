@@ -20,6 +20,8 @@ BuildArch:        noarch
 
 BuildRequires:    git
 BuildRequires:    python-setuptools
+BuildRequires:    python2-pip
+BuildRequires:    python2-wheel
 BuildRequires:    python2-devel
 BuildRequires:    python-pbr >= 1.6
 %if 0%{?with_python3}
@@ -115,6 +117,7 @@ rm -f test-requirements.txt
 %build
 export PBR_VERSION=%{version}
 %py2_build
+%py2_build_wheel
 %if 0%{?with_python3}
 %py3_build
 %endif
@@ -122,6 +125,8 @@ export PBR_VERSION=%{version}
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install -O1 --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 %if 0%{?with_python3}
 %{__python3} setup.py install -O1 --skip-build --root %{buildroot}
@@ -186,6 +191,15 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='
 
 %files sdk
 /usr/share/remote-clients/%{name}-%{version}.tgz
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Fri Aug 11 2017 Alfredo Moralejo <amoralej@redhat.com> 2.9.0-1

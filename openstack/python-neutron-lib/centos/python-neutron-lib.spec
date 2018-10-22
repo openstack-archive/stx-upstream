@@ -17,6 +17,8 @@ BuildArch:  noarch
 BuildRequires:  python2-devel
 BuildRequires:  python-pbr
 BuildRequires:  python-setuptools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  git
 
 Requires:   python-debtcollector >= 1.2.0
@@ -76,14 +78,20 @@ This package contains the documentation.
 rm -f *requirements.txt
 
 %build
+export PBR_VERSION=%{version}
 %py2_build
 # generate html docs
 %{__python2} setup.py build_sphinx -b html
 # remove the sphinx-build leftovers
 rm -rf doc/build/html/.{doctrees,buildinfo}
 
+%py2_build_wheel
+
 %install
+export PBR_VERSION=%{version}
 %py2_install
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 %files
 %license LICENSE
@@ -98,6 +106,15 @@ rm -rf doc/build/html/.{doctrees,buildinfo}
 %files doc
 %license LICENSE
 %doc doc/build/html README.rst
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Mon Aug 21 2017 Alfredo Moralejo <amoralej@redhat.com> 1.9.1-1

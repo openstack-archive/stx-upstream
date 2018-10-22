@@ -28,6 +28,8 @@ Summary:          Python API and CLI for OpenStack Cinder
 
 BuildRequires:    python2-devel
 BuildRequires:    python-setuptools
+BuildRequires:    python2-pip
+BuildRequires:    python2-wheel
 BuildRequires:    python-pbr
 BuildRequires:    python-d2to1
 
@@ -106,6 +108,7 @@ rm -f {,test-}requirements.txt
 %build
 export PBR_VERSION=%{version}
 %py2_build
+%py2_build_wheel
 %if 0%{?with_python3}
 %py3_build
 %endif
@@ -131,6 +134,8 @@ rm -fr %{buildroot}%{python3_sitelib}/cinderclient/tests
 %endif
 
 %py2_install
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 mv %{buildroot}%{_bindir}/cinder %{buildroot}%{_bindir}/cinder-%{python2_version}
 ln -s ./cinder-%{python2_version} %{buildroot}%{_bindir}/cinder-2
 # Delete tests
@@ -170,6 +175,15 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='
 
 %files sdk
 /usr/share/remote-clients/%{name}-%{version}.tgz
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Fri Aug 11 2017 Alfredo Moralejo <amoralej@redhat.com> 3.1.0-1

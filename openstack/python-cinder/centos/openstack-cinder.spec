@@ -52,6 +52,8 @@ BuildRequires:    python-reno
 BuildRequires:    python-sphinx
 BuildRequires:    python2-devel
 BuildRequires:    python-setuptools
+BuildRequires:    python2-pip
+BuildRequires:    python2-wheel
 BuildRequires:    python-netaddr
 BuildRequires:    systemd
 BuildRequires:    git
@@ -289,14 +291,20 @@ PYTHONPATH=. oslo-config-generator --config-file=cinder/config/cinder-config-gen
 cp %{SOURCE3} etc/cinder/cinder.conf.sample
 
 # Build
+export PBR_VERSION=%{version}
 %{__python2} setup.py build
 
 # Generate i18n files
 # (amoralej) we can remove '-D cinder' once https://review.openstack.org/#/c/439501/ is merged
 %{__python2} setup.py compile_catalog -d build/lib/%{pypi_name}/locale -D cinder
 
+%py2_build_wheel
+
 %install
+export PBR_VERSION=%{version}
 %{__python2} setup.py install -O1 --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Create fake egg-info for the tempest plugin
 # TODO switch to %{service} everywhere as in openstack-example.spec
@@ -451,6 +459,15 @@ exit 0
 %files doc
 %doc doc/build/html
 %endif
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Wed Aug 30 2017 rdo-trunk <javier.pena@redhat.com> 1:11.0.0-1

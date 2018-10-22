@@ -50,6 +50,8 @@ Requires:   python-pbr
 
 BuildRequires: python2-devel
 BuildRequires: python-setuptools
+BuildRequires: python2-pip
+BuildRequires: python2-wheel
 BuildRequires: python-pbr >= 2.0.0
 BuildRequires: git
 BuildRequires: python-six >= 1.9.0
@@ -317,11 +319,16 @@ sphinx-build -b html doc/source html
 
 # Fix hidden-file-or-dir warnings
 rm -fr html/.doctrees html/.buildinfo
+
 %endif
+
+%py2_build_wheel
 
 %install
 export PBR_VERSION=%{version}
 %{__python} setup.py install -O1 --skip-build --root %{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # WRS
 install -d -m 755 %{buildroot}/opt/branding
@@ -496,6 +503,15 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %files -n openstack-dashboard-theme
 #%{_datadir}/openstack-dashboard/openstack_dashboard/dashboards/theme
 #%{_datadir}/openstack-dashboard/openstack_dashboard/enabled/_99_customization.*
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Mon Oct 04 2017 Radomir Dopieralski <rdopiera@redhat.com> 1:12.0.0-2

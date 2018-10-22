@@ -32,6 +32,8 @@ Summary:          Python API and CLI for OpenStack Glance
 %{?python_provide:%python_provide python2-glanceclient}
 
 BuildRequires:    python2-devel
+BuildRequires:    python2-pip
+BuildRequires:    python2-wheel
 BuildRequires:    python-setuptools
 BuildRequires:    python-pbr
 
@@ -110,6 +112,7 @@ rm -rf test-requirements.txt
 %build
 export PBR_VERSION=%{version}
 %py2_build
+%py2_build_wheel
 %if 0%{?with_python3}
 %py3_build
 %endif
@@ -134,6 +137,9 @@ mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d
 install -pm 644 tools/glance.bash_completion \
     %{buildroot}%{_sysconfdir}/bash_completion.d/glance
 install -p -D -m 500 %{SOURCE1} %{buildroot}/sbin/image-backup
+
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Delete tests
 rm -fr %{buildroot}%{python2_sitelib}/glanceclient/tests
@@ -180,6 +186,15 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --e
 
 %files sdk
 /usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Fri Aug 11 2017 Alfredo Moralejo <amoralej@redhat.com> 1:2.8.0-1

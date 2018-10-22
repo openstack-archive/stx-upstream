@@ -20,6 +20,8 @@ BuildRequires: git
 BuildRequires: python2-devel
 BuildRequires: python-pbr
 BuildRequires: python-setuptools
+BuildRequires: python2-pip
+BuildRequires: python2-wheel
 BuildRequires: python-werkzeug
 BuildRequires: systemd-units
 # Required for config file generation
@@ -230,10 +232,13 @@ find contrib -name tests -type d | xargs rm -rf
 %build
 export PBR_VERSION=%{version}
 %{__python2} setup.py build
+%py2_build_wheel
 
 %install
 export PBR_VERSION=%{version}
 %{__python2} setup.py install -O1 --skip-build --root=%{buildroot}
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Create fake egg-info for the tempest plugin
 %py2_entrypoint %{service} %{service}
@@ -316,6 +321,15 @@ exit 0
 %license LICENSE
 %{python2_sitelib}/%{service}/tests
 %{python2_sitelib}/%{service}_tests.egg-info
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Mon Aug 28 2017 rdo-trunk <javier.pena@redhat.com> 5.0.1-1

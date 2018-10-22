@@ -28,6 +28,8 @@ BuildRequires:  python-openvswitch
 BuildRequires:  python-pbr
 BuildRequires:  python-reno
 BuildRequires:  python-setuptools
+BuildRequires:  python2-pip
+BuildRequires:  python2-wheel
 BuildRequires:  python-sphinx
 BuildRequires:  python-subunit
 BuildRequires:  python-testrepository
@@ -107,9 +109,13 @@ export PBR_VERSION=%{version}
 # remove the sphinx-build leftovers
 rm -rf html/.{doctrees,buildinfo}
 
+%py2_build_wheel
+
 %install
 export PBR_VERSION=%{version}
 %py2_install
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 mkdir -p %{buildroot}%{_sysconfdir}/%{service}/policy.d
 mv %{buildroot}/usr/etc/neutron/networking_bgpvpn.conf %{buildroot}%{_sysconfdir}/%{service}/
@@ -150,6 +156,15 @@ ln -s %{_sysconfdir}/%{service}/networking_bgpvpn.conf %{buildroot}%{_datadir}/%
 %files -n python-%{pypi_name}-heat
 %license LICENSE
 %{python2_sitelib}/networking_bgpvpn_heat
+
+%package wheels
+Summary: %{module_name} wheels
+
+%description wheels
+Contains python wheels for %{module_name}
+
+%files wheels
+/wheels/*
 
 %changelog
 * Mon Mar 13 2017 Matt Peters <matt.peters@windriver.com> 5.0.0-0
