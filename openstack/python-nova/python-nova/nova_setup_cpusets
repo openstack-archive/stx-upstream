@@ -58,6 +58,8 @@ errlog()
 
 start()
 {
+    set -euo pipefail
+
     # Do not continue if the host has not been configured. We can't do
     # anything until the nova.conf file has been updated.
     if [ ! -f ${INITIAL_COMPUTE_CONFIG_COMPLETE} ]
@@ -66,43 +68,37 @@ start()
         exit 0
     fi
 
-    mkdir -p /dev/cpuset
+    # Configure cpuset mount
+    CPUSET=/sys/fs/cgroup/cpuset
+    CPUS='cpuset.cpus'
+    MEMS='cpuset.mems'
+    mkdir -p ${CPUSET}
     if [ $? -ne 0 ]; then
-        errlog "unable to create /dev/cpuset"
+        errlog "unable to create ${CPUSET}"
         exit 1
     fi
 
-    if ! mountpoint -q /dev/cpuset
+    if ! mountpoint -q ${CPUSET}
     then
-        mount -t cpuset none /dev/cpuset
+        mount -t cpuset none ${CPUSET}
         if [ $? -ne 0 ]; then
-            errlog "unable to mount /dev/cpuset"
+            errlog "unable to mount ${CPUSET}"
             exit 1
         fi
             
     fi
 
-    # Figure out whether to use WRL or CentOS naming
-    if [ -f /dev/cpuset/cpuset.cpus ]
-    then
-        CPUS='cpuset.cpus'
-        MEMS='cpuset.mems'
-    else
-        CPUS='cpus'
-        MEMS='mems'
-    fi
-
     # Make the global "floating" cpuset
-    mkdir -p /dev/cpuset/floating
+    mkdir -p ${CPUSET}/floating
     if [ $? -ne 0 ]; then
         errlog "unable to create 'floating' cpuset"
         exit 1
     fi
 
     # Assign the full set of NUMA nodes to the global floating nodeset
-    MEMNODES=$(cat /dev/cpuset/${MEMS})
+    MEMNODES=$(cat ${CPUSET}/${MEMS})
     log "Assign nodes ${MEMNODES} to floating/${MEMS}"
-    cp /dev/cpuset/${MEMS} /dev/cpuset/floating/${MEMS}
+    cp ${CPUSET}/${MEMS} ${CPUSET}/floating/${MEMS}
     if [ $? -ne 0 ]; then
         errlog "unable to write to floating/${MEMS}"
     fi
@@ -111,20 +107,21 @@ start()
     VCPU_PIN_STR=$(grep vcpu_pin_set /etc/nova/nova.conf)
     VCPU_PIN_STR=${VCPU_PIN_STR//\"/}
     FLOAT_CPUS=${VCPU_PIN_STR##*=}
+
     log "Assign cpus ${FLOAT_CPUS} to floating/${CPUS}"
-    /bin/echo $FLOAT_CPUS > /dev/cpuset/floating/${CPUS}
+    /bin/echo $FLOAT_CPUS > ${CPUSET}/floating/${CPUS}
     if [ $? -ne 0 ]; then
         errlog "unable to write to floating/${CPUS}"
     fi
 
     # Set ownership/permissions on the cpus/tasks files
-    chown nova.nova /dev/cpuset/floating/${CPUS} /dev/cpuset/floating/tasks
-    chmod 644 /dev/cpuset/floating/${CPUS} /dev/cpuset/floating/tasks
+    chown nova.nova ${CPUSET}/floating/${CPUS} ${CPUSET}/floating/tasks
+    chmod 644 ${CPUSET}/floating/${CPUS} ${CPUSET}/floating/tasks
 
     # Now set up the per-NUMA-node cpusets
     cd /sys/devices/system/node/
-    NODES=`ls -d node*`
-    cd /dev/cpuset/floating
+    NODES=$(ls -d node*)
+    cd ${CPUSET}/floating
     for NODE in $NODES
     do
         NODENUM=${NODE#node}
@@ -138,7 +135,7 @@ start()
         # may span numa nodes. Default linux memory allocation policy is to
         # use the same node(s) where the task is affined if that is possible.
         log "Assign nodes ${MEMNODES} to floating/${NODE}/${MEMS}"
-        cp /dev/cpuset/${MEMS} ${NODE}/${MEMS}
+        cp ${CPUSET}/${MEMS} ${NODE}/${MEMS}
         if [ $? -ne 0 ]; then
             errlog "unable to write to ${NODE}/${MEMS}"
             continue
