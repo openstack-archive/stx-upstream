@@ -14,3 +14,4 @@
 1005-meta-US106901-Openstack-CLI-Adoption.patch
 1006-meta-patch-for-endpoint-groups.patch
 1007-Allow-setting-wrs-binding-vif_model-using-osclient.patch
+1008-Remove-wrs-binding-mac_filtering-and-setting-extensi.patch
