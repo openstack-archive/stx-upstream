@@ -180,3 +180,14 @@ openstack-swift-proxy
 
 # stx-ocf-scripts
 stx-ocf-scripts
+
+# openstack-barbican
+openstack-barbican
+openstack-barbican-api
+openstack-barbican-common
+openstack-barbican-keystone-listener
+openstack-barbican-worker
+puppet-barbican
+python-barbican
+python2-barbicanclient
+python-ldap3
