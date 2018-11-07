@@ -50,5 +50,3 @@ openstack/python-wsme
 openstack/distributedcloud
 openstack/distributedcloud-client
 openstack/stx-ocf-scripts
-openstack/openstack-helm
-openstack/openstack-helm-infra
