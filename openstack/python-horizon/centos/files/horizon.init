@@ -99,6 +99,10 @@ start()
             fi
         fi
     fi
+
+    # As part of starting horizon we should kill containerized horizon so that it
+    # will pickup branding changes
+    kubectl --kubeconfig=/etc/kubernetes/admin.conf delete pods -n openstack -l application=horizon 1>/dev/null
 }
 
 stop()
