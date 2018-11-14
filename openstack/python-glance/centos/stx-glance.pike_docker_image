@@ -1,0 +1,8 @@
+BUILDER=loci
+LABEL=stx-glance
+PROJECT=glance
+PROJECT_REPO=https://github.com/starlingx-staging/stx-glance.git
+PIP_PACKAGES="pycrypto python-swiftclient psutil pylint fm_api fm_core"
+DIST_PACKAGES="postgresql-libs fm-common"
+PROFILES="fluent glance ceph"
+
