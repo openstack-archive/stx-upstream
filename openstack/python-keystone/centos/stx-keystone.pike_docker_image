@@ -1,0 +1,7 @@
+BUILDER=loci
+LABEL=stx-keystone
+PROJECT=keystone
+PROJECT_REPO=https://github.com/starlingx-staging/stx-keystone.git
+PIP_PACKAGES="python-openstackclient ldap ldappool python-ldap pylint"
+PROFILES="fluent apache"
+

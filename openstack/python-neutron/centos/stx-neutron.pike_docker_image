@@ -1,0 +1,8 @@
+BUILDER=loci
+LABEL=stx-neutron
+PROJECT=neutron
+PROJECT_REPO=https://github.com/starlingx-staging/stx-neutron.git
+PIP_PACKAGES="networking-sfc pycrypto tsconfig fm_api fm_core cgtsclient pylint tinyrpc lxml neutron==11.0.0"
+DIST_PACKAGES="ethtool lshw"
+PROFILES="fluent neutron linuxbridge openvswitch"
+

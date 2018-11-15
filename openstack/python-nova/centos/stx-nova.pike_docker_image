@@ -1,0 +1,9 @@
+BUILDER=loci
+LABEL=stx-nova
+PROJECT=nova
+PROJECT_REPO=https://github.com/starlingx-staging/stx-nova.git
+PIP_PACKAGES="pycrypto tsconfig cgtsclient httplib2 pylint"
+DIST_PACKAGES="openssh-clients openssh-server libvirt "
+PROFILES="fluent nova ceph linuxbridge openvswitch configdrive qemu apache"
+
+

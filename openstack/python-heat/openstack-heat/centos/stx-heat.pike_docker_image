@@ -1,0 +1,7 @@
+BUILDER=loci
+LABEL=stx-heat
+PROJECT=heat
+PROJECT_REPO=https://github.com/starlingx-staging/stx-heat.git
+PIP_PACKAGES="pycrypto pylint"
+PROFILES="fluent heat apache"
+

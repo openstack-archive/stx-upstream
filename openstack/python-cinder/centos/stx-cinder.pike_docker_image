@@ -1,0 +1,7 @@
+BUILDER=loci
+LABEL=stx-cinder
+PROJECT=cinder
+PROJECT_REPO=https://github.com/starlingx-staging/stx-cinder.git
+PIP_PACKAGES="pycrypto python-swiftclient pylint"
+PROFILES="fluent cinder lvm ceph qemu"
+
