@@ -187,7 +187,7 @@ RABBITMQ_PID_FILE=$OCF_RESKEY_pid_file
 [ ! -z $RABBITMQ_NODENAME ]            && export RABBITMQ_NODENAME
 
 #
-# Make sure a HOME directory is set and exported for rabbitmqctl 
+# Make sure a HOME directory is set and exported for rabbitmqctl
 # to work, otherwise an error "erlexec: HOME must be set" will
 # result.  Erlang exec requires a HOME directory to be set.
 # Rabbit-Server will source a different directory from the config
