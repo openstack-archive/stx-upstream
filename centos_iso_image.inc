@@ -160,8 +160,8 @@ python-panko
 openstack-panko-api
 openstack-panko-common
 
-# rabbitmq-server
-rabbitmq-server
+# rabbitmq-server-config
+rabbitmq-server-config
 
 # python-openstackclient
 python2-openstackclient
