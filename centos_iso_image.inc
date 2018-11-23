@@ -162,6 +162,7 @@ openstack-panko-common
 
 # rabbitmq-server
 rabbitmq-server
+rabbitmq-server-config
 
 # python-openstackclient
 python2-openstackclient

@@ -41,6 +41,7 @@ openstack/python-oslo-concurrency
 openstack/python-oslo-service
 openstack/python-oslo-messaging
 openstack/rabbitmq-server
+openstack/rabbitmq-server-config
 openstack/python-keystoneauth1
 openstack/python-openstackclient
 openstack/python-osc-lib

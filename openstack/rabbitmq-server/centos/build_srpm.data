@@ -1,3 +1,2 @@
-COPY_LIST="rabbitmq-server/rabbitmq-server.ocf centos/patches/*"
-TIS_PATCH_VER=6
+TIS_PATCH_VER=7
 BUILD_IS_SLOW=3
