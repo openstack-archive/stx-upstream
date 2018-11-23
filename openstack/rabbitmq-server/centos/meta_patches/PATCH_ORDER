@@ -1,6 +1,2 @@
-spec-comments-for-ocf.patch
-packstack-fixes.patch
-Allow-rabbitmqctl-to-run-as-root.patch
 0001-Update-package-versioning-for-TIS-format.patch
-Set-root-home-for-rabbitmqctl.patch
-0006-Update-rabbitmq-server.logrotate.patch
+Allow-rabbitmqctl-to-run-as-root-and-set-root-home.patch
