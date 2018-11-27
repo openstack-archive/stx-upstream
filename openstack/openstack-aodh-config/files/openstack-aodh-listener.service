@@ -1,0 +1,11 @@
+[Unit]
+Description=OpenStack Alarm listener service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/aodh-listener
+
+[Install]
+WantedBy=multi-user.target
