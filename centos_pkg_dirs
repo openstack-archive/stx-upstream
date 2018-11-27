@@ -1,4 +1,5 @@
 openstack/openstack-aodh
+openstack/openstack-aodh-config
 openstack/openstack-murano
 openstack/python-muranoclient
 openstack/openstack-murano-ui

@@ -1,0 +1,11 @@
+[Unit]
+Description=OpenStack Alarm evaluator service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/aodh-evaluator
+
+[Install]
+WantedBy=multi-user.target
