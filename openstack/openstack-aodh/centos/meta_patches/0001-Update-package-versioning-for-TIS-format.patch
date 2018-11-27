@@ -3,14 +3,13 @@ From: Scott Little <scott.little@windriver.com>
 Date: Mon, 2 Oct 2017 14:28:46 -0400
 Subject: [PATCH 2/6] WRS: 0001-Update-package-versioning-for-TIS-format.patch
 
-Conflicts:
-	SPECS/openstack-aodh.spec
+Signed-off-by: zhipengl <zhipengs.liu@intel.com>
 ---
  SPECS/openstack-aodh.spec | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/SPECS/openstack-aodh.spec b/SPECS/openstack-aodh.spec
-index cac691f..4e626d3 100644
+index 9fffb3c..01615e7 100644
 --- a/SPECS/openstack-aodh.spec
 +++ b/SPECS/openstack-aodh.spec
 @@ -4,7 +4,7 @@
@@ -23,5 +22,5 @@ index cac691f..4e626d3 100644
  License:          ASL 2.0
  URL:              https://github.com/openstack/aodh.git
 -- 
-2.7.4
+1.8.3.1
 

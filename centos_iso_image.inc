@@ -154,6 +154,7 @@ openstack-aodh-evaluator
 openstack-aodh-notifier
 openstack-aodh-listener
 openstack-aodh-expirer
+openstack-aodh-config
 
 # openstack-panko
 python-panko

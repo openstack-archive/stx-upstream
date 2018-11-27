@@ -1,0 +1,61 @@
+#!/bin/bash
+
+#
+# Wrapper script to run aodh-expirer when on active controller only
+#
+AODH_EXPIRER_INFO="/var/run/aodh-expirer.info"
+AODH_EXPIRER_CMD="/usr/bin/nice -n 2 /usr/bin/aodh-expirer"
+
+function is_active_pgserver()
+{
+    # Determine whether we're running on the same controller as the service.
+    local service=postgres
+    local enabledactive=$(/usr/bin/sm-query service $service| grep enabled-active)
+    if [ "x$enabledactive" == "x" ]
+    then
+        # enabled-active not found for that service on this controller
+        return 1
+    else
+        # enabled-active found for that resource
+        return 0
+    fi
+}
+
+if is_active_pgserver
+then
+    if [ ! -f ${AODH_EXPIRER_INFO} ]
+    then
+        echo delay_count=0 > ${AODH_EXPIRER_INFO}
+    fi
+
+    source ${AODH_EXPIRER_INFO}
+    sudo -u postgres psql -d sysinv -c "SELECT alarm_id, entity_instance_id from i_alarm;" | grep -P "^(?=.*100.101)(?=.*${HOSTNAME})" &>/dev/null
+    if [ $? -eq 0 ]
+    then
+        source /etc/platform/platform.conf
+        if [ "${system_type}" = "All-in-one" ]
+        then
+            source /etc/init.d/task_affinity_functions.sh
+            idle_core=$(get_most_idle_core)
+            if [ "$idle_core" -ne "0" ]
+            then
+                sh -c "exec taskset -c $idle_core ${AODH_EXPIRER_CMD}"
+                sed -i "/delay_count/s/=.*/=0/" ${AODH_EXPIRER_INFO}
+                exit 0
+            fi
+        fi
+
+        if [ "$delay_count" -lt "3" ]
+        then
+            newval=$(($delay_count+1))
+            sed -i "/delay_count/s/=.*/=$newval/" ${AODH_EXPIRER_INFO}
+           (sleep 3600; /usr/bin/aodh-expirer-active) &
+            exit 0
+        fi
+    fi
+
+    eval ${AODH_EXPIRER_CMD}
+    sed -i "/delay_count/s/=.*/=0/" ${AODH_EXPIRER_INFO}
+fi
+
+exit 0
