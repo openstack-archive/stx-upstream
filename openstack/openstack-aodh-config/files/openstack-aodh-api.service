@@ -1,0 +1,11 @@
+[Unit]
+Description=OpenStack Alarm API service
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/bin/python /usr/bin/gunicorn --config /usr/share/aodh/aodh-api.conf --pythonpath /usr/share/aodh aodh-api
+
+[Install]
+WantedBy=multi-user.target
