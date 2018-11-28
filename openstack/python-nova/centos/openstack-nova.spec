@@ -65,8 +65,6 @@ Source62:         nova-purge-deleted-active
 Source63:         nova_setup_cpusets
 Source64:         openstack-nova-compute-setup.service
 Source65:         nova-compute.init
-Source66:         nova_clean_thinpool
-Source67:         nova-clean-thinpool.service
 Source68:         nova-restart
 Source69:         kvm_timer_advance_setup.service
 Source70:         nova_setup_timer_advance
@@ -586,7 +584,6 @@ install -p -D -m 644 %{SOURCE29} %{buildroot}%{_unitdir}/openstack-nova-novncpro
 install -p -D -m 644 %{SOURCE31} %{buildroot}%{_unitdir}/openstack-nova-serialproxy.service
 install -p -D -m 644 %{SOURCE32} %{buildroot}%{_unitdir}/openstack-nova-os-compute-api.service
 install -p -D -m 644 %{SOURCE64} %{buildroot}%{_unitdir}/openstack-nova-compute-setup.service
-install -p -D -m 644 %{SOURCE67} %{buildroot}%{_unitdir}/nova-clean-thinpool.service
 install -p -D -m 644 %{SOURCE69} %{buildroot}%{_unitdir}/kvm_timer_advance_setup.service
 
 # Install sudoers
@@ -627,7 +624,6 @@ install -p -D -m 755 %{SOURCE60} %{buildroot}%{_bindir}/nova_authorized_cmds
 install -p -D -m 755 %{SOURCE62} %{buildroot}%{_bindir}/nova-purge-deleted-active
 install -p -D -m 755 %{SOURCE63} %{buildroot}%{_bindir}/d_nova_setup_cpusets
 install -p -D -m 755 %{SOURCE65} %{buildroot}%{_sysconfdir}/rc.d/init.d/nova-compute 
-install -p -D -m 755 %{SOURCE66} %{buildroot}%{_bindir}/nova_clean_thinpool
 install -p -D -m 755 %{SOURCE68} %{buildroot}%{_bindir}/nova-restart
 install -p -D -m 755 %{SOURCE70} %{buildroot}%{_bindir}/nova_setup_timer_advance
 install -p -D -m 755 %{SOURCE71} %{buildroot}%{_bindir}/nova-pci-interrupts
@@ -685,7 +681,6 @@ exit 0
 %post compute
 %systemd_post %{name}-compute.service
 /usr/bin/systemctl enable %{name}-compute-setup.service
-/usr/bin/systemctl enable nova-clean-thinpool.service
 /usr/bin/systemctl enable kvm_timer_advance_setup.service
 %post network
 %systemd_post %{name}-network.service
@@ -710,7 +705,6 @@ exit 0
 %systemd_preun %{name}-compute.service
 if [ $1 -eq 0 ] ; then 
   # Package removal, not upgrade 
-  /usr/bin/systemctl disable nova-clean-thinpool.service
   /usr/bin/systemctl disable %{name}-compute-setup.service
   /usr/bin/systemctl disable kvm_timer_advance_setup.service
 fi
@@ -798,11 +792,9 @@ fi
 %{_unitdir}/nova-compute.service
 %{_datarootdir}/nova/rootwrap/compute.filters
 %{_bindir}/nova_authorized_cmds
-%{_unitdir}/nova-clean-thinpool.service
 %{_unitdir}/openstack-nova-compute-setup.service
 %{_bindir}/d_nova_setup_cpusets
 %{_sysconfdir}/rc.d/init.d/nova-compute
-%{_bindir}/nova_clean_thinpool
 %{_unitdir}/kvm_timer_advance_setup.service
 %{_bindir}/nova_setup_timer_advance
 %{_bindir}/nova-pci-interrupts
