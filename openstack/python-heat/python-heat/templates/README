@@ -1,4 +1,4 @@
-Copyright © 2014-2017 Wind River Systems, Inc.
+Copyright © 2014-2018 Wind River Systems, Inc.
 
 SPDX-License-Identifier: Apache-2.0
 -----------------------------------------------------------------------
@@ -123,10 +123,6 @@ the hot/simple/ directory, in a YAML file named after the heat resource.
     WR_Neutron_ProviderNetRange.yaml    - Creates a segment id range for a Provider Network; 
                                           specifying the providerNet, and the min and max values 
                                           of the segment id range.
-    WR_Neutron_QoSPolicy.yaml           - Creates a Neutron QoS Policy which specifies a packet 
-                                          scheduling weight. This QoS Policy can be referenced 
-                                          by a Tenant Network to modify the scheduling weight of 
-                                          AVS ingress traffic from VMs for this Tenant Network.
 
 
 
