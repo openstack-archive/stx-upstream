@@ -456,7 +456,9 @@ DROPDOWN_MAX_ITEMS = 30
 
 # The timezone of the server. This should correspond with the timezone
 # of your entire OpenStack installation, and hopefully be in UTC.
-TIME_ZONE = "UTC"
+# In this case, we set the value to None so that the interface uses the system
+# timezone by default
+TIME_ZONE = None
 
 # When launching an instance, the menu of available flavors is
 # sorted by RAM usage, ascending. If you would like a different sort order,
