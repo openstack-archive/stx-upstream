@@ -1,0 +1,8 @@
+BUILDER=loci
+LABEL=stx-neutron
+PROJECT=neutron
+PROJECT_REPO=https://github.com/openstack/neutron.git
+PIP_PACKAGES="networking-sfc pycrypto pylint tinyrpc lxml"
+DIST_PACKAGES="ethtool lshw"
+PROFILES="fluent neutron linuxbridge openvswitch"
+

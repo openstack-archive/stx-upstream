@@ -1,0 +1,7 @@
+BUILDER=loci
+LABEL=stx-panko
+PROJECT=panko
+PROJECT_REPO=https://github.com/openstack/panko.git
+PIP_PACKAGES="pylint python-openstackclient pankoclient"
+PROFILES="apache"
+
