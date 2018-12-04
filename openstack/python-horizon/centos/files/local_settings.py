@@ -1200,3 +1200,11 @@ SESSION_TIMEOUT = 3000
 # token expiry to log users out. If the token expires in 60 minutes, a
 # value of 600 will log users out after 50 minutes.
 TOKEN_TIMEOUT_MARGIN = 600
+
+# The timezone of the server. This should correspond with the timezone
+# of your entire OpenStack installation, and hopefully be in UTC.
+# In this case, we set the value to None so that the interface uses the system
+# timezone by default
+# This is an intentional overwrite of the original default value defined
+# above in this file.
+TIME_ZONE = None
