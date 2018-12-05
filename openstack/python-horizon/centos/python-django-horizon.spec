@@ -454,7 +454,6 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %{_datadir}/openstack-dashboard/openstack_dashboard/static
 %{_datadir}/openstack-dashboard/openstack_dashboard/templates
 %{_datadir}/openstack-dashboard/openstack_dashboard/templatetags
-%{_datadir}/openstack-dashboard/openstack_dashboard/themes
 %{_datadir}/openstack-dashboard/openstack_dashboard/test
 %{_datadir}/openstack-dashboard/openstack_dashboard/usage
 %{_datadir}/openstack-dashboard/openstack_dashboard/utils
