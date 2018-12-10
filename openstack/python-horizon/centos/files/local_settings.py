@@ -986,9 +986,9 @@ SITE_BRANDING = "StarlingX"
 AVAILABLE_THEMES = [
     ('default', 'Default', 'themes/default'),
     ('material', 'Material', 'themes/material'),
-    ('titanium', 'Titanium', 'themes/titanium'),
+    ('starlingx', 'StarlingX', 'themes/starlingx'),
 ]
-DEFAULT_THEME = 'titanium'
+DEFAULT_THEME = 'starlingx'
 
 for root, dirs, files in os.walk('/opt/branding/applied'):
     if 'manifest.py' in files:
@@ -999,7 +999,7 @@ for root, dirs, files in os.walk('/opt/branding/applied'):
         AVAILABLE_THEMES = [
             ('default', 'Default', 'themes/default'),
             ('material', 'Material', 'themes/material'),
-            ('titanium', 'Titanium', 'themes/titanium'),
+            ('starlingx', 'StarlingX', 'themes/starlingx'),
             ('custom', 'Custom', '/opt/branding/applied'),
         ]
         DEFAULT_THEME = 'custom'
