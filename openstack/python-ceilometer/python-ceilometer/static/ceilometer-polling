@@ -28,16 +28,16 @@ start()
     fi
 
     . $PLATFORM_CONF_FILE
-    if [[ "$nodetype" == "compute" || "$subfunction" == *"compute"* ]] ; then
-        if [ ! -f $VOLATILE_COMPUTE_CONFIG_COMPLETE ]; then
+    if [[ "$nodetype" == "worker" || "$subfunction" == *"worker"* ]] ; then
+        if [ ! -f $VOLATILE_WORKER_CONFIG_COMPLETE ]; then
             # Do not start polling until compute manifests have been applied
-            echo "Waiting for $VOLATILE_COMPUTE_CONFIG_COMPLETE"
+            echo "Waiting for $VOLATILE_WORKER_CONFIG_COMPLETE"
             exit 0
-        elif [ -f $VOLATILE_DISABLE_COMPUTE_SERVICES ]; then
+        elif [ -f $VOLATILE_DISABLE_WORKER_SERVICES ]; then
             # Do not start polling if compute services are disabled. This can
             # happen during an upgrade when controller-1 is running a newer
             # load than controller-0.
-            echo "Waiting for $VOLATILE_DISABLE_COMPUTE_SERVICES"
+            echo "Waiting for $VOLATILE_DISABLE_WORKER_SERVICES"
             exit 0
         fi
     fi
