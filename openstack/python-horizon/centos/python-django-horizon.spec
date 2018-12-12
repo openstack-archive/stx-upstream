@@ -22,10 +22,9 @@ Source4:    openstack-dashboard-httpd-logging.conf
 # logrotate config
 Source5:    python-django-horizon-logrotate.conf
 
-# WRS
+# STX 
 Source7:    horizon.init
 Source8:    horizon-clearsessions
-Source10:   local_settings.py
 Source11:   horizon-patching-restart
 Source12:   horizon-region-exclusions.csv
 Source13:   guni_config.py
@@ -40,7 +39,7 @@ BuildArch:  noarch
 BuildRequires:   python-django
 Requires:   python-django
 
-# WRS
+# STX 
 BuildRequires: cgts-client
 Requires: cgts-client
 
@@ -204,7 +203,7 @@ BuildRequires: python-pint
 
 BuildRequires: pytz
 BuildRequires: systemd
-# WRS
+# STX 
 BuildRequires: systemd-devel
 
 %description -n openstack-dashboard
@@ -214,7 +213,7 @@ mostly consisting of JavaScript and CSS to tie it altogether as a standalone
 site.
 
 
-# Turn OFF sphinx documentation in WRS environment
+# Turn OFF sphinx documentation in STX environment
 # Mock does not have /dev/log so sphinx-build will always fail
 %if 0%{?with_doc}
 %package doc
@@ -249,14 +248,12 @@ Customization module for OpenStack Dashboard to provide a branded logo.
 %prep
 %autosetup -n horizon-%{upstream_version} -S git
 
-# WRS remove troublesome files introduced by tox
+# STX remove troublesome files introduced by tox
 rm -f openstack_dashboard/test/.secret_key_store
 rm -f openstack_dashboard/test/*.secret_key_store.lock
 rm -f openstack_dashboard/local/.secret_key_store
 rm -f openstack_dashboard/local/*.secret_key_store.lock
 rm -rf horizon.egg-info
-
-cp %{SOURCE10} openstack_dashboard/local/local_settings.py
 
 # drop config snippet
 cp -p %{SOURCE4} .
@@ -276,7 +273,7 @@ sed -i "/^COMPRESS_PARSER = .*/a COMPRESS_OFFLINE = True" openstack_dashboard/se
 # set COMPRESS_OFFLINE=True
 sed -i 's:COMPRESS_OFFLINE.=.False:COMPRESS_OFFLINE = True:' openstack_dashboard/settings.py
 
-# WRS: MANIFEST needs .eslintrc files for angular
+# STX: MANIFEST needs .eslintrc files for angular
 echo "include .eslintrc"   >> MANIFEST.in
 # MANIFEST needs to include json and pot files under openstack_dashboard 
 echo "recursive-include openstack_dashboard *.json *.pot .eslintrc"   >> MANIFEST.in
@@ -294,17 +291,17 @@ cd openstack_dashboard && django-admin compilemessages && cd ..
 # Further reading why not remove upstream egg metadata:
 # https://github.com/emonty/python-oslo-messaging/commit/f632684eb2d582253601e8da7ffdb8e55396e924
 # https://fedorahosted.org/fpc/ticket/488
-# WRS: 2 problems.  1  we dont have an egg yet.  2 there are no .mo files
+# STX: 2 problems.  1  we dont have an egg yet.  2 there are no .mo files
 #echo >> horizon.egg-info/SOURCES.txt
 #ls */locale/*/LC_MESSAGES/django*mo >> horizon.egg-info/SOURCES.txt
 export PBR_VERSION=%{version}
 %{__python} setup.py build
 
-# WRS: package our own local_setting.py and run compression on the controller
 # compress css, js etc.
-#cp openstack_dashboard/local/local_settings.py.example openstack_dashboard/local/local_settings.py
+cp openstack_dashboard/local/local_settings.py.example openstack_dashboard/local/local_settings.py
 # get it ready for compressing later in puppet-horizon
-# WRS turn off compression because /dev/log does not exist in mock
+# STX: run compression on the controller
+# STX: turn off compression because /dev/log does not exist in mock
 #%{__python} manage.py collectstatic --noinput --clear
 #%{__python} manage.py compress --force
 
@@ -315,7 +312,7 @@ export PYTHONPATH="$( pwd ):$PYTHONPATH"
 sphinx-build -b html doc/source html
 
 # undo hack
-#cp openstack_dashboard/local/local_settings.py.example openstack_dashboard/local/local_settings.py
+cp openstack_dashboard/local/local_settings.py.example openstack_dashboard/local/local_settings.py
 
 # Fix hidden-file-or-dir warnings
 rm -fr html/.doctrees html/.buildinfo
@@ -330,7 +327,7 @@ export PBR_VERSION=%{version}
 mkdir -p $RPM_BUILD_ROOT/wheels
 install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
-# WRS
+# STX
 install -d -m 755 %{buildroot}/opt/branding
 mkdir -p %{buildroot}%{_sysconfdir}/rc.d/init.d
 install -m 755 -D -p  %{SOURCE7} %{buildroot}%{_sysconfdir}/rc.d/init.d/horizon
@@ -354,7 +351,7 @@ cp %{SOURCE3} %{buildroot}%{_unitdir}/httpd.service.d/openstack-dashboard.conf
 mv %{buildroot}%{python_sitelib}/openstack_dashboard \
    %{buildroot}%{_datadir}/openstack-dashboard
 cp manage.py %{buildroot}%{_datadir}/openstack-dashboard
-# WRS
+# STX
 cp guni_config.py %{buildroot}%{_datadir}/openstack-dashboard
 rm -rf %{buildroot}%{python_sitelib}/openstack_dashboard
 
@@ -364,6 +361,7 @@ find %{buildroot} -name djangojs.po -exec rm '{}' \;
 
 # Move config to /etc, symlink it back to /usr/share
 mv %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/local/local_settings.py.example %{buildroot}%{_sysconfdir}/openstack-dashboard/local_settings
+# STX: we do not want to have this symlink, puppet will overwrite the content of local_settings
 #ln -s ../../../../../%{_sysconfdir}/openstack-dashboard/local_settings %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/local/local_settings.py
 
 mv %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/conf/*.json %{buildroot}%{_sysconfdir}/openstack-dashboard
@@ -377,7 +375,7 @@ grep "\/site-packages\/horizon" django.lang > horizon.lang
 mkdir -p %{buildroot}%{_datadir}/openstack-dashboard/static
 cp -a openstack_dashboard/static/* %{buildroot}%{_datadir}/openstack-dashboard/static
 cp -a horizon/static/* %{buildroot}%{_datadir}/openstack-dashboard/static
-# WRS: there is no static folder, since compress step was skipped
+# STX: there is no static folder, since compress step was skipped
 #cp -a static/* %{buildroot}%{_datadir}/openstack-dashboard/static
 
 # create /var/run/openstack-dashboard/ and own it
@@ -444,7 +442,7 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %{_datadir}/openstack-dashboard/openstack_dashboard/dashboards/identity
 %{_datadir}/openstack-dashboard/openstack_dashboard/dashboards/project
 %{_datadir}/openstack-dashboard/openstack_dashboard/dashboards/settings
-# WRS
+# STX
 %{_datadir}/openstack-dashboard/openstack_dashboard/dashboards/__init__.py*
 %{_datadir}/openstack-dashboard/openstack_dashboard/django_pyscss_fix
 %{_datadir}/openstack-dashboard/openstack_dashboard/enabled
@@ -482,7 +480,7 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %attr(755,root,root) %dir %{_unitdir}/httpd.service.d
 %config(noreplace) %{_unitdir}/httpd.service.d/openstack-dashboard.conf
 
-# WRS
+# STX
 %dir /opt/branding
 %config(noreplace) /opt/branding/horizon-region-exclusions.csv
 %{_sysconfdir}/rc.d/init.d/horizon
