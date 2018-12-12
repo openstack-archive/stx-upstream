@@ -25,7 +25,6 @@ Source5:    python-django-horizon-logrotate.conf
 # WRS
 Source7:    horizon.init
 Source8:    horizon-clearsessions
-Source10:   local_settings.py
 Source11:   horizon-patching-restart
 Source12:   horizon-region-exclusions.csv
 Source13:   guni_config.py
@@ -256,8 +255,6 @@ rm -f openstack_dashboard/local/.secret_key_store
 rm -f openstack_dashboard/local/*.secret_key_store.lock
 rm -rf horizon.egg-info
 
-cp %{SOURCE10} openstack_dashboard/local/local_settings.py
-
 # drop config snippet
 cp -p %{SOURCE4} .
 cp -p %{SOURCE13} .
@@ -300,11 +297,11 @@ cd openstack_dashboard && django-admin compilemessages && cd ..
 export PBR_VERSION=%{version}
 %{__python} setup.py build
 
-# WRS: package our own local_setting.py and run compression on the controller
 # compress css, js etc.
-#cp openstack_dashboard/local/local_settings.py.example openstack_dashboard/local/local_settings.py
+cp openstack_dashboard/local/local_settings.py.example openstack_dashboard/local/local_settings.py
 # get it ready for compressing later in puppet-horizon
-# WRS turn off compression because /dev/log does not exist in mock
+# WRS: run compression on the controller
+# WRS: turn off compression because /dev/log does not exist in mock
 #%{__python} manage.py collectstatic --noinput --clear
 #%{__python} manage.py compress --force
 
@@ -315,7 +312,7 @@ export PYTHONPATH="$( pwd ):$PYTHONPATH"
 sphinx-build -b html doc/source html
 
 # undo hack
-#cp openstack_dashboard/local/local_settings.py.example openstack_dashboard/local/local_settings.py
+cp openstack_dashboard/local/local_settings.py.example openstack_dashboard/local/local_settings.py
 
 # Fix hidden-file-or-dir warnings
 rm -fr html/.doctrees html/.buildinfo
@@ -364,6 +361,7 @@ find %{buildroot} -name djangojs.po -exec rm '{}' \;
 
 # Move config to /etc, symlink it back to /usr/share
 mv %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/local/local_settings.py.example %{buildroot}%{_sysconfdir}/openstack-dashboard/local_settings
+# WRS: we do not want to have this symlink, puppet will overwrite the content of local_settings
 #ln -s ../../../../../%{_sysconfdir}/openstack-dashboard/local_settings %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/local/local_settings.py
 
 mv %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/conf/*.json %{buildroot}%{_sysconfdir}/openstack-dashboard
