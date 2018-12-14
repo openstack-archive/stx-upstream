@@ -29,7 +29,7 @@ declare -i GLOBAL_RC=$PATCH_STATUS_OK
 #
 # Processes that run with compute subfunction
 #
-if is_compute || is_cpe
+if is_worker || is_cpe
 then
     processes_to_restart="nova-compute"
     /usr/local/sbin/patch-restart-processes nova-compute
