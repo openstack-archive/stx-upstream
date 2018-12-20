@@ -160,6 +160,7 @@ openstack-aodh-config
 python-panko
 openstack-panko-api
 openstack-panko-common
+openstack-panko-config
 
 # rabbitmq-server
 rabbitmq-server
