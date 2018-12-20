@@ -1,7 +1,7 @@
 [Unit]
 Description=OpenStack Nova Compute Server Pre-Startup
-After=syslog.target compute-config-gate.service
-Before=nova-compute.service goenabled-compute.service
+After=syslog.target worker-config-gate.service
+Before=nova-compute.service goenabled-worker.service
 
 [Service]
 Type=oneshot

@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# Copyright (c) 2013-2017 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
 
 
 # This script is intended to set up the cpusets for use by nova-compute.
-# It should only run on compute nodes, and it must be run after the
+# It should only run on worker nodes, and it must be run after the
 # /etc/nova/nova.conf file has been modified by packstack since it
 # extracts the "vcpu_pin_set" value from that file.
 #
@@ -62,9 +62,9 @@ start()
 
     # Do not continue if the host has not been configured. We can't do
     # anything until the nova.conf file has been updated.
-    if [ ! -f ${INITIAL_COMPUTE_CONFIG_COMPLETE} ]
+    if [ ! -f ${INITIAL_WORKER_CONFIG_COMPLETE} ]
     then
-        log "Initial compute configuration is not complete, nothing to do"
+        log "Initial worker configuration is not complete, nothing to do"
         exit 0
     fi
 

@@ -1,7 +1,7 @@
 [Unit]
 Description=KVM Timer Advance Setup
 After=openstack-nova-compute-setup.service
-Before=nova-compute.service goenabled-compute.service
+Before=nova-compute.service goenabled-worker.service
 
 [Service]
 Type=simple
