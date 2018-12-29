@@ -3,12 +3,15 @@ From: jmckenna <jason.mckenna@windriver.com>
 Date: Thu, 7 Dec 2017 09:12:43 -0500
 Subject: [PATCH] Disable check on build
 
+---
+ SPECS/python-oslo-messaging.spec | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/SPECS/python-oslo-messaging.spec b/SPECS/python-oslo-messaging.spec
 index 627a1be..648718a 100644
 --- a/SPECS/python-oslo-messaging.spec
 +++ b/SPECS/python-oslo-messaging.spec
-@@ -268,11 +268,11 @@ rm -fr doc/build/html/.buildinfo
+@@ -281,11 +281,11 @@ rm -fr doc/build/html/.buildinfo
  %check
  # Temporarily disabling tests until we have
  # mock >= 1.2 and pika_pool
