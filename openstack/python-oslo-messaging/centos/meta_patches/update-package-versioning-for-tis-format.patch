@@ -12,10 +12,10 @@ diff --git a/SPECS/python-oslo-messaging.spec b/SPECS/python-oslo-messaging.spec
 index 59562ac..929e8e0 100644
 --- a/SPECS/python-oslo-messaging.spec
 +++ b/SPECS/python-oslo-messaging.spec
-@@ -8,7 +8,7 @@
+@@ -11,7 +11,7 @@
  
  Name:       python-oslo-messaging
- Version:    5.30.0
+ Version:    5.30.6
 -Release:    1%{?dist}
 +Release:    1.el7%{?_tis_dist}.%{tis_patch_ver}
  Summary:    OpenStack common messaging library
