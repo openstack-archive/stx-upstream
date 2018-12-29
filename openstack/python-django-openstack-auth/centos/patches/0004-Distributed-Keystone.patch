@@ -24,7 +24,7 @@ diff --git a/openstack_auth/forms.py b/openstack_auth/forms.py
 index 90e281b..4834ab2 100644
 --- a/openstack_auth/forms.py
 +++ b/openstack_auth/forms.py
-@@ -153,10 +153,10 @@ class Login(django_auth_forms.AuthenticationForm):
+@@ -154,10 +154,10 @@ class Login(django_auth_forms.AuthenticationForm):
              # since this user logged in successfully, clear its
              # lockout status
              utils.clear_user_lockout(username)
