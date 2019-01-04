@@ -38,5 +38,8 @@ index 2c25c75..874e8a4 100644
 +/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
 +
  %changelog
- * Mon Aug 21 2017 Alfredo Moralejo <amoralej@redhat.com> 3.12.0-1
- - Update to 3.12.0
+ * Tue Apr 03 2018 RDO <dev@lists.rdoproject.org> 3.12.1-1
+ - Update to 3.12.1
+-- 
+1.8.3.1
+
