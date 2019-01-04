@@ -151,7 +151,7 @@ index c6e2161..551ed8e 100644
          parser.add_argument(
              '--policy',
              metavar='<policy>',
-@@ -66,17 +110,21 @@ class CreateServerGroup(command.ShowOne):
+@@ -67,17 +111,21 @@ class CreateServerGroup(command.ShowOne):
      def take_action(self, parsed_args):
          compute_client = self.app.client_manager.compute
          info = {}
@@ -175,7 +175,7 @@ index c6e2161..551ed8e 100644
  class DeleteServerGroup(command.Command):
      _description = _("Delete existing server group(s).")
  
-@@ -133,8 +181,13 @@ class ListServerGroup(command.Lister):
+@@ -134,8 +182,13 @@ class ListServerGroup(command.Lister):
  
      def take_action(self, parsed_args):
          compute_client = self.app.client_manager.compute
@@ -189,7 +189,7 @@ index c6e2161..551ed8e 100644
          if parsed_args.long:
              column_headers = columns = (
                  'ID',
-@@ -143,12 +196,14 @@ class ListServerGroup(command.Lister):
+@@ -144,12 +197,14 @@ class ListServerGroup(command.Lister):
                  'Members',
                  'Project Id',
                  'User Id',
@@ -204,7 +204,7 @@ index c6e2161..551ed8e 100644
              )
  
          return (column_headers,
-@@ -175,11 +230,43 @@ class ShowServerGroup(command.ShowOne):
+@@ -176,11 +231,43 @@ class ShowServerGroup(command.ShowOne):
  
      def take_action(self, parsed_args):
          compute_client = self.app.client_manager.compute

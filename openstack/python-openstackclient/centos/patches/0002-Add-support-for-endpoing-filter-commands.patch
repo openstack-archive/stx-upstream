@@ -590,7 +590,7 @@ diff --git a/setup.cfg b/setup.cfg
 index 1b8e006..d60657f 100644
 --- a/setup.cfg
 +++ b/setup.cfg
-@@ -195,12 +195,15 @@ openstack.identity.v3 =
+@@ -194,12 +194,15 @@ openstack.identity.v3 =
  	ec2_credentials_delete = openstackclient.identity.v3.ec2creds:DeleteEC2Creds
  	ec2_credentials_list = openstackclient.identity.v3.ec2creds:ListEC2Creds
  	ec2_credentials_show = openstackclient.identity.v3.ec2creds:ShowEC2Creds
