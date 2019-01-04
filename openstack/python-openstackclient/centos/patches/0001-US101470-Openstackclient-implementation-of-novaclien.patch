@@ -169,7 +169,7 @@ diff --git a/python_openstackclient.egg-info/SOURCES.txt b/python_openstackclien
 index 82dae1c..66b9513 100644
 --- a/python_openstackclient.egg-info/SOURCES.txt
 +++ b/python_openstackclient.egg-info/SOURCES.txt
-@@ -187,6 +187,8 @@ openstackclient/compute/v2/server_group.py
+@@ -188,6 +188,8 @@ openstackclient/compute/v2/server_group.py
  openstackclient/compute/v2/server_image.py
  openstackclient/compute/v2/service.py
  openstackclient/compute/v2/usage.py
@@ -178,7 +178,7 @@ index 82dae1c..66b9513 100644
  openstackclient/identity/__init__.py
  openstackclient/identity/client.py
  openstackclient/identity/common.py
-@@ -894,4 +896,4 @@ releasenotes/source/unreleased.rst
+@@ -900,4 +902,4 @@ releasenotes/source/unreleased.rst
  releasenotes/source/_static/.placeholder
  releasenotes/source/_templates/.placeholder
  tools/fast8.sh
