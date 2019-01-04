@@ -14,7 +14,7 @@ index 73a1c6f..7d6d32f 100644
 @@ -8,7 +8,7 @@
  
  Name:    python-heatclient
- Version: 1.11.0
+ Version: 1.11.1
 -Release: 1%{?dist}
 +Release: 1.el7%{?_tis_dist}.%{tis_patch_ver}
  Summary: Python API and CLI for OpenStack Heat
