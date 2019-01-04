@@ -27,7 +27,7 @@ index f2b20f1..9f2767f 100644
  
  from oslo_serialization import jsonutils
  from oslo_utils import encodeutils
-@@ -371,3 +379,43 @@ def get_response_body(resp):
+@@ -447,3 +455,43 @@ def get_response_body(resp):
      else:
          body = None
      return body
@@ -75,7 +75,7 @@ diff --git a/heatclient/v1/shell.py b/heatclient/v1/shell.py
 index ac4ecb9..d8c8324 100644
 --- a/heatclient/v1/shell.py
 +++ b/heatclient/v1/shell.py
-@@ -45,6 +45,7 @@ def show_deprecated(deprecated, recommended):
+@@ -43,6 +43,7 @@ def show_deprecated(deprecated, recommended):
                     )
  
  
@@ -83,7 +83,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('-f', '--template-file', metavar='<FILE>',
             help=_('Path to the template.'))
  @utils.arg('-e', '--environment-file', metavar='<FILE or URL>',
-@@ -414,6 +415,7 @@ def do_action_check(hc, args):
+@@ -412,6 +413,7 @@ def do_action_check(hc, args):
          do_stack_list(hc)
  
  
@@ -91,7 +91,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of stack to describe.'))
  @utils.arg('--no-resolve-outputs', action="store_true",
-@@ -592,6 +594,7 @@ def do_stack_cancel_update(hc, args):
+@@ -590,6 +592,7 @@ def do_stack_cancel_update(hc, args):
          do_stack_list(hc)
  
  
@@ -99,7 +99,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('-s', '--show-deleted', default=False, action="store_true",
             help=_('Include soft-deleted stacks in the stack listing.'))
  @utils.arg('-n', '--show-nested', default=False, action="store_true",
-@@ -695,6 +698,7 @@ def do_stack_list(hc, args=None):
+@@ -700,6 +703,7 @@ def do_stack_list(hc, args=None):
      utils.print_list(stacks, fields, sortby_index=sortby_index)
  
  
@@ -107,7 +107,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of stack to query.'))
  def do_output_list(hc, args):
-@@ -856,6 +860,7 @@ def do_resource_type_template(hc, args):
+@@ -861,6 +865,7 @@ def do_resource_type_template(hc, args):
              print(utils.format_output(template))
  
  
@@ -115,7 +115,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of stack to get the template for.'))
  def do_template_show(hc, args):
-@@ -929,6 +934,7 @@ def do_template_validate(hc, args):
+@@ -934,6 +939,7 @@ def do_template_validate(hc, args):
      print(jsonutils.dumps(validation, indent=2, ensure_ascii=False))
  
  
@@ -123,7 +123,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of stack to show the resources for.'))
  @utils.arg('-n', '--nested-depth', metavar='<DEPTH>',
-@@ -970,6 +976,7 @@ def do_resource_list(hc, args):
+@@ -975,6 +981,7 @@ def do_resource_list(hc, args):
          utils.print_list(resources, fields, sortby_index=4)
  
  
@@ -131,7 +131,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of stack to show the resource for.'))
  @utils.arg('resource', metavar='<RESOURCE>',
-@@ -1135,6 +1142,7 @@ def do_hook_clear(hc, args):
+@@ -1140,6 +1147,7 @@ def do_hook_clear(hc, args):
                                          hook_type, resource_pattern)
  
  
@@ -139,7 +139,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of stack to show the events for.'))
  @utils.arg('-r', '--resource', metavar='<RESOURCE>',
-@@ -1258,6 +1266,7 @@ def do_event(hc, args):
+@@ -1263,6 +1271,7 @@ def do_event(hc, args):
      do_event_show(hc, args)
  
  
@@ -147,7 +147,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of stack to show the events for.'))
  @utils.arg('resource', metavar='<RESOURCE>',
-@@ -1285,6 +1294,7 @@ def do_event_show(hc, args):
+@@ -1290,6 +1299,7 @@ def do_event_show(hc, args):
          utils.print_dict(event.to_dict(), formatters=formatters)
  
  
@@ -155,7 +155,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('-f', '--definition-file', metavar='<FILE or URL>',
             help=_('Path to JSON/YAML containing map defining '
                    '<inputs>, <outputs>, and <options>.'))
-@@ -1355,6 +1365,7 @@ def do_config_list(hc, args):
+@@ -1360,6 +1370,7 @@ def do_config_list(hc, args):
      utils.print_list(scs, fields, sortby_index=None)
  
  
@@ -163,7 +163,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<ID>',
             help=_('ID of the config.'))
  @utils.arg('-c', '--config-only', default=False, action="store_true",
-@@ -1475,6 +1486,7 @@ def do_deployment_list(hc, args):
+@@ -1480,6 +1491,7 @@ def do_deployment_list(hc, args):
      utils.print_list(deployments, fields, sortby_index=5)
  
  
@@ -171,7 +171,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<ID>',
             help=_('ID of the deployment.'))
  def do_deployment_show(hc, args):
-@@ -1490,6 +1502,7 @@ def do_deployment_show(hc, args):
+@@ -1495,6 +1507,7 @@ def do_deployment_show(hc, args):
          print(jsonutils.dumps(sd.to_dict(), indent=2))
  
  
@@ -179,7 +179,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<ID>',
             help=_('ID of the server to fetch deployments for.'))
  def do_deployment_metadata_show(hc, args):
-@@ -1535,6 +1548,7 @@ def do_deployment_delete(hc, args):
+@@ -1540,6 +1553,7 @@ def do_deployment_delete(hc, args):
                                 {'count': failure_count, 'total': len(args.id)})
  
  
@@ -187,7 +187,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<ID>',
             help=_('ID deployment to show the output for.'))
  @utils.arg('output', metavar='<OUTPUT NAME>', nargs='?', default=None,
-@@ -1589,6 +1603,7 @@ def do_build_info(hc, args):
+@@ -1594,6 +1608,7 @@ def do_build_info(hc, args):
      utils.print_dict(result, formatters=formatters)
  
  
@@ -195,7 +195,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of stack to snapshot.'))
  @utils.arg('-n', '--name', metavar='<NAME>',
-@@ -1608,6 +1623,7 @@ def do_stack_snapshot(hc, args):
+@@ -1613,6 +1628,7 @@ def do_stack_snapshot(hc, args):
          print(jsonutils.dumps(snapshot, indent=2, ensure_ascii=False))
  
  
@@ -203,7 +203,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of the stack containing the snapshot.'))
  @utils.arg('snapshot', metavar='<SNAPSHOT>',
-@@ -1655,6 +1671,7 @@ def do_stack_restore(hc, args):
+@@ -1681,6 +1697,7 @@ def do_stack_restore(hc, args):
          raise exc.CommandError(_('Stack or snapshot not found'))
  
  
@@ -211,7 +211,7 @@ index ac4ecb9..d8c8324 100644
  @utils.arg('id', metavar='<NAME or ID>',
             help=_('Name or ID of the stack containing the snapshots.'))
  def do_snapshot_list(hc, args):
-@@ -1678,6 +1695,7 @@ def do_snapshot_list(hc, args):
+@@ -1704,6 +1721,7 @@ def do_snapshot_list(hc, args):
          utils.print_list(snapshots["snapshots"], fields, formatters=formatters)
  
  
