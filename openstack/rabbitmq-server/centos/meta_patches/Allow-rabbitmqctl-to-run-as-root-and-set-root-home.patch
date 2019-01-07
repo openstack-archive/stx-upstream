@@ -1,7 +1,7 @@
 From cc25d3100a677e0c69a11975fd30ce72937ad575 Mon Sep 17 00:00:00 2001
 From: Scott Little <scott.little@windriver.com>
 Date: Tue, 24 Jan 2017 12:16:38 -0500
-Subject: [PATCH 3/5] WRS: Allow-rabbitmqctl-to-run-as-root.patch
+Subject: [PATCH 2/2] WRS: Allow-rabbitmqctl-to-run-as-root-and-set-root-home.patch
 
 ---
  SOURCES/rabbitmq-script-wrapper | 4 +++-
@@ -17,11 +17,10 @@ index 3d2fc49..d039b23 100644
  elif [ `id -u` = 0 ] ; then
 -    su rabbitmq -s /bin/sh -c "/usr/lib/rabbitmq/bin/${SCRIPT} ${CMDLINE}"
 +    # WRS. Allow to run as root
-+    # su rabbitmq -s /bin/sh -c "/usr/lib/rabbitmq/bin/${SCRIPT} ${CMDLINE}"
++    export HOME=${HOME:-/root}
 +    /bin/sh -c "/usr/lib/rabbitmq/bin/${SCRIPT} ${CMDLINE}"
  else
      /usr/lib/rabbitmq/bin/${SCRIPT}
      echo
 -- 
 1.8.3.1
-
