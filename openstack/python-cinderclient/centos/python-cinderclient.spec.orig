@@ -11,7 +11,7 @@ Client library (cinderclient python module) and command line utility \
 
 Name:             python-cinderclient
 Version:          4.0.1
-Release:          1%{?_tis_dist}.%{tis_patch_ver}
+Release:          1%{?dist}
 Summary:          Python API and CLI for OpenStack Cinder
 
 License:          ASL 2.0
@@ -106,9 +106,7 @@ rm -rf python_cinderclient.egg-info
 rm -f {,test-}requirements.txt
 
 %build
-export PBR_VERSION=%{version}
 %py2_build
-%py2_build_wheel
 %if 0%{?with_python3}
 %py3_build
 %endif
@@ -129,8 +127,6 @@ rm -fr %{buildroot}%{python3_sitelib}/cinderclient/tests
 %endif
 
 %py2_install
-mkdir -p $RPM_BUILD_ROOT/wheels
-install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 mv %{buildroot}%{_bindir}/cinder %{buildroot}%{_bindir}/cinder-%{python2_version}
 ln -s ./cinder-%{python2_version} %{buildroot}%{_bindir}/cinder-2
 # Delete tests
@@ -141,11 +137,6 @@ ln -s ./cinder-2 %{buildroot}%{_bindir}/cinder
 install -p -D -m 644 tools/cinder.bash_completion %{buildroot}%{_sysconfdir}/bash_completion.d/cinder.bash_completion
 
 install -p -D -m 644 doc/build/man/cinder.1 %{buildroot}%{_mandir}/man1/cinder.1
-
-# prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients
-tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
-
 
 %files -n python2-%{sname}
 %doc README.rst
@@ -168,24 +159,6 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='
 
 %files doc
 %doc doc/build/html
-
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
-
-%files sdk
-/usr/share/remote-clients/%{name}-%{version}.tgz
-
-%package wheels
-Summary: %{name} wheels
-
-%description wheels
-Contains python wheels for %{name}
-
-%files wheels
-/wheels/*
 
 %changelog
 * Thu Aug 09 2018 RDO <dev@lists.rdoproject.org> 4.0.1-1

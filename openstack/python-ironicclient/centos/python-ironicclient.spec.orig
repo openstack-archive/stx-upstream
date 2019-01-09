@@ -10,7 +10,7 @@
 
 Name:           python-ironicclient
 Version:        2.5.0
-Release:        1%{?_tis_dist}.%{tis_patch_ver}
+Release:        1%{?dist}
 Summary:        Python client for Ironic
 
 License:        ASL 2.0
@@ -29,8 +29,6 @@ Summary:        Python client for Ironic
 BuildRequires:  python2-devel
 BuildRequires:  python2-pbr >= 2.0.0
 BuildRequires:  python2-setuptools
-BuildRequires:  python2-pip
-BuildRequires:  python2-wheel
 
 Requires:       python2-appdirs >= 1.3.0
 Requires:       python2-keystoneauth1 >= 3.4.0
@@ -94,16 +92,13 @@ Requires:       python3-PyYAML
 rm -rf {test-,}requirements.txt tools/{pip,test}-requires
 
 %build
-export PBR_VERSION=%{version}
 %py2_build
-%py2_build_wheel
 %if 0%{?with_python3}
 %py3_build
 %endif
 
 
 %install
-export PBR_VERSION=%{version}
 %if 0%{?with_python3}
 %py3_install
 mv %{buildroot}%{_bindir}/ironic %{buildroot}%{_bindir}/ironic-%{python3_version}
@@ -115,9 +110,6 @@ mv %{buildroot}%{_bindir}/ironic %{buildroot}%{_bindir}/ironic-%{python2_version
 ln -s ./ironic-%{python2_version} %{buildroot}%{_bindir}/ironic-2
 
 ln -s ./ironic-2 %{buildroot}%{_bindir}/ironic
-
-mkdir -p $RPM_BUILD_ROOT/wheels
-install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 
 %files -n python2-%{sname}
@@ -138,15 +130,6 @@ install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 %{python3_sitelib}/ironicclient*
 %{python3_sitelib}/python_ironicclient*
 %endif
-
-%package wheels
-Summary: %{name} wheels
-
-%description wheels
-Contains python wheels for %{name}
-
-%files wheels
-/wheels/*
 
 
 %changelog

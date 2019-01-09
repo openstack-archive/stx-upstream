@@ -1,5 +1,3 @@
-openstack/openstack-aodh
-openstack/openstack-aodh-config
 openstack/openstack-murano
 openstack/python-muranoclient
 openstack/openstack-murano-ui
@@ -13,8 +11,8 @@ openstack/openstack-panko
 openstack/openstack-panko-config
 openstack/openstack-os-vif
 openstack/python-aodhclient
+openstack/python-barbicanclient
 openstack/python-ceilometer
-openstack/python-ceilometerclient
 openstack/python-cinder
 openstack/python-cinderclient
 openstack/python-glance
@@ -28,7 +26,6 @@ openstack/python-heatclient
 openstack/python-horizon
 openstack/python-keystone
 openstack/python-keystoneclient
-openstack/python-keystonemiddleware
 openstack/python-networking-bgpvpn
 openstack/python-networking-sfc
 openstack/python-networking-odl
@@ -42,11 +39,10 @@ openstack/python-openstackdocstheme
 openstack/python-oslo-concurrency
 openstack/python-oslo-service
 openstack/python-oslo-messaging
+openstack/python-pankoclient
 openstack/rabbitmq-server
 openstack/rabbitmq-server-config
-openstack/python-keystoneauth1
 openstack/python-openstackclient
-openstack/python-osc-lib
 openstack/python-openstacksdk
 openstack/python-django-openstack-auth
 openstack/python-wsme

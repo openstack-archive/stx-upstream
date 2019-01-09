@@ -87,7 +87,6 @@ BuildRequires: python-saharaclient
 BuildRequires: python-neutronclient
 BuildRequires: python-swiftclient
 BuildRequires: python-heatclient
-BuildRequires: python-ceilometerclient
 BuildRequires: python-glanceclient
 BuildRequires: python-troveclient
 BuildRequires: python-aodhclient
@@ -277,7 +276,6 @@ Requires: python-oslo-service
 Requires: python-oslo-log 
 Requires: python-oslo-versionedobjects 
 
-Requires: python-ceilometerclient 
 Requires: python-cinderclient 
 Requires: python-glanceclient 
 Requires: python-heatclient 

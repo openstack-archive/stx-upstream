@@ -18,7 +18,7 @@ command-line tool (magnum).
 
 Name:           python-%{pname}
 Version:        2.10.0
-Release:        1%{?_tis_dist}.%{tis_patch_ver}
+Release:        1%{?dist}
 Summary:        Client library for Magnum API
 
 License:        ASL 2.0
@@ -35,8 +35,6 @@ Summary:        Client library for Magnum API
 
 BuildRequires:  python2-devel
 BuildRequires:  python2-setuptools
-BuildRequires:  python2-pip
-BuildRequires:  python2-wheel
 BuildRequires:  python2-pbr
 BuildRequires:  git
 
@@ -177,9 +175,7 @@ Requires:  python3-prettytable
 %py_req_cleanup
 
 %build
-export PBR_VERSION=%{version}
 %py2_build
-%py2_build_wheel
 
 %if 0%{?with_python3}
 %py3_build
@@ -192,7 +188,7 @@ sphinx-build -b html doc/source doc/build/html
 rm -rf doc/build/html/.{doctrees,buildinfo}
 
 %install
-export PBR_VERSION=%{version}
+
 %if 0%{?with_python3}
 %py3_install
 %if %{default_python} >= 3
@@ -205,9 +201,6 @@ mv %{buildroot}%{_bindir}/magnum ./magnum.py3
 %if 0%{?default_python} >= 3
 mv magnum.py3 %{buildroot}%{_bindir}/magnum
 %endif
-
-mkdir -p $RPM_BUILD_ROOT/wheels
-install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 %check
 # tests are failing due to unicode not defined
@@ -250,15 +243,6 @@ install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 %files -n python3-%{pname}-tests
 %{python3_sitelib}/%{pname}/tests
 %endif
-
-%package wheels
-Summary: %{name} wheels
-
-%description wheels
-Contains python wheels for %{name}
-
-%files wheels
-/wheels/*
 
 %changelog
 * Thu Aug 09 2018 RDO <dev@lists.rdoproject.org> 2.10.0-1

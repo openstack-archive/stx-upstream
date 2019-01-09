@@ -1,1 +1,3 @@
-TIS_PATCH_VER=1
+TAR_NAME=aodhclient
+SRC_DIR=$CGCS_BASE/git/python-aodhclient
+TIS_PATCH_VER=0
