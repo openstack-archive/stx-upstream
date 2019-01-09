@@ -1,1 +1,3 @@
-TIS_PATCH_VER=18
+TAR_NAME=python-openstackclient
+SRC_DIR="$CGCS_BASE/git/python-openstackclient"
+TIS_PATCH_VER=0

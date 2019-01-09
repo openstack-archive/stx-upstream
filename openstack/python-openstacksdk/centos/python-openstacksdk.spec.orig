@@ -6,9 +6,6 @@
 # Disable docs until bs4 package is available
 %global with_doc 0
 
-# STX: Disable unit tests as part of build
-%global do_check 0
-
 %global pypi_name openstacksdk
 
 %global common_desc \
@@ -21,7 +18,7 @@ clouds - test files
 
 Name:           python-%{pypi_name}
 Version:        0.17.2
-Release:        1%{?_tis_dist}.%{tis_patch_ver}
+Release:        1%{?dist}
 Summary:        An SDK for building applications to work with OpenStack
 
 License:        ASL 2.0
@@ -39,8 +36,6 @@ Summary:        An SDK for building applications to work with OpenStack
 %{?python_provide:%python_provide python2-%{pypi_name}}
 
 BuildRequires:  python2-devel
-BuildRequires:  python2-pip
-BuildRequires:  python2-wheel
 BuildRequires:  python2-pbr >= 2.0.0
 BuildRequires:  python2-sphinx
 BuildRequires:  python2-openstackdocstheme
@@ -192,9 +187,7 @@ clouds - documentation.
 rm -rf {,test-}requirements.txt
 
 %build
-export PBR_VERSION=%{version}
 %py2_build
-%py2_build_wheel
 
 %if 0%{?with_python3}
 %{py3_build}
@@ -208,22 +201,12 @@ rm -rf html/.{doctrees,buildinfo}
 %endif
 
 %install
-export PBR_VERSION=%{version}
 %if 0%{?with_python3}
 %{py3_install}
 %endif
 %py2_install
 
-# STX: stage wheels
-mkdir -p $RPM_BUILD_ROOT/wheels
-install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
-
-# STX: prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients
-tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{pypi_name}-%{version}
-
 %check
-%if 0%{?do_check}
 export OS_STDOUT_CAPTURE=true
 export OS_STDERR_CAPTURE=true
 export OS_TEST_TIMEOUT=10
@@ -232,7 +215,6 @@ stestr --test-path ./openstack/tests/unit run
 %if 0%{?with_python3}
 rm -rf .testrepository
 stestr-3 --test-path ./openstack/tests/unit run
-%endif
 %endif
 
 
@@ -264,25 +246,6 @@ stestr-3 --test-path ./openstack/tests/unit run
 %files -n python3-%{pypi_name}-tests
 %{python3_sitelib}/openstack/tests
 %endif
-
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
-
-%files sdk
-/usr/share/remote-clients/%{pypi_name}-%{version}.tgz
-
-%package wheels
-Summary: %{name} wheels
-
-%description wheels
-Contains python wheels for %{name}
-
-%files wheels
-/wheels/*
-
 
 %changelog
 * Thu Aug 09 2018 RDO <dev@lists.rdoproject.org> 0.17.2-1

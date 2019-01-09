@@ -1,7 +1,7 @@
 %{!?upstream_version: %global upstream_version %{version}%{?milestone}}
 
 %global sname glanceclient
-%global with_doc 0
+%global with_doc 1
 
 %if 0%{?fedora}
 %global with_python3 1
@@ -15,7 +15,7 @@ glanceclient module), and a command-line script (glance). Each implements \
 Name:             python-glanceclient
 Epoch:            1
 Version:          2.13.1
-Release:          1%{?_tis_dist}.%{tis_patch_ver}
+Release:          1%{?dist}
 Summary:          Python API and CLI for OpenStack Glance
 
 License:          ASL 2.0
@@ -35,8 +35,6 @@ Summary:          Python API and CLI for OpenStack Glance
 %{?python_provide:%python_provide python2-glanceclient}
 
 BuildRequires:    python2-devel
-BuildRequires:    python2-pip
-BuildRequires:    python2-wheel
 BuildRequires:    python2-setuptools
 BuildRequires:    python2-pbr
 
@@ -112,9 +110,7 @@ This package contains auto-generated documentation.
 %py_req_cleanup
 
 %build
-export PBR_VERSION=%{version}
 %py2_build
-%py2_build_wheel
 %if 0%{?with_python3}
 %py3_build
 %endif
@@ -128,7 +124,6 @@ ln -s ./glance-%{python3_version} %{buildroot}%{_bindir}/glance-3
 rm -fr %{buildroot}%{python3_sitelib}/glanceclient/tests
 %endif
 
-
 %py2_install
 mv %{buildroot}%{_bindir}/glance %{buildroot}%{_bindir}/glance-%{python2_version}
 ln -s ./glance-%{python2_version} %{buildroot}%{_bindir}/glance-2
@@ -138,9 +133,6 @@ ln -s ./glance-2 %{buildroot}%{_bindir}/glance
 mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d
 install -pm 644 tools/glance.bash_completion \
     %{buildroot}%{_sysconfdir}/bash_completion.d/glance
-
-mkdir -p $RPM_BUILD_ROOT/wheels
-install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
 # Delete tests
 rm -fr %{buildroot}%{python2_sitelib}/glanceclient/tests
@@ -154,10 +146,6 @@ rm -rf doc/build/html/.{doctrees,buildinfo}
 sphinx-build -b man doc/source doc/build/man
 install -p -D -m 644 doc/build/man/glance.1 %{buildroot}%{_mandir}/man1/glance.1
 %endif
-# prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients/%{name}
-tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
-
 
 %files -n python2-%{sname}
 %doc README.rst
@@ -189,24 +177,6 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --e
 %doc doc/build/html
 %license LICENSE
 %endif
-
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
-
-%files sdk
-/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
-
-%package wheels
-Summary: %{name} wheels
-
-%description wheels
-Contains python wheels for %{name}
-
-%files wheels
-/wheels/*
 
 %changelog
 * Wed Dec 19 2018 RDO <dev@lists.rdoproject.org> 1:2.13.1-1
