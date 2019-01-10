@@ -1,0 +1,34 @@
+From 446eaf18ceef8dff865035c98fa32bd974d699ad Mon Sep 17 00:00:00 2001
+From: Gerry Kopec <Gerry.Kopec@windriver.com>
+Date: Wed, 9 Jan 2019 20:11:33 -0500
+Subject: [PATCH] Allow multiple containers per daemonset pod
+
+Comment out code that restricted daemonset pods to single containers.
+Container names will default to name from helm chart template without
+hostname and sha though the pod will still have them.
+
+May require further refinement before this can be upstreamed.
+---
+ helm-toolkit/templates/utils/_daemonset_overrides.tpl | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/helm-toolkit/templates/utils/_daemonset_overrides.tpl b/helm-toolkit/templates/utils/_daemonset_overrides.tpl
+index 8ba2241..d1fd3fe 100644
+--- a/helm-toolkit/templates/utils/_daemonset_overrides.tpl
++++ b/helm-toolkit/templates/utils/_daemonset_overrides.tpl
+@@ -219,10 +219,11 @@ limitations under the License.
+ 
+     {{/* set container name
+     assume not more than one container is defined */}}
++    {{/* starlingx: allow multiple containers per daemonset pod }}
+     {{- $container := first $context.Values.__daemonset_yaml.spec.template.spec.containers }}
+     {{- $_ := set $container "name" $current_dict.dns_1123_name }}
+     {{- $cont_list := list $container }}
+-    {{- $_ := set $context.Values.__daemonset_yaml.spec.template.spec "containers" $cont_list }}
++    {{- $_ := set $context.Values.__daemonset_yaml.spec.template.spec "containers" $cont_list */}}
+ 
+     {{/* cross-reference configmap name to container volume definitions */}}
+     {{- $_ := set $context.Values "__volume_list" list }}
+-- 
+1.8.3.1
+
