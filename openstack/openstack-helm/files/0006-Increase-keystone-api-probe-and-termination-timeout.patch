@@ -1,0 +1,56 @@
+From c740d6f69e090194416ebb0974850e9106467d4e Mon Sep 17 00:00:00 2001
+From: Tao Liu <tao.liu@windriver.com>
+Date: Sat, 12 Jan 2019 14:46:51 -0500
+Subject: [PATCH] Increase keystone api probe and termination timeout,
+and cleanup stale files
+
+---
+ keystone/templates/bin/_keystone-api.sh.tpl | 4 ++--
+ keystone/templates/deployment-api.yaml      | 2 ++
+ keystone/values.yaml                        | 2 +-
+ 3 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/keystone/templates/bin/_keystone-api.sh.tpl b/keystone/templates/bin/_keystone-api.sh.tpl
+index 316a828..1172680 100644
+--- a/keystone/templates/bin/_keystone-api.sh.tpl
++++ b/keystone/templates/bin/_keystone-api.sh.tpl
+@@ -31,8 +31,8 @@ function start () {
+      source /etc/apache2/envvars
+   fi
+
+-  # Get rid of stale pid file if present.
+-  rm -f /var/run/apache2/*.pid
++  # Get rid of stale pid, shared memory segment and wsgi sock files if present.
++  rm -f /var/run/apache2/*
+
+   # Start Apache2
+   exec apache2 -DFOREGROUND
+diff --git a/keystone/templates/deployment-api.yaml b/keystone/templates/deployment-api.yaml
+index c985cad..23e8a2b 100644
+--- a/keystone/templates/deployment-api.yaml
++++ b/keystone/templates/deployment-api.yaml
+@@ -79,6 +79,8 @@ spec:
+               port: {{ $portInt }}
+             initialDelaySeconds: 15
+             periodSeconds: 10
++            timeoutSeconds: 30
++            failureThreshold: 5
+           volumeMounts:
+           - name: etckeystone
+             mountPath: /etc/keystone
+diff --git a/keystone/values.yaml b/keystone/values.yaml
+index 6a824ea..19efed5 100644
+--- a/keystone/values.yaml
++++ b/keystone/values.yaml
+@@ -216,7 +216,7 @@ pod:
+         min_available: 0
+     termination_grace_period:
+       api:
+-        timeout: 30
++        timeout: 60
+   resources:
+     enabled: false
+     api:
+
+1.8.3.1
+
