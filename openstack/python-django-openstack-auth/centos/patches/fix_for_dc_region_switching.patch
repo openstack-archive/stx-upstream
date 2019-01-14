@@ -85,7 +85,7 @@ index a680abf..0b1351d 100644
  
          if not region_auth_url:
              msg = _('Cannot switch to subcloud %s, no Identity available '
-@@ -324,7 +326,8 @@ def switch_region(request, region_name,
+@@ -320,7 +322,8 @@ def switch_region(request, region_name,
          try:
              request.user = auth.authenticate(
                  request=request, auth_url=unscoped_auth.auth_url,
