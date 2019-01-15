@@ -26,6 +26,10 @@ Source7:       dcorch-snmp.service
 Source8:       dcorch-cinder-api-proxy.service
 Source9:       dcorch-neutron-api-proxy.service
 Source10:      dcorch-identity-api-proxy.service
+Source11:      dbsync-api.service
+Source12:      dcmanager.conf
+Source13:      dcorch.conf
+Source14:      dbsync.conf
 
 BuildArch:     noarch
 
@@ -78,10 +82,16 @@ Distributed Cloud Manager
 %package dcorch
 Summary: DC Orchestrator
 # TODO(John): should we add Requires lines?
-Requires: openstack-ras 
+Requires: openstack-ras
 
 %description dcorch
 Distributed Cloud Orchestrator
+
+%package dbsync
+Summary: DC DBsync Agent
+
+%description dbsync
+Distributed Cloud DBsync Agent
 
 %prep
 %autosetup -n %{pypi_name}-%{version}
@@ -98,6 +108,7 @@ export PBR_VERSION=%{version}
 # oslo-config-generator doesn't skip heat's entry points.
 PYTHONPATH=. oslo-config-generator --config-file=./dcmanager/config-generator.conf
 PYTHONPATH=. oslo-config-generator --config-file=./dcorch/config-generator.conf
+PYTHONPATH=. oslo-config-generator --config-file=./dbsync/config-generator.conf
 
 
 %install
@@ -106,22 +117,22 @@ export PBR_VERSION=%{version}
                                   --single-version-externally-managed
 mkdir -p $RPM_BUILD_ROOT/wheels
 install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
+install -d -m 0755 %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}/var/log/dcmanager
 mkdir -p %{buildroot}/var/cache/dcmanager
-mkdir -p %{buildroot}/var/run/dcmanager
-mkdir -p %{buildroot}/etc/dcmanager/
+mkdir -p %{buildroot}%{_sysconfdir}/dcmanager/
 # install systemd unit files
 install -p -D -m 644 %{SOURCE1} %{buildroot}%{_unitdir}/dcmanager-api.service
 install -p -D -m 644 %{SOURCE2} %{buildroot}%{_unitdir}/dcmanager-manager.service
+install -p -D -m 644 %{SOURCE12} %{buildroot}%{_tmpfilesdir}
 # install default config files
-cd %{_builddir}/%{pypi_name}-%{version} && oslo-config-generator --config-file ./dcmanager/config-generator.conf --output-file %{_builddir}/%{pypi_name}-%{version}/etc/dcmanager/dcmanager.conf.sample
-install -p -D -m 640 %{_builddir}/%{pypi_name}-%{version}/etc/dcmanager/dcmanager.conf.sample %{buildroot}%{_sysconfdir}/dcmanager/dcmanager.conf
+cd %{_builddir}/%{pypi_name}-%{version} && oslo-config-generator --config-file ./dcmanager/config-generator.conf --output-file %{_builddir}/%{pypi_name}-%{version}%{_sysconfdir}/dcmanager/dcmanager.conf.sample
+install -p -D -m 640 %{_builddir}/%{pypi_name}-%{version}%{_sysconfdir}/dcmanager/dcmanager.conf.sample %{buildroot}%{_sysconfdir}/dcmanager/dcmanager.conf
 
 
 mkdir -p %{buildroot}/var/log/dcorch
 mkdir -p %{buildroot}/var/cache/dcorch
-mkdir -p %{buildroot}/var/run/dcorch
-mkdir -p %{buildroot}/etc/dcorch/
+mkdir -p %{buildroot}%{_sysconfdir}/dcorch/
 # install systemd unit files
 install -p -D -m 644 %{SOURCE3} %{buildroot}%{_unitdir}/dcorch-api.service
 install -p -D -m 644 %{SOURCE4} %{buildroot}%{_unitdir}/dcorch-engine.service
@@ -131,14 +142,27 @@ install -p -D -m 644 %{SOURCE7} %{buildroot}%{_unitdir}/dcorch-snmp.service
 install -p -D -m 644 %{SOURCE8} %{buildroot}%{_unitdir}/dcorch-cinder-api-proxy.service
 install -p -D -m 644 %{SOURCE9} %{buildroot}%{_unitdir}/dcorch-neutron-api-proxy.service
 install -p -D -m 644 %{SOURCE10} %{buildroot}%{_unitdir}/dcorch-identity-api-proxy.service
+install -p -D -m 644 %{SOURCE13} %{buildroot}%{_tmpfilesdir}
 
 # install ocf scripts
 install -d -m 755 ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack
 install -p -D -m 755 ocf/* ${RPM_BUILD_ROOT}/usr/lib/ocf/resource.d/openstack/
 
 # install default config files
-cd %{_builddir}/%{pypi_name}-%{version} && oslo-config-generator --config-file ./dcorch/config-generator.conf --output-file %{_builddir}/%{pypi_name}-%{version}/etc/dcorch/dcorch.conf.sample
-install -p -D -m 640 %{_builddir}/%{pypi_name}-%{version}/etc/dcorch/dcorch.conf.sample %{buildroot}%{_sysconfdir}/dcorch/dcorch.conf
+cd %{_builddir}/%{pypi_name}-%{version} && oslo-config-generator --config-file ./dcorch/config-generator.conf --output-file %{_builddir}/%{pypi_name}-%{version}%{_sysconfdir}/dcorch/dcorch.conf.sample
+install -p -D -m 640 %{_builddir}/%{pypi_name}-%{version}%{_sysconfdir}/dcorch/dcorch.conf.sample %{buildroot}%{_sysconfdir}/dcorch/dcorch.conf
+
+# dc dbsync agent
+mkdir -p %{buildroot}/var/log/dbsync
+mkdir -p %{buildroot}/var/cache/dbsync
+mkdir -p %{buildroot}%{_sysconfdir}/dbsync/
+# install systemd unit files
+install -p -D -m 644 %{SOURCE11} %{buildroot}%{_unitdir}/dbsync-api.service
+install -p -D -m 644 %{SOURCE14} %{buildroot}%{_tmpfilesdir}
+# install default config files
+cd %{_builddir}/%{pypi_name}-%{version} && oslo-config-generator --config-file ./dbsync/config-generator.conf --output-file %{_builddir}/%{pypi_name}-%{version}%{_sysconfdir}/dbsync/dbsync.conf.sample
+install -p -D -m 640 %{_builddir}/%{pypi_name}-%{version}%{_sysconfdir}/dbsync/dbsync.conf.sample %{buildroot}%{_sysconfdir}/dbsync/dbsync.conf
+
 
 %files dcmanager
 %license LICENSE
@@ -150,11 +174,14 @@ install -p -D -m 640 %{_builddir}/%{pypi_name}-%{version}/etc/dcorch/dcorch.conf
 %{_bindir}/dcmanager-manager
 %{_unitdir}/dcmanager-manager.service
 %{_bindir}/dcmanager-manage
+%{_tmpfilesdir}/dcmanager.conf
 %dir %attr(0755,root,root) %{_localstatedir}/log/dcmanager
-%dir %attr(0755,root,root) %{_localstatedir}/run/dcmanager
 %dir %attr(0755,root,root) %{_localstatedir}/cache/dcmanager
 %dir %attr(0755,root,root) %{_sysconfdir}/dcmanager
 %config(noreplace) %attr(-, root, root) %{_sysconfdir}/dcmanager/dcmanager.conf
+%dir %attr(0755,root,root) /usr/lib/ocf/resource.d/openstack
+%defattr(-,root,root,-)
+/usr/lib/ocf/resource.d/openstack/dcmanager-*
 
 
 %files dcorch
@@ -175,14 +202,31 @@ install -p -D -m 640 %{_builddir}/%{pypi_name}-%{version}/etc/dcorch/dcorch.conf
 %{_bindir}/dcorch-manage
 %{_bindir}/dcorch-snmp
 %{_unitdir}/dcorch-snmp.service
+%{_tmpfilesdir}/dcorch.conf
 %dir %attr(0755,root,root) %{_localstatedir}/log/dcorch
-%dir %attr(0755,root,root) %{_localstatedir}/run/dcorch
 %dir %attr(0755,root,root) %{_localstatedir}/cache/dcorch
 %dir %attr(0755,root,root) %{_sysconfdir}/dcorch
 %config(noreplace) %attr(-, dcorch, dcorch) %{_sysconfdir}/dcorch/dcorch.conf
 %dir %attr(0755,root,root) /usr/lib/ocf/resource.d/openstack
 %defattr(-,root,root,-)
-/usr/lib/ocf/resource.d/openstack/*
+/usr/lib/ocf/resource.d/openstack/dcorch-*
+
+
+%files dbsync
+%license LICENSE
+%{python2_sitelib}/dbsync*
+%{python2_sitelib}/distributedcloud-*.egg-info
+%exclude %{python2_sitelib}/dbsync/tests
+%{_bindir}/dbsync-api
+%{_unitdir}/dbsync-api.service
+%{_tmpfilesdir}/dbsync.conf
+%dir %attr(0755,root,root) %{_localstatedir}/log/dbsync
+%dir %attr(0755,root,root) %{_localstatedir}/cache/dbsync
+%dir %attr(0755,root,root) %{_sysconfdir}/dbsync
+%config(noreplace) %attr(-, root, root) %{_sysconfdir}/dbsync/dbsync.conf
+%dir %attr(0755,root,root) /usr/lib/ocf/resource.d/openstack
+%defattr(-,root,root,-)
+/usr/lib/ocf/resource.d/openstack/dbsync-*
 
 %pre dcorch
 getent group dcorch >/dev/null || groupadd -r --gid 173 dcorch
