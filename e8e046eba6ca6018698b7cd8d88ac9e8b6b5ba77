@@ -1,0 +1,11 @@
+Code-Review+2: Al Bailey <al.bailey@windriver.com>
+Code-Review+2: Chris Friesen <chris.friesen@windriver.com>
+Code-Review+1: Lin Shuicheng <shuicheng.lin@intel.com>
+Workflow+1: Al Bailey <al.bailey@windriver.com>
+Code-Review+1: Scott Little <scott.little@windriver.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 15 Jan 2019 18:16:36 +0000
+Reviewed-on: https://review.openstack.org/628817
+Project: openstack/stx-upstream
+Branch: refs/heads/f/centos76
