@@ -143,6 +143,7 @@ python2-novaclient
 # distributedcloud
 distributedcloud-dcmanager
 distributedcloud-dcorch
+distributedcloud-dbsync
 
 # distributedcloud-client
 distributedcloud-client-dcmanagerclient
