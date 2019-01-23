@@ -3,7 +3,7 @@ LABEL=stx-nova
 PROJECT=nova
 PROJECT_REPO=https://github.com/starlingx-staging/stx-nova.git
 PIP_PACKAGES="pycrypto tsconfig cgtsclient httplib2 pylint"
-DIST_PACKAGES="openssh-clients openssh-server libvirt pam-config"
+DIST_PACKAGES="openssh-clients openssh-server libvirt pam-config e2fsprogs"
 PROFILES="fluent nova ceph linuxbridge openvswitch configdrive qemu apache"
 
 
