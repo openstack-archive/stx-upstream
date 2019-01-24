@@ -1,0 +1,421 @@
+From de54db52e6dbfe4357d160004a917cdd2ed0f7e6 Mon Sep 17 00:00:00 2001
+From: Jim Gauld <james.gauld@windriver.com>
+Date: Thu, 24 Jan 2019 11:55:53 -0400
+Subject: [PATCH] nova chart support pci alias, passthrough and sriov
+
+This modifies script nova-api.sh to configure global PCI aliases
+given a JSONstring with list of PCI alias dictionaries. The aliases
+are reformatted one-line-per-entry to a nova compatible auxiliary file
+nova-pci-alias.conf.
+
+This adds script nova-compute-sriov-init.sh to configure compute PCI
+aliases, and compute PCI passthrough whitelist. This uses global
+parameters and per-host-override parameters from per-compute rendered
+nova.conf.
+- JSONstring with list of PCI alias dictionaries
+- JSONstring with list of PCI passthrough device dictionaries
+- JSONstring with list of PCI SR-IOV device dictionaries
+
+This script does runtime initialization of SR-IOV VFs via
+/sys/bus/pci/devices/<pf_addr>/sriov_numvfs . The /sys/devices
+host path is exposed as root to enable this.
+
+PCI passthrough whitelist is extended to include SR-IOV devices
+in nova compatible auxiliary file nova-pci-whitelist.conf.
+---
+ nova/templates/bin/_nova-api.sh.tpl                |  23 +-
+ nova/templates/bin/_nova-compute-sriov-init.sh.tpl | 263 +++++++++++++++++++++
+ nova/templates/bin/_nova-compute.sh.tpl            |   4 +-
+ nova/templates/configmap-bin.yaml                  |   2 +
+ nova/templates/daemonset-compute.yaml              |  26 ++
+ 5 files changed, 316 insertions(+), 2 deletions(-)
+ mode change 100644 => 100755 nova/templates/bin/_nova-api.sh.tpl
+ create mode 100755 nova/templates/bin/_nova-compute-sriov-init.sh.tpl
+ mode change 100644 => 100755 nova/templates/bin/_nova-compute.sh.tpl
+ mode change 100644 => 100755 nova/templates/configmap-bin.yaml
+ mode change 100644 => 100755 nova/templates/daemonset-compute.yaml
+
+diff --git a/nova/templates/bin/_nova-api.sh.tpl b/nova/templates/bin/_nova-api.sh.tpl
+old mode 100644
+new mode 100755
+index 6d3cb0c..e6308d3
+--- a/nova/templates/bin/_nova-api.sh.tpl
++++ b/nova/templates/bin/_nova-api.sh.tpl
+@@ -20,8 +20,29 @@ set -ex
+ COMMAND="${@:-start}"
+ 
+ function start () {
++  # Reformat global PCI aliases (JSONstring list of dictionaries)
++  # using one-per-line alias format.
++  alias_conf=/tmp/nova-pci-alias.conf
++  cat > $alias_conf << EOF
++{{ if .Values.conf.nova -}}
++{{- $n := .Values.conf.nova -}}
++{{- if $n.pci_extended -}}
++{{- $x := $n.pci_extended -}}
++{{- if $x.alias -}}
++{{- if and (kindIs "map" $x) (kindIs "string" $x.alias) -}}
++[pci]
++{{ range $x.alias | trimAll "[]" | splitList "}, " -}}
++alias = {{ .  | trimSuffix "}" | printf "%s}" }}
++{{ end -}}
++{{- end -}}
++{{- end -}}
++{{- end -}}
++{{ end -}}
++EOF
++
+   exec nova-api-os-compute \
+-        --config-file /etc/nova/nova.conf
++        --config-file /etc/nova/nova.conf \
++        --config-file $alias_conf
+ }
+ 
+ function stop () {
+diff --git a/nova/templates/bin/_nova-compute-sriov-init.sh.tpl b/nova/templates/bin/_nova-compute-sriov-init.sh.tpl
+new file mode 100755
+index 0000000..bf76a53
+--- /dev/null
++++ b/nova/templates/bin/_nova-compute-sriov-init.sh.tpl
+@@ -0,0 +1,263 @@
++#!/bin/bash
++
++{{/*
++Copyright 2017 The Openstack-Helm Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++   http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/}}
++
++set -ex
++
++# This script generates auxiliary nova-pci-whitelist.conf and
++# nova-pci-alias.conf override files based on PCI defice
++# information contained in [pci_extended] fields.
++# This reformats the PCI information to be compatible with
++# upstream nova.
++#
++# This script discovers and configures SR-IOV VF PCI addresses
++# for interfaces that were configured for SR-IOV. This
++# configures /sys/bus/pci/devices/<pf_addr>/sriov_numvfs
++# at runtime.
++#
++# The global [pci_extended] input section contains:
++# - JSON list of PCI aliases, eg.
++#     alias = [{"vendor_id": "8086", "producd_id": "0443", "name": "a1"}, ..]
++#
++# The per-host override [pci_extended] input section contains:
++# - JSON list of PCI passthrough devices, eg.
++#     passthrough_whitelist = [{"address": "0000:09:00.0"}, ..]
++#
++# - JSON list of PCI SR-IOV devices, eg.
++#    sriov_whitelist = [{"sriov_numvfs": 16,
++#                        "physical_network": "group0-nic0",
++#                        "address": "0000:02:00.0"}, ..]
++# NOTES:
++# - Empty configuration from helm appears as malformed JSON, e.g.,
++#     sriov_whitelist = <no value>
++# - Upstream nova does not allow specification of list of PCI aliases,
++#   so this formats the aliases as one line per entry.
++# - Upstream nova does not provide specification of PCI SR-IOV devices,
++#   so the PCI whitelist is extended to include SR-IOV devices.
++#   This formats the whitelist as one line per entry to be pretty.
++
++pod_shared=/tmp/pod-shared
++nova_conf=/etc/nova/nova.conf
++pci_conf=$pod_shared/nova-pci-whitelist.conf
++alias_conf=$pod_shared/nova-pci-alias.conf
++
++# Reformat global PCI aliases (JSONstring list of dictionaries)
++# using one-per-line alias format.
++cat > $alias_conf << EOF
++{{ if .Values.conf.nova -}}
++{{- $n := .Values.conf.nova -}}
++{{- if $n.pci_extended -}}
++{{- $x := $n.pci_extended -}}
++{{- if $x.alias -}}
++{{- if and (kindIs "map" $x) (kindIs "string" $x.alias) -}}
++[pci]
++{{ range $x.alias | trimAll "[]" | splitList "}, " -}}
++alias = {{ .  | trimSuffix "}" | printf "%s}" }}
++{{ end -}}
++{{- end -}}
++{{- end -}}
++{{- end -}}
++{{ end -}}
++EOF
++
++# Reformat host PCI whitelists using one-per-line whitelist format,
++# and runtime configure SR-IOV VF interfaces.
++exec python - $nova_conf $pci_conf <<__SCRIPT__
++import sys
++import os
++import json
++import fnmatch
++
++import ConfigParser
++import logging
++
++# Globals
++_config = None
++_config_file = None
++
++logger = logging.getLogger('nova-compute-sriov-init')
++logger.setLevel(logging.DEBUG)
++ch = logging.StreamHandler()
++ch.setLevel(logging.DEBUG)
++formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
++ch.setFormatter(formatter)
++logger.addHandler(ch)
++
++def usage():
++    argv0 = os.path.basename(sys.argv[0])
++    print """
++Usage:
++------
++     %(argv0)s nova_conf pci_conf
++
++where nova_conf is the full pathname to nova.conf input file,
++and pci_conf is the full pathname to generated output file.
++
++    """ % locals()  # replace items from local variables
++
++
++def configure_vf_whitelist(sriov_if):
++    '''Generate the list of VF PCI addresses to create a VF based whitelist
++    for a given PF PCI address and provider network. Configure number of VFs
++    if that is supported by the device.'''
++
++    pf_addr = sriov_if.get('address')
++    dirpcidev = '/sys/bus/pci/devices/' + pf_addr
++
++    # Attempt to configure the requested number of VFs if the device supports
++    # setting the number of VFs via sysfs.
++    # Need to write 0 to sriov_numvfs before writing a new value, or the value
++    # will not take.
++    numvfs = sriov_if.get('sriov_numvfs')
++    if numvfs is not None:
++        numvfs_path = os.path.join(dirpcidev, 'sriov_numvfs')
++        if os.path.isfile(numvfs_path):
++            try:
++                with open(numvfs_path, 'w') as f:
++                    f.write('0')
++                    f.flush()
++                    f.write(str(numvfs))
++            except Exception as err:
++                logger.error('Cannot write to {}, error = {}.'
++                             .format(numvfs_path, err))
++                sys.exit(1)
++
++    virtfn_links = len(fnmatch.filter(os.listdir(dirpcidev), 'virtfn*'))
++
++    # Some devices (for e.g. Coleto Creek) don't support configuration of the
++    # number of VFs.  Use all the VFs present in this case.
++    if numvfs is not None:
++        if virtfn_links != numvfs:
++            logger.error('Configured number of VFs is different than the '
++                         'VFs present (if:{} conf:{} present:{})'
++                         .format(pf_addr, numvfs, virtfn_links))
++            sys.exit(1)
++    else:
++        numvfs = virtfn_links
++
++    pci_sriov_vf_whitelist = []
++    i = 0
++    while i < int(numvfs):
++        lvf = dirpcidev + '/virtfn' + str(i)
++        try:
++            vf_addr = os.path.basename(os.readlink(lvf))
++        except:
++            logger.error('virtfn link {} non-existent (numvfs={})'.format(lvf, numvfs))
++            sys.exit(1)
++
++        device = {'address': vf_addr}
++
++        # Some devices (for e.g. Coleto Creek) are not associated with a
++        # physical network.
++        providernets = sriov_if.get('physical_network')
++        if providernets:
++            device.update({'physical_network': providernets})
++
++        pci_sriov_vf_whitelist.append(device)
++        i += 1
++
++    return pci_sriov_vf_whitelist
++
++
++def decode_from_config(conf_file, section, name):
++    '''Decode JSON encoded string from configuration file, for specified
++    section and parameter name. Return the decoded value.'''
++    global _config
++    global _config_file
++    if _config_file != conf_file:
++        _config = None
++    if _config is None:
++        try:
++            _config = ConfigParser.ConfigParser()
++            _config.read(conf_file)
++        except:
++            logger.error('Failed loading config {}.'.format(conf_file))
++            raise 
++    try:
++        value = json.loads(
++            _config.get(section, name, ''))
++    except ConfigParser.NoOptionError as err:
++        # just treat as empty if not present
++        logger.info('Cannot get from config {} [{}]/{}, '
++                     'error = {}.'.format(conf_file, section, name, err))
++        value = []
++    except ValueError as err:
++        # just treat as empty if JSON is malformed such as '<no value>'
++        logger.info('Cannot decode from config {} [{}]/{}, '
++                     'error = {}.'.format(conf_file, section, name, err))
++        value = []
++    except Exception as err:
++        logger.error('Cannot load from config {} [{}]/{}, '
++                     'error = {}.'.format(conf_file, section, name, err))
++        raise
++    return value
++
++def main():
++    '''Discover and configure SR-IOV VF PCI addresses for interfaces that are
++    configured for SR-IOV. Reformat the nova.conf [pci_extended] section as
++    an auxiliary configuration file. This script is used by the nova-compute
++    helm manifest and is run at application time. This should be run after the
++    VF driver is loaded and the VF PCI addresses are visible in the system.'''
++
++    if len(sys.argv) < 3:
++        usage()
++        sys.exit(1)
++
++    nova_conf = sys.argv[1]
++    pci_conf = sys.argv[2]
++    logger.info('Input configuration: {}'.format(nova_conf))
++    logger.info('Output configuration: {}'.format(pci_conf))
++
++    # Obtain pci related information from nova.conf
++    prefix = 'pci_extended'
++    pci_pt_whitelist = decode_from_config(nova_conf, prefix,
++                                          'passthrough_whitelist')
++    pci_sriov_whitelist = decode_from_config(nova_conf, prefix,
++                                             'sriov_whitelist')
++
++    # Show input configuration
++    logger.info('{}:passthrough_whitelist={}'.format(prefix, pci_pt_whitelist))
++    logger.info('{}:sriov_whitelist={}'.format(prefix, pci_sriov_whitelist))
++
++    # Configure the number of VFs for SR-IOV devices.
++    # Extend the passthrough whitelist with these devices.
++    for sriov_if in pci_sriov_whitelist:
++        logger.info('Configuring SR-IOV VF {}'.format(sriov_if))
++        pci_sriov_vf_whitelist = configure_vf_whitelist(sriov_if)
++        pci_pt_whitelist.extend(pci_sriov_vf_whitelist)
++
++    # Write auxilary nova configuration file for [pci]
++    with open(pci_conf, 'w') as f:
++        f.write('[pci]\n')
++        # passthrough whitelist written one-per-line just to be pretty
++        for dev in pci_pt_whitelist:
++            f.write('passthrough_whitelist = {}\n'.format(json.dumps(dev)))
++
++    # Show output configuration
++    logger.info('Contents of: {}'.format(pci_conf))
++    with open(pci_conf, 'r') as f:
++        for line in f:
++            logger.info(line.rstrip())
++
++    logger.info('Finished SR-IOV VF initialization.')
++
++if __name__ == "__main__":
++    main()
++    sys.exit(0)
++
++__SCRIPT__
++
+diff --git a/nova/templates/bin/_nova-compute.sh.tpl b/nova/templates/bin/_nova-compute.sh.tpl
+old mode 100644
+new mode 100755
+index 84596a5..955abdd
+--- a/nova/templates/bin/_nova-compute.sh.tpl
++++ b/nova/templates/bin/_nova-compute.sh.tpl
+@@ -21,4 +21,6 @@ set -ex
+ exec nova-compute \
+       --config-file /etc/nova/nova.conf \
+       --config-file /tmp/pod-shared/nova-console.conf \
+-      --config-file /tmp/pod-shared/nova-libvirt.conf
++      --config-file /tmp/pod-shared/nova-libvirt.conf \
++      --config-file /tmp/pod-shared/nova-pci-alias.conf \
++      --config-file /tmp/pod-shared/nova-pci-whitelist.conf
+diff --git a/nova/templates/configmap-bin.yaml b/nova/templates/configmap-bin.yaml
+old mode 100644
+new mode 100755
+index e422b62..69e23b1
+--- a/nova/templates/configmap-bin.yaml
++++ b/nova/templates/configmap-bin.yaml
+@@ -63,6 +63,8 @@ data:
+ {{ tuple "bin/_nova-compute.sh.tpl" . | include "helm-toolkit.utils.template" | indent 4 }}
+   nova-compute-init.sh: |
+ {{ tuple "bin/_nova-compute-init.sh.tpl" . | include "helm-toolkit.utils.template" | indent 4 }}
++  nova-compute-sriov-init.sh: |
++{{ tuple "bin/_nova-compute-sriov-init.sh.tpl" . | include "helm-toolkit.utils.template" | indent 4 }}
+   nova-compute-ironic.sh: |
+ {{ tuple "bin/_nova-compute-ironic.sh.tpl" . | include "helm-toolkit.utils.template" | indent 4 }}
+   nova-conductor.sh: |
+diff --git a/nova/templates/daemonset-compute.yaml b/nova/templates/daemonset-compute.yaml
+old mode 100644
+new mode 100755
+index 82f185f..c593e51
+--- a/nova/templates/daemonset-compute.yaml
++++ b/nova/templates/daemonset-compute.yaml
+@@ -71,6 +71,29 @@ spec:
+               mountPath: /var/lib/nova
+             - name: pod-shared
+               mountPath: /tmp/pod-shared
++        - name: nova-compute-sriov-init
++{{ tuple $envAll "nova_compute" | include "helm-toolkit.snippets.image" | indent 10 }}
++{{ tuple $envAll $envAll.Values.pod.resources.compute | include "helm-toolkit.snippets.kubernetes_resources" | indent 10 }}
++          securityContext:
++            runAsUser: 0
++          env:
++            - name: NOVA_USER_UID
++              value: "{{ .Values.pod.user.nova.uid }}"
++          command:
++            - /tmp/nova-compute-sriov-init.sh
++          volumeMounts:
++            - name: nova-bin
++              mountPath: /tmp/nova-compute-sriov-init.sh
++              subPath: nova-compute-sriov-init.sh
++              readOnly: true
++            - name: nova-etc
++              mountPath: /etc/nova/nova.conf
++              subPath: nova.conf
++              readOnly: true
++            - name: sysdevices
++              mountPath: /sys/devices
++            - name: pod-shared
++              mountPath: /tmp/pod-shared
+         {{- if .Values.conf.ceph.enabled }}
+         {{- if empty .Values.conf.ceph.cinder.keyring }}
+         - name: ceph-admin-keyring-placement
+@@ -327,6 +350,9 @@ spec:
+         - name: cgroup
+           hostPath:
+             path: /sys/fs/cgroup
++        - name: sysdevices
++          hostPath:
++            path: /sys/devices
+         - name: pod-shared
+           emptyDir: {}
+         - name: machine-id
+-- 
+1.8.3.1
+
