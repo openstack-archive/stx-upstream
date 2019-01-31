@@ -7,7 +7,7 @@ ceph
 ceph-common
 ceph-fuse
 ceph-radosgw
-libcephfs1
+libcephfs2
 python-cephfs
 python-ceph-compat
 
