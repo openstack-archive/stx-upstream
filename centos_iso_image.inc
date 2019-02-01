@@ -62,6 +62,8 @@ openstack-ceilometer-common
 openstack-ceilometer-notification
 openstack-ceilometer-ipmi
 openstack-ceilometer-polling
+# ceilometerclient is needed by horizon temporarily
+python2-ceilometerclient
 
 # openstack-cinder
 openstack-cinder
