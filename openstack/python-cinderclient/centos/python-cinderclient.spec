@@ -120,6 +120,7 @@ sphinx-build -W -b man doc/source doc/build/man
 rm -fr doc/build/html/.doctrees doc/build/html/.buildinfo
 
 %install
+export PBR_VERSION=%{version}
 %if 0%{?with_python3}
 %py3_install
 mv %{buildroot}%{_bindir}/cinder %{buildroot}%{_bindir}/cinder-%{python3_version}
