@@ -31,6 +31,8 @@ Summary:          Python API and CLI for OpenStack Cinder
 
 BuildRequires:    python2-devel
 BuildRequires:    python2-setuptools
+BuildRequires:    python2-pip
+BuildRequires:    python2-wheel
 BuildRequires:    python2-pbr
 %if 0%{?fedora} > 0
 BuildRequires:    python2-d2to1
@@ -120,6 +122,7 @@ sphinx-build -W -b man doc/source doc/build/man
 rm -fr doc/build/html/.doctrees doc/build/html/.buildinfo
 
 %install
+export PBR_VERSION=%{version}
 %if 0%{?with_python3}
 %py3_install
 mv %{buildroot}%{_bindir}/cinder %{buildroot}%{_bindir}/cinder-%{python3_version}
