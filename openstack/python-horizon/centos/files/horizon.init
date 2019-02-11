@@ -20,7 +20,7 @@ PYTHON=`which python`
 MANAGE="/usr/share/openstack-dashboard/manage.py"
 EXEC="/usr/bin/gunicorn"
 BIND="localhost"
-PORT="8080"
+PORT="8008"
 WORKER="eventlet"
 WORKERS=`grep workers /etc/openstack-dashboard/horizon-config.ini | cut -f3 -d' '`
 # Increased timeout to facilitate large image uploads
