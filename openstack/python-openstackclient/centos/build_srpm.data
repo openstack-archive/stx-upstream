@@ -1,3 +1,4 @@
 TAR_NAME=python-openstackclient
 SRC_DIR="$CGCS_BASE/git/python-openstackclient"
-TIS_PATCH_VER=0
+COPY_LIST="$DISTRO/patches/*"
+TIS_PATCH_VER=1

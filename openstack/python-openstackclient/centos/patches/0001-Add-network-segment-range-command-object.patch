@@ -1,0 +1,1488 @@
+From c61224f6227585819c313072133bb5a15ca8957d Mon Sep 17 00:00:00 2001
+From: Kailun Qin <kailun.qin@intel.com>
+Date: Tue, 25 Dec 2018 07:20:59 +0800
+Subject: [PATCH] Add network segment range command object
+
+Add network segment range command object in support of network segment
+range management.
+
+This patch set includes documentation, unit tests and functional tests
+(currently skipped unit network segment range enabled in Neutron by
+default) for the following new commands:
+  - "os network segment range create"
+  - "os network segment range delete"
+  - "os network segment range list"
+  - "os network segment range set"
+  - "os network segment range show"
+
+Co-authored-by: Allain Legacy <Allain.legacy@windriver.com>
+
+Partially-implements: blueprint network-segment-range-management
+Change-Id: I335692f2db5be07c1c164f09b13f1abb80b7ba33
+Depends-on: https://review.openstack.org/624708
+Depends-on: https://review.openstack.org/624709
+---
+
+diff --git a/doc/source/cli/command-objects/network_segment_range.rst b/doc/source/cli/command-objects/network_segment_range.rst
+new file mode 100644
+index 0000000..31fabbf
+--- /dev/null
++++ b/doc/source/cli/command-objects/network_segment_range.rst
+@@ -0,0 +1,168 @@
++=====================
++network segment range
++=====================
++
++A **network segment range** is a resource for tenant network segment
++allocation.
++A network segment range exposes the segment range management to be administered
++via the Neutron API. In addition, it introduces the ability for the
++administrator to control the segment ranges globally or on a per-tenant basis.
++
++Network v2
++
++network segment range create
++----------------------------
++
++Create new network segment range
++
++.. program:: network segment range create
++.. code:: bash
++
++    openstack network segment range create
++          (--private | --shared)
++          [--project <project> [--project-domain <project-domain>]]
++          --network-type <network-type>
++          [--physical-network <physical-network-name>]
++          --minimum <minimum-segmentation-id>
++          --maximum <maximum-segmentation-id>
++          <name>
++
++.. option:: --private
++
++    Network segment range is assigned specifically to the project
++
++.. option:: --shared
++
++    Network segment range is shared with other projects
++
++.. option:: --project <project>
++
++    Network segment range owner (name or ID). Optional when the segment
++    range is shared
++
++.. option:: --project-domain <project-domain>
++
++    Domain the project belongs to (name or ID).
++    This can be used in case collisions between project names exist.
++
++.. option:: --physical-network <physical-network-name>
++
++    Physical network name of this network segment range
++
++.. option:: --network-type <network-type>
++
++    Network type of this network segment range
++    (geneve, gre, vlan or vxlan)
++
++.. option:: --minimum <minimum-segmentation-id>
++
++    Minimum segment identifier for this network segment range which is based
++    on the network type, VLAN ID for vlan network type and tunnel ID for
++    geneve, gre and vxlan network types
++
++.. option:: --maximum <maximum-segmentation-id>
++
++    Maximum segment identifier for this network segment range which is based
++    on the network type, VLAN ID for vlan network type and tunnel ID for
++    geneve, gre and vxlan network types
++
++.. _network_segment_range_create-name:
++.. describe:: <name>
++
++    Name of new network segment range
++
++network segment range delete
++----------------------------
++
++Delete network segment range(s)
++
++.. program:: network segment range delete
++.. code:: bash
++
++    openstack network segment range delete
++        <network-segment-range> [<network-segment-range> ...]
++
++.. _network_segment_range_delete-network-segment-range:
++.. describe:: <network-segment-range>
++
++    Network segment range (s) to delete (name or ID)
++
++network segment range list
++--------------------------
++
++List network segment ranges
++
++.. program:: network segment range list
++.. code:: bash
++
++    openstack network segment range list
++        [--long]
++        [--used | --unused]
++        [--available | --unavailable]
++
++.. option:: --long
++
++    List additional fields in output
++
++.. option:: --used
++
++    List network segment ranges that have segments not in use
++
++.. option:: --unused
++
++    List network segment ranges that do not have segments not in use
++
++.. option:: --available
++
++    List network segment ranges that have available segments
++
++.. option:: --unavailable
++
++    List network segment ranges without available segments
++
++network segment range set
++-------------------------
++
++Set network segment range properties
++
++.. program:: network segment range set
++.. code:: bash
++
++    openstack network segment range set
++        [--name <name>]
++        [--minimum <minimum-segmentation-id>]
++        [--maximum <maximum-segmentation-id>]
++        <network-segment-range>
++
++.. option:: --name <name>
++
++    Set network segment range name
++
++.. option:: --minimum <minimum-segmentation-id>
++
++    Set network segment range minimum segment identifier
++
++.. option:: --maximum <maximum-segmentation-id>
++
++    Set network segment range maximum segment identifier
++
++.. _network_segment_range_set-network-segment-range:
++.. describe:: <network-segment-range>
++
++    Network segment range to modify (name or ID)
++
++network segment range show
++--------------------------
++
++Display network segment range details
++
++.. program:: network segment range show
++.. code:: bash
++
++    openstack network segment range show
++        <network-segment-range>
++
++.. _network_segment_range_show-network-segment-range:
++.. describe:: <network-segment-range>
++
++    Network segment range to display (name or ID)
+diff --git a/doc/source/cli/commands.rst b/doc/source/cli/commands.rst
+index cdd5e63..e302fda 100644
+--- a/doc/source/cli/commands.rst
++++ b/doc/source/cli/commands.rst
+@@ -125,6 +125,7 @@
+ * ``network qos policy``: (**Network**) - a QoS policy for network resources
+ * ``network qos rule type``: (**Network**) - list of QoS available rule types
+ * ``network segment``: (**Network**) - a segment of a virtual network
++* ``network segment range``: (**Network**) - a segment range for tenant network segment allocation
+ * ``network service provider``: (**Network**) - a driver providing a network service
+ * ``object``: (**Object Storage**) a single file in the Object Storage
+ * ``object store account``: (**Object Storage**) owns a group of Object Storage resources
+diff --git a/openstackclient/network/v2/network_segment_range.py b/openstackclient/network/v2/network_segment_range.py
+new file mode 100644
+index 0000000..9e5e2e9
+--- /dev/null
++++ b/openstackclient/network/v2/network_segment_range.py
+@@ -0,0 +1,450 @@
++# Copyright (c) 2018, Intel Corporation.
++# All Rights Reserved.
++#
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++
++"""Network segment action implementations"""
++
++import itertools
++import logging
++
++from osc_lib.command import command
++from osc_lib import exceptions
++from osc_lib import utils
++import six
++
++from openstackclient.i18n import _
++from openstackclient.identity import common as identity_common
++from openstackclient.network import sdk_utils
++
++
++LOG = logging.getLogger(__name__)
++
++
++def _get_columns(item):
++    return sdk_utils.get_osc_show_columns_for_sdk_resource(item, {})
++
++
++def _get_ranges(item):
++    item = [int(i) if isinstance(i, six.string_types) else i for i in item]
++    for a, b in itertools.groupby(enumerate(item), lambda xy: xy[1] - xy[0]):
++        b = list(b)
++        yield "%s-%s" % (b[0][1], b[-1][1]) if b[0][1] != b[-1][1] else \
++            str(b[0][1])
++
++
++def _hack_tuple_value_update_by_index(tup, index, value):
++    lot = list(tup)
++    lot[index] = value
++    return tuple(lot)
++
++
++def _is_prop_empty(columns, props, prop_name):
++    return True if not props[columns.index(prop_name)] else False
++
++
++def _exchange_dict_keys_with_values(orig_dict):
++    updated_dict = dict()
++    for k, v in six.iteritems(orig_dict):
++        k = [k]
++        if not updated_dict.get(v):
++            updated_dict[v] = k
++        else:
++            updated_dict[v].extend(k)
++    return updated_dict
++
++
++def _update_available_from_props(columns, props):
++    index_available = columns.index('available')
++    props = _hack_tuple_value_update_by_index(
++        props, index_available, list(_get_ranges(props[index_available])))
++    return props
++
++
++def _update_used_from_props(columns, props):
++    index_used = columns.index('used')
++    updated_used = _exchange_dict_keys_with_values(props[index_used])
++    for k, v in six.iteritems(updated_used):
++        updated_used[k] = list(_get_ranges(v))
++    props = _hack_tuple_value_update_by_index(
++        props, index_used, updated_used)
++    return props
++
++
++def _update_additional_fields_from_props(columns, props):
++    props = _update_available_from_props(columns, props)
++    props = _update_used_from_props(columns, props)
++    return props
++
++
++class CreateNetworkSegmentRange(command.ShowOne):
++    _description = _("Create new network segment range")
++
++    def get_parser(self, prog_name):
++        parser = super(CreateNetworkSegmentRange, self).get_parser(prog_name)
++        shared_group = parser.add_mutually_exclusive_group(required=True)
++        shared_group.add_argument(
++            "--private",
++            dest="private",
++            action="store_true",
++            help=_('Network segment range is assigned specifically to the '
++                   'project'),
++        )
++        shared_group.add_argument(
++            "--shared",
++            dest="shared",
++            action="store_true",
++            help=_('Network segment range is shared with other projects'),
++        )
++        parser.add_argument(
++            'name',
++            metavar='<name>',
++            help=_('Name of new network segment range')
++        )
++        parser.add_argument(
++            '--project',
++            metavar='<project>',
++            help=_('Network segment range owner (name or ID). Optional when '
++                   'the segment range is shared'),
++        )
++        identity_common.add_project_domain_option_to_parser(parser)
++        parser.add_argument(
++            '--network-type',
++            metavar='<network-type>',
++            choices=['geneve', 'gre', 'vlan', 'vxlan'],
++            required=True,
++            help=_('Network type of this network segment range '
++                   '(geneve, gre, vlan or vxlan)'),
++        )
++        parser.add_argument(
++            '--physical-network',
++            metavar='<physical-network-name>',
++            help=_('Physical network name of this network segment range'),
++        )
++        parser.add_argument(
++            '--minimum',
++            metavar='<minimum-segmentation-id>',
++            type=int,
++            required=True,
++            help=_('Minimum segment identifier for this network segment '
++                   'range which is based on the network type, VLAN ID for '
++                   'vlan network type and tunnel ID for geneve, gre and vxlan '
++                   'network types'),
++        )
++        parser.add_argument(
++            '--maximum',
++            metavar='<maximum-segmentation-id>',
++            type=int,
++            required=True,
++            help=_('Maximum segment identifier for this network segment '
++                   'range which is based on the network type, VLAN ID for '
++                   'vlan network type and tunnel ID for geneve, gre and vxlan '
++                   'network types'),
++        )
++
++        return parser
++
++    def take_action(self, parsed_args):
++        network_client = self.app.client_manager.network
++        try:
++            # Verify that the extension exists.
++            network_client.find_extension('network-segment-range',
++                                          ignore_missing=False)
++        except Exception as e:
++            msg = (_('Network segment range create not supported by '
++                     'Network API: %(e)s') % {'e': e})
++            raise exceptions.CommandError(msg)
++
++        identity_client = self.app.client_manager.identity
++
++        if parsed_args.shared and parsed_args.project:
++            msg = _("--project is only allowed with --private")
++            raise exceptions.CommandError(msg)
++
++        if parsed_args.private and not parsed_args.project:
++            msg = _("--project is required with --private")
++            raise exceptions.CommandError(msg)
++
++        if (parsed_args.network_type.lower() != 'vlan' and
++                parsed_args.physical_network):
++            msg = _("--physical-network is only allowed with --network-type "
++                    "vlan")
++            raise exceptions.CommandError(msg)
++
++        attrs = {}
++        attrs['shared'] = parsed_args.shared
++        attrs['network_type'] = parsed_args.network_type
++        attrs['minimum'] = parsed_args.minimum
++        attrs['maximum'] = parsed_args.maximum
++        if parsed_args.name:
++            attrs['name'] = parsed_args.name
++
++        if parsed_args.project:
++            project_id = identity_common.find_project(
++                identity_client,
++                parsed_args.project,
++                parsed_args.project_domain,
++            ).id
++            if project_id:
++                attrs['project_id'] = project_id
++            else:
++                msg = (_("Failed to create the network segment range for "
++                         "project %(project_id)s") % parsed_args.project_id)
++                raise exceptions.CommandError(msg)
++        if parsed_args.physical_network:
++            attrs['physical_network'] = parsed_args.physical_network
++        obj = network_client.create_network_segment_range(**attrs)
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns)
++        data = _update_additional_fields_from_props(columns, props=data)
++        return (display_columns, data)
++
++
++class DeleteNetworkSegmentRange(command.Command):
++    _description = _("Delete network segment range(s)")
++
++    def get_parser(self, prog_name):
++        parser = super(DeleteNetworkSegmentRange, self).get_parser(prog_name)
++        parser.add_argument(
++            'network_segment_range',
++            metavar='<network-segment-range>',
++            nargs='+',
++            help=_('Network segment range(s) to delete (name or ID)'),
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        network_client = self.app.client_manager.network
++        try:
++            # Verify that the extension exists.
++            network_client.find_extension('network-segment-range',
++                                          ignore_missing=False)
++        except Exception as e:
++            msg = (_('Network segment range delete not supported by '
++                     'Network API: %(e)s') % {'e': e})
++            raise exceptions.CommandError(msg)
++
++        result = 0
++        for network_segment_range in parsed_args.network_segment_range:
++            try:
++                obj = network_client.find_network_segment_range(
++                    network_segment_range, ignore_missing=False)
++                network_client.delete_network_segment_range(obj)
++            except Exception as e:
++                result += 1
++                LOG.error(_("Failed to delete network segment range with "
++                            "ID '%(network_segment_range)s': %(e)s"),
++                          {'network_segment_range': network_segment_range,
++                           'e': e})
++
++        if result > 0:
++            total = len(parsed_args.network_segment_range)
++            msg = (_("%(result)s of %(total)s network segment ranges failed "
++                     "to delete.") % {'result': result, 'total': total})
++            raise exceptions.CommandError(msg)
++
++
++class ListNetworkSegmentRange(command.Lister):
++    _description = _("List network segment ranges")
++
++    def get_parser(self, prog_name):
++        parser = super(ListNetworkSegmentRange, self).get_parser(prog_name)
++        parser.add_argument(
++            '--long',
++            action='store_true',
++            help=_('List additional fields in output'),
++        )
++        used_group = parser.add_mutually_exclusive_group()
++        used_group.add_argument(
++            '--used',
++            action='store_true',
++            help=_('List network segment ranges that have segments in use'),
++        )
++        used_group.add_argument(
++            '--unused',
++            action='store_true',
++            help=_('List network segment ranges that have segments '
++                   'not in use'),
++        )
++        available_group = parser.add_mutually_exclusive_group()
++        available_group.add_argument(
++            '--available',
++            action='store_true',
++            help=_('List network segment ranges that have available segments'),
++        )
++        available_group.add_argument(
++            '--unavailable',
++            action='store_true',
++            help=_('List network segment ranges without available segments'),
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        network_client = self.app.client_manager.network
++        try:
++            # Verify that the extension exists.
++            network_client.find_extension('network-segment-range',
++                                          ignore_missing=False)
++        except Exception as e:
++            msg = (_('Network segment ranges list not supported by '
++                     'Network API: %(e)s') % {'e': e})
++            raise exceptions.CommandError(msg)
++
++        filters = {}
++        data = network_client.network_segment_ranges(**filters)
++
++        headers = (
++            'ID',
++            'Name',
++            'Default',
++            'Shared',
++            'Project ID',
++            'Network Type',
++            'Physical Network',
++            'Minimum ID',
++            'Maximum ID'
++        )
++        columns = (
++            'id',
++            'name',
++            'default',
++            'shared',
++            'project_id',
++            'network_type',
++            'physical_network',
++            'minimum',
++            'maximum',
++        )
++        if parsed_args.available or parsed_args.unavailable or \
++                parsed_args.used or parsed_args.unused:
++            # If one of `--available`, `--unavailable`, `--used`,
++            # `--unused` is specified, we assume that additional fields
++            # should be listed in output.
++            parsed_args.long = True
++        if parsed_args.long:
++            headers = headers + (
++                'Used',
++                'Available',
++            )
++            columns = columns + (
++                'used',
++                'available',
++            )
++
++        display_props = tuple()
++        for s in data:
++            props = utils.get_item_properties(s, columns)
++            if parsed_args.available and \
++                    _is_prop_empty(columns, props, 'available') or \
++               parsed_args.unavailable and \
++                    not _is_prop_empty(columns, props, 'available') or \
++               parsed_args.used and _is_prop_empty(columns, props, 'used') or \
++               parsed_args.unused and \
++                    not _is_prop_empty(columns, props, 'used'):
++                    continue
++            if parsed_args.long:
++                props = _update_additional_fields_from_props(columns, props)
++            display_props += (props,)
++
++        return headers, display_props
++
++
++class SetNetworkSegmentRange(command.Command):
++    _description = _("Set network segment range properties")
++
++    def get_parser(self, prog_name):
++        parser = super(SetNetworkSegmentRange, self).get_parser(prog_name)
++        parser.add_argument(
++            'network_segment_range',
++            metavar='<network-segment-range>',
++            help=_('Network segment range to modify (name or ID)'),
++        )
++        parser.add_argument(
++            '--name',
++            metavar='<name>',
++            help=_('Set network segment name'),
++        )
++        parser.add_argument(
++            '--minimum',
++            metavar='<minimum-segmentation-id>',
++            type=int,
++            help=_('Set network segment range minimum segment identifier'),
++        )
++        parser.add_argument(
++            '--maximum',
++            metavar='<maximum-segmentation-id>',
++            type=int,
++            help=_('Set network segment range maximum segment identifier'),
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        network_client = self.app.client_manager.network
++        try:
++            # Verify that the extension exists.
++            network_client.find_extension('network-segment-range',
++                                          ignore_missing=False)
++        except Exception as e:
++            msg = (_('Network segment range set not supported by '
++                     'Network API: %(e)s') % {'e': e})
++            raise exceptions.CommandError(msg)
++
++        if (parsed_args.minimum and not parsed_args.maximum) or \
++                (parsed_args.maximum and not parsed_args.minimum):
++            msg = _("--minimum and --maximum are both required")
++            raise exceptions.CommandError(msg)
++
++        obj = network_client.find_network_segment_range(
++            parsed_args.network_segment_range, ignore_missing=False)
++        attrs = {}
++        if parsed_args.name:
++            attrs['name'] = parsed_args.name
++        if parsed_args.minimum:
++            attrs['minimum'] = parsed_args.minimum
++        if parsed_args.maximum:
++            attrs['maximum'] = parsed_args.maximum
++        network_client.update_network_segment_range(obj, **attrs)
++
++
++class ShowNetworkSegmentRange(command.ShowOne):
++    _description = _("Display network segment range details")
++
++    def get_parser(self, prog_name):
++        parser = super(ShowNetworkSegmentRange, self).get_parser(prog_name)
++        parser.add_argument(
++            'network_segment_range',
++            metavar='<network-segment-range>',
++            help=_('Network segment range to display (name or ID)'),
++        )
++        return parser
++
++    def take_action(self, parsed_args):
++        network_client = self.app.client_manager.network
++        try:
++            # Verify that the extension exists.
++            network_client.find_extension('network-segment-range',
++                                          ignore_missing=False)
++        except Exception as e:
++            msg = (_('Network segment range show not supported by '
++                     'Network API: %(e)s') % {'e': e})
++            raise exceptions.CommandError(msg)
++
++        obj = network_client.find_network_segment_range(
++            parsed_args.network_segment_range,
++            ignore_missing=False
++        )
++        display_columns, columns = _get_columns(obj)
++        data = utils.get_item_properties(obj, columns)
++        data = _update_additional_fields_from_props(columns, props=data)
++        return (display_columns, data)
+diff --git a/openstackclient/tests/functional/network/v2/test_network_segment_range.py b/openstackclient/tests/functional/network/v2/test_network_segment_range.py
+new file mode 100644
+index 0000000..435cbe1
+--- /dev/null
++++ b/openstackclient/tests/functional/network/v2/test_network_segment_range.py
+@@ -0,0 +1,152 @@
++# Copyright (c) 2018, Intel Corporation.
++# All Rights Reserved.
++#
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++
++import json
++import uuid
++
++import testtools
++
++from openstackclient.tests.functional.network.v2 import common
++
++
++# NOTE(kailun): Network segment range management is still a WIP and not
++# enabled by default.
++@testtools.skip("bp/network-segment-range-management")
++class NetworkSegmentRangeTests(common.NetworkTests):
++    """Functional tests for network segment range"""
++
++    PROJECT_NAME = uuid.uuid4().hex
++
++    @classmethod
++    def setUpClass(cls):
++        super(NetworkSegmentRangeTests, cls).setUpClass()
++        # Make a project
++        cmd_output = json.loads(cls.openstack(
++            "project create -f json --enable " + cls.PROJECT_NAME
++        ))
++        cls.project_id = cmd_output["id"]
++
++    @classmethod
++    def tearDownClass(cls):
++        try:
++            raw_output = cls.openstack("project delete " + cls.PROJECT_NAME)
++            cls.assertOutput('', raw_output)
++        finally:
++            super(NetworkSegmentRangeTests, cls).tearDownClass()
++
++    def setUp(self):
++        super(NetworkSegmentRangeTests, self).setUp()
++        # Nothing in this class works with Nova Network
++        if not self.haz_network:
++            self.skipTest("No Network service present")
++
++    def test_network_segment_range_create_delete(self):
++        name = uuid.uuid4().hex
++        json_output = json.loads(self.openstack(
++            ' network segment range create -f json ' +
++            '--private ' +
++            "--project " + self.PROJECT_NAME + " " +
++            '--network-type vxlan ' +
++            '--minimum 2018 ' +
++            '--maximum 2055 ' +
++            name
++        ))
++        self.assertEqual(
++            name,
++            json_output["name"],
++        )
++        self.assertEqual(
++            self.project_id,
++            json_output["project_id"],
++        )
++
++        raw_output = self.openstack(
++            'network segment range delete ' + name,
++        )
++        self.assertOutput('', raw_output)
++
++    def test_network_segment_range_list(self):
++        name = uuid.uuid4().hex
++        json_output = json.loads(self.openstack(
++            ' network segment range create -f json ' +
++            '--shared ' +
++            '--network-type geneve ' +
++            '--minimum 2018 ' +
++            '--maximum 2055 ' +
++            name
++        ))
++        network_segment_range_id = json_output.get('id')
++        network_segment_range_name = json_output.get('name')
++        self.addCleanup(
++            self.openstack,
++            'network segment range delete ' + network_segment_range_id
++        )
++        self.assertEqual(
++            name,
++            json_output["name"],
++        )
++
++        json_output = json.loads(self.openstack(
++            'network segment list -f json'
++        ))
++        item_map = {
++            item.get('ID'): item.get('Name') for item in json_output
++        }
++        self.assertIn(network_segment_range_id, item_map.keys())
++        self.assertIn(network_segment_range_name, item_map.values())
++
++    def test_network_segment_range_set_show(self):
++        name = uuid.uuid4().hex
++        json_output = json.loads(self.openstack(
++            ' network segment range create -f json ' +
++            '--private ' +
++            "--project " + self.PROJECT_NAME + " " +
++            '--network-type geneve ' +
++            '--minimum 2018 ' +
++            '--maximum 2055 ' +
++            name
++        ))
++        self.addCleanup(
++            self.openstack,
++            'network segment range delete ' + name
++        )
++        self.assertEqual(
++            name,
++            json_output["name"],
++        )
++
++        new_minimum = '2010'
++        new_maximum = '2060'
++        cmd_output = self.openstack(
++            'network segment range set ' +
++            '--minimum ' + new_minimum + ' ' +
++            '--maximum ' + new_maximum + ' ' +
++            name
++        )
++        self.assertOutput('', cmd_output)
++
++        json_output = json.loads(self.openstack(
++            'network segment range show -f json ' +
++            name
++        ))
++        self.assertEqual(
++            new_minimum,
++            json_output["minimum"],
++        )
++        self.assertEqual(
++            new_maximum,
++            json_output["maximum"],
++        )
+diff --git a/openstackclient/tests/unit/network/v2/fakes.py b/openstackclient/tests/unit/network/v2/fakes.py
+index 28e92d1..2397cc5 100644
+--- a/openstackclient/tests/unit/network/v2/fakes.py
++++ b/openstackclient/tests/unit/network/v2/fakes.py
+@@ -538,6 +538,66 @@
+         return network_segments
+ 
+ 
++class FakeNetworkSegmentRange(object):
++    """Fake one or more network segment ranges."""
++
++    @staticmethod
++    def create_one_network_segment_range(attrs=None):
++        """Create a fake network segment range.
++
++        :param Dictionary attrs:
++            A dictionary with all attributes
++        :return:
++            A FakeResource object faking the network segment range
++        """
++        attrs = attrs or {}
++
++        # Set default attributes.
++        fake_uuid = uuid.uuid4().hex
++        network_segment_range_attrs = {
++            'id': 'network-segment-range-id-' + fake_uuid,
++            'name': 'network-segment-name-' + fake_uuid,
++            'default': False,
++            'shared': False,
++            'project_id': 'project-id-' + fake_uuid,
++            'network_type': 'vlan',
++            'physical_network': 'physical-network-name-' + fake_uuid,
++            'minimum': 64,
++            'maximum': 256,
++            'used': {104: '3312e4ba67864b2eb53f3f41432f8efc',
++                     106: '3312e4ba67864b2eb53f3f41432f8efc'},
++            'available': [100, 101, 102, 103, 105],
++        }
++
++        # Overwrite default attributes.
++        network_segment_range_attrs.update(attrs)
++
++        network_segment_range = fakes.FakeResource(
++            info=copy.deepcopy(network_segment_range_attrs),
++            loaded=True
++        )
++
++        return network_segment_range
++
++    @staticmethod
++    def create_network_segment_ranges(attrs=None, count=2):
++        """Create multiple fake network segment ranges.
++
++        :param Dictionary attrs:
++            A dictionary with all attributes
++        :param int count:
++            The number of network segment ranges to fake
++        :return:
++            A list of FakeResource objects faking the network segment ranges
++        """
++        network_segment_ranges = []
++        for i in range(0, count):
++            network_segment_ranges.append(
++                FakeNetworkSegmentRange.create_one_network_segment_range(attrs)
++            )
++        return network_segment_ranges
++
++
+ class FakePort(object):
+     """Fake one or more ports."""
+ 
+diff --git a/openstackclient/tests/unit/network/v2/test_network_segment_range.py b/openstackclient/tests/unit/network/v2/test_network_segment_range.py
+new file mode 100644
+index 0000000..bb2b302
+--- /dev/null
++++ b/openstackclient/tests/unit/network/v2/test_network_segment_range.py
+@@ -0,0 +1,557 @@
++# Copyright (c) 2018, Intel Corporation.
++# All Rights Reserved.
++#
++#   Licensed under the Apache License, Version 2.0 (the "License"); you may
++#   not use this file except in compliance with the License. You may obtain
++#   a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
++#   License for the specific language governing permissions and limitations
++#   under the License.
++#
++
++import mock
++from mock import call
++
++from osc_lib import exceptions
++
++from openstackclient.network.v2 import network_segment_range
++from openstackclient.tests.unit.network.v2 import fakes as network_fakes
++from openstackclient.tests.unit import utils as tests_utils
++
++
++class TestNetworkSegmentRange(network_fakes.TestNetworkV2):
++
++    def setUp(self):
++        super(TestNetworkSegmentRange, self).setUp()
++
++        # Get a shortcut to the network client
++        self.network = self.app.client_manager.network
++
++
++class TestCreateNetworkSegmentRange(TestNetworkSegmentRange):
++
++    # The network segment range to create.
++    _network_segment_range = network_fakes.FakeNetworkSegmentRange.\
++        create_one_network_segment_range()
++
++    columns = (
++        'available',
++        'default',
++        'id',
++        'maximum',
++        'minimum',
++        'name',
++        'network_type',
++        'physical_network',
++        'project_id',
++        'shared',
++        'used',
++    )
++
++    data = (
++        ['100-103', '105'],
++        _network_segment_range.default,
++        _network_segment_range.id,
++        _network_segment_range.maximum,
++        _network_segment_range.minimum,
++        _network_segment_range.name,
++        _network_segment_range.network_type,
++        _network_segment_range.physical_network,
++        _network_segment_range.project_id,
++        _network_segment_range.shared,
++        {'3312e4ba67864b2eb53f3f41432f8efc': ['104', '106']},
++    )
++
++    def setUp(self):
++        super(TestCreateNetworkSegmentRange, self).setUp()
++
++        self.network.find_extension = mock.Mock()
++        self.network.create_network_segment_range = mock.Mock(
++            return_value=self._network_segment_range
++        )
++
++        # Get the command object to test
++        self.cmd = network_segment_range.CreateNetworkSegmentRange(
++            self.app,
++            self.namespace
++        )
++
++    def test_create_no_options(self):
++        # Missing required args should bail here
++        self.assertRaises(tests_utils.ParserException, self.check_parser,
++                          self.cmd, [], [])
++
++    def test_create_invalid_network_type(self):
++        arglist = [
++            '--private',
++            '--project', self._network_segment_range.project_id,
++            '--network-type', 'foo',
++            '--minimum', str(self._network_segment_range.minimum),
++            '--maximum', str(self._network_segment_range.maximum),
++            self._network_segment_range.name,
++        ]
++        self.assertRaises(tests_utils.ParserException, self.check_parser,
++                          self.cmd, arglist, [])
++
++    def test_create_shared_with_project_id(self):
++        arglist = [
++            '--shared',
++            '--project', self._network_segment_range.project_id,
++            '--network-type', 'vxlan',
++            '--minimum', str(self._network_segment_range.minimum),
++            '--maximum', str(self._network_segment_range.maximum),
++            self._network_segment_range.name,
++        ]
++        verifylist = [
++            ('shared', True),
++            ('project', self._network_segment_range.project_id),
++            ('network_type', 'vxlan'),
++            ('minimum', self._network_segment_range.minimum),
++            ('maximum', self._network_segment_range.maximum),
++            ('name', self._network_segment_range.name),
++        ]
++
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++        self.assertRaises(exceptions.CommandError,
++                          self.cmd.take_action,
++                          parsed_args)
++
++    def test_create_non_shared_with_no_project_id(self):
++        arglist = [
++            '--private',
++            '--network-type', 'vxlan',
++            '--minimum', str(self._network_segment_range.minimum),
++            '--maximum', str(self._network_segment_range.maximum),
++            self._network_segment_range.name,
++        ]
++        verifylist = [
++            ('shared', self._network_segment_range.shared),
++            ('network_type', 'vxlan'),
++            ('minimum', self._network_segment_range.minimum),
++            ('maximum', self._network_segment_range.maximum),
++            ('name', self._network_segment_range.name),
++        ]
++
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++        self.assertRaises(exceptions.CommandError,
++                          self.cmd.take_action,
++                          parsed_args)
++
++    def test_create_tunnel_with_physical_network(self):
++        arglist = [
++            '--shared',
++            '--network-type', 'vxlan',
++            '--physical-network', self._network_segment_range.physical_network,
++            '--minimum', str(self._network_segment_range.minimum),
++            '--maximum', str(self._network_segment_range.maximum),
++            self._network_segment_range.name,
++        ]
++        verifylist = [
++            ('shared', True),
++            ('network_type', 'vxlan'),
++            ('physical_network', self._network_segment_range.physical_network),
++            ('minimum', self._network_segment_range.minimum),
++            ('maximum', self._network_segment_range.maximum),
++            ('name', self._network_segment_range.name),
++        ]
++
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++        self.assertRaises(exceptions.CommandError,
++                          self.cmd.take_action,
++                          parsed_args)
++
++    def test_create_minimum_options(self):
++        arglist = [
++            '--private',
++            '--project', self._network_segment_range.project_id,
++            '--network-type', self._network_segment_range.network_type,
++            '--minimum', str(self._network_segment_range.minimum),
++            '--maximum', str(self._network_segment_range.maximum),
++            self._network_segment_range.name,
++        ]
++        verifylist = [
++            ('shared', self._network_segment_range.shared),
++            ('project', self._network_segment_range.project_id),
++            ('network_type', self._network_segment_range.network_type),
++            ('minimum', self._network_segment_range.minimum),
++            ('maximum', self._network_segment_range.maximum),
++            ('name', self._network_segment_range.name),
++        ]
++
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++        columns, data = self.cmd.take_action(parsed_args)
++
++        self.network.create_network_segment_range.assert_called_once_with(**{
++            'shared': self._network_segment_range.shared,
++            'project_id': mock.ANY,
++            'network_type': self._network_segment_range.network_type,
++            'minimum': self._network_segment_range.minimum,
++            'maximum': self._network_segment_range.maximum,
++            'name': self._network_segment_range.name,
++        })
++
++        self.assertEqual(self.columns, columns)
++        self.assertEqual(self.data, data)
++
++    def test_create_all_options(self):
++        arglist = [
++            '--private',
++            '--project', self._network_segment_range.project_id,
++            '--network-type', self._network_segment_range.network_type,
++            '--physical-network', self._network_segment_range.physical_network,
++            '--minimum', str(self._network_segment_range.minimum),
++            '--maximum', str(self._network_segment_range.maximum),
++            self._network_segment_range.name,
++        ]
++        verifylist = [
++            ('shared', self._network_segment_range.shared),
++            ('project', self._network_segment_range.project_id),
++            ('network_type', self._network_segment_range.network_type),
++            ('physical_network', self._network_segment_range.physical_network),
++            ('minimum', self._network_segment_range.minimum),
++            ('maximum', self._network_segment_range.maximum),
++            ('name', self._network_segment_range.name),
++        ]
++
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++        columns, data = self.cmd.take_action(parsed_args)
++
++        self.network.create_network_segment_range.assert_called_once_with(**{
++            'shared': self._network_segment_range.shared,
++            'project_id': mock.ANY,
++            'network_type': self._network_segment_range.network_type,
++            'physical_network': self._network_segment_range.physical_network,
++            'minimum': self._network_segment_range.minimum,
++            'maximum': self._network_segment_range.maximum,
++            'name': self._network_segment_range.name,
++        })
++
++        self.assertEqual(self.columns, columns)
++        self.assertEqual(self.data, data)
++
++
++class TestDeleteNetworkSegmentRange(TestNetworkSegmentRange):
++
++    # The network segment ranges to delete.
++    _network_segment_ranges = \
++        network_fakes.FakeNetworkSegmentRange.create_network_segment_ranges()
++
++    def setUp(self):
++        super(TestDeleteNetworkSegmentRange, self).setUp()
++
++        self.network.find_extension = mock.Mock()
++        self.network.delete_network_segment_range = mock.Mock(
++            return_value=None)
++        self.network.find_network_segment_range = mock.Mock(
++            side_effect=self._network_segment_ranges
++        )
++
++        # Get the command object to test
++        self.cmd = network_segment_range.DeleteNetworkSegmentRange(
++            self.app,
++            self.namespace
++        )
++
++    def test_delete(self):
++        arglist = [
++            self._network_segment_ranges[0].id,
++        ]
++        verifylist = [
++            ('network_segment_range', [self._network_segment_ranges[0].id]),
++        ]
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++
++        result = self.cmd.take_action(parsed_args)
++
++        self.network.delete_network_segment_range.assert_called_once_with(
++            self._network_segment_ranges[0]
++        )
++        self.assertIsNone(result)
++
++    def test_delete_multiple(self):
++        arglist = []
++        for _network_segment_range in self._network_segment_ranges:
++            arglist.append(_network_segment_range.id)
++        verifylist = [
++            ('network_segment_range', arglist),
++        ]
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++
++        result = self.cmd.take_action(parsed_args)
++
++        calls = []
++        for _network_segment_range in self._network_segment_ranges:
++            calls.append(call(_network_segment_range))
++        self.network.delete_network_segment_range.assert_has_calls(calls)
++        self.assertIsNone(result)
++
++    def test_delete_multiple_with_exception(self):
++        arglist = [
++            self._network_segment_ranges[0].id,
++            'doesnotexist'
++        ]
++        verifylist = [
++            ('network_segment_range',
++             [self._network_segment_ranges[0].id, 'doesnotexist']),
++        ]
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++
++        find_mock_result = [self._network_segment_ranges[0],
++                            exceptions.CommandError]
++        self.network.find_network_segment_range = (
++            mock.Mock(side_effect=find_mock_result)
++        )
++
++        try:
++            self.cmd.take_action(parsed_args)
++            self.fail('CommandError should be raised.')
++        except exceptions.CommandError as e:
++            self.assertEqual('1 of 2 network segment ranges failed to delete.',
++                             str(e))
++
++        self.network.find_network_segment_range.assert_any_call(
++            self._network_segment_ranges[0].id, ignore_missing=False)
++        self.network.find_network_segment_range.assert_any_call(
++            'doesnotexist', ignore_missing=False)
++        self.network.delete_network_segment_range.assert_called_once_with(
++            self._network_segment_ranges[0]
++        )
++
++
++class TestListNetworkSegmentRange(TestNetworkSegmentRange):
++    _network_segment_ranges = network_fakes.FakeNetworkSegmentRange.\
++        create_network_segment_ranges(count=3)
++
++    columns = (
++        'ID',
++        'Name',
++        'Default',
++        'Shared',
++        'Project ID',
++        'Network Type',
++        'Physical Network',
++        'Minimum ID',
++        'Maximum ID'
++    )
++    columns_long = columns + (
++        'Used',
++        'Available',
++    )
++
++    data = []
++    for _network_segment_range in _network_segment_ranges:
++        data.append((
++            _network_segment_range.id,
++            _network_segment_range.name,
++            _network_segment_range.default,
++            _network_segment_range.shared,
++            _network_segment_range.project_id,
++            _network_segment_range.network_type,
++            _network_segment_range.physical_network,
++            _network_segment_range.minimum,
++            _network_segment_range.maximum,
++        ))
++
++    data_long = []
++    for _network_segment_range in _network_segment_ranges:
++        data_long.append((
++            _network_segment_range.id,
++            _network_segment_range.name,
++            _network_segment_range.default,
++            _network_segment_range.shared,
++            _network_segment_range.project_id,
++            _network_segment_range.network_type,
++            _network_segment_range.physical_network,
++            _network_segment_range.minimum,
++            _network_segment_range.maximum,
++            {'3312e4ba67864b2eb53f3f41432f8efc': ['104', '106']},
++            ['100-103', '105'],
++        ))
++
++    def setUp(self):
++        super(TestListNetworkSegmentRange, self).setUp()
++
++        # Get the command object to test
++        self.cmd = network_segment_range.ListNetworkSegmentRange(
++            self.app, self.namespace)
++
++        self.network.find_extension = mock.Mock()
++        self.network.network_segment_ranges = mock.Mock(
++            return_value=self._network_segment_ranges)
++
++    def test_list_no_option(self):
++        arglist = []
++        verifylist = [
++            ('long', False),
++            ('available', False),
++            ('unavailable', False),
++            ('used', False),
++            ('unused', False),
++        ]
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++
++        columns, data = self.cmd.take_action(parsed_args)
++
++        self.network.network_segment_ranges.assert_called_once_with()
++        self.assertEqual(self.columns, columns)
++        self.assertEqual(self.data, list(data))
++
++    def test_list_long(self):
++        arglist = [
++            '--long',
++        ]
++        verifylist = [
++            ('long', True),
++            ('available', False),
++            ('unavailable', False),
++            ('used', False),
++            ('unused', False),
++        ]
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++
++        columns, data = self.cmd.take_action(parsed_args)
++
++        self.network.network_segment_ranges.assert_called_once_with()
++        self.assertEqual(self.columns_long, columns)
++        self.assertEqual(self.data_long, list(data))
++
++
++class TestSetNetworkSegmentRange(TestNetworkSegmentRange):
++
++    # The network segment to show.
++    _network_segment_range = network_fakes.FakeNetworkSegmentRange.\
++        create_one_network_segment_range()
++
++    def setUp(self):
++        super(TestSetNetworkSegmentRange, self).setUp()
++
++        self.network.find_extension = mock.Mock()
++        self.network.find_network_segment_range = mock.Mock(
++            return_value=self._network_segment_range
++        )
++        self.network.update_network_segment_range = mock.Mock(
++            return_value=self._network_segment_range
++        )
++
++        # Get the command object to test
++        self.cmd = network_segment_range.SetNetworkSegmentRange(self.app,
++                                                                self.namespace)
++
++    def test_set_no_options(self):
++        arglist = [
++            self._network_segment_range.id,
++        ]
++        verifylist = [
++            ('network_segment_range', self._network_segment_range.id),
++        ]
++
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++        result = self.cmd.take_action(parsed_args)
++
++        self.network.update_network_segment_range.assert_called_once_with(
++            self._network_segment_range, **{}
++        )
++        self.assertIsNone(result)
++
++    def test_set_all_options(self):
++        arglist = [
++            '--name', 'new name',
++            '--minimum', str(32),
++            '--maximum', str(512),
++            self._network_segment_range.id,
++        ]
++        verifylist = [
++            ('name', 'new name'),
++            ('minimum', 32),
++            ('maximum', 512),
++            ('network_segment_range', self._network_segment_range.id),
++        ]
++
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++        result = self.cmd.take_action(parsed_args)
++
++        attrs = {
++            'name': 'new name',
++            'minimum': 32,
++            'maximum': 512,
++        }
++        self.network.update_network_segment_range.assert_called_once_with(
++            self._network_segment_range, **attrs
++        )
++        self.assertIsNone(result)
++
++
++class TestShowNetworkSegmentRange(TestNetworkSegmentRange):
++
++    # The network segment range to show.
++    _network_segment_range = network_fakes.FakeNetworkSegmentRange.\
++        create_one_network_segment_range()
++
++    columns = (
++        'available',
++        'default',
++        'id',
++        'maximum',
++        'minimum',
++        'name',
++        'network_type',
++        'physical_network',
++        'project_id',
++        'shared',
++        'used',
++    )
++
++    data = (
++        ['100-103', '105'],
++        _network_segment_range.default,
++        _network_segment_range.id,
++        _network_segment_range.maximum,
++        _network_segment_range.minimum,
++        _network_segment_range.name,
++        _network_segment_range.network_type,
++        _network_segment_range.physical_network,
++        _network_segment_range.project_id,
++        _network_segment_range.shared,
++        {'3312e4ba67864b2eb53f3f41432f8efc': ['104', '106']},
++    )
++
++    def setUp(self):
++        super(TestShowNetworkSegmentRange, self).setUp()
++
++        self.network.find_extension = mock.Mock()
++        self.network.find_network_segment_range = mock.Mock(
++            return_value=self._network_segment_range
++        )
++
++        # Get the command object to test
++        self.cmd = network_segment_range.ShowNetworkSegmentRange(
++            self.app, self.namespace)
++
++    def test_show_no_options(self):
++        # Missing required args should bail here
++        self.assertRaises(tests_utils.ParserException, self.check_parser,
++                          self.cmd, [], [])
++
++    def test_show_all_options(self):
++        arglist = [
++            self._network_segment_range.id,
++        ]
++        verifylist = [
++            ('network_segment_range', self._network_segment_range.id),
++        ]
++
++        parsed_args = self.check_parser(self.cmd, arglist, verifylist)
++        columns, data = self.cmd.take_action(parsed_args)
++
++        self.network.find_network_segment_range.assert_called_once_with(
++            self._network_segment_range.id,
++            ignore_missing=False
++        )
++
++        self.assertEqual(self.columns, columns)
++        self.assertEqual(self.data, data)
+diff --git a/releasenotes/notes/bp-network-segment-range-management-0abf03fe03eea149.yaml b/releasenotes/notes/bp-network-segment-range-management-0abf03fe03eea149.yaml
+new file mode 100644
+index 0000000..4ff4f57
+--- /dev/null
++++ b/releasenotes/notes/bp-network-segment-range-management-0abf03fe03eea149.yaml
+@@ -0,0 +1,6 @@
++---
++features:
++  - Add ``network segment range create``, ``network segment range delete``,
++    ``network segment range list``, ``network segment range show`` and
++    ``network segment range set`` commands.
++    [Blueprint `network-segment-range-management <https://blueprints.launchpad.net/neutron/+spec/network-segment-range-management>`_]
+diff --git a/setup.cfg b/setup.cfg
+index 48c2247..c73f2ce 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -463,6 +463,12 @@
+     network_segment_set = openstackclient.network.v2.network_segment:SetNetworkSegment
+     network_segment_show = openstackclient.network.v2.network_segment:ShowNetworkSegment
+ 
++    network_segment_range_create = openstackclient.network.v2.network_segment_range:CreateNetworkSegmentRange
++    network_segment_range_delete = openstackclient.network.v2.network_segment_range:DeleteNetworkSegmentRange
++    network_segment_range_list = openstackclient.network.v2.network_segment_range:ListNetworkSegmentRange
++    network_segment_range_set = openstackclient.network.v2.network_segment_range:SetNetworkSegmentRange
++    network_segment_range_show = openstackclient.network.v2.network_segment_range:ShowNetworkSegmentRange
++
+     network_service_provider_list = openstackclient.network.v2.network_service_provider:ListNetworkServiceProvider
+ 
+     port_create = openstackclient.network.v2.port:CreatePort
