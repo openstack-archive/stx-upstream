@@ -3,6 +3,7 @@ openstack/openstack-ironic
 openstack/openstack-magnum
 openstack/openstack-murano
 openstack/openstack-panko
+openstack/python-barbican
 openstack/python-ceilometer
 openstack/python-cinder
 openstack/python-glance
