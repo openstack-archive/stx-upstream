@@ -1,0 +1,4 @@
+BUILDER=loci
+LABEL=stx-barbican
+PROJECT=barbican
+PROJECT_REPO=https://github.com/openstack/barbican.git
