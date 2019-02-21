@@ -120,6 +120,7 @@ export PBR_VERSION=%{version}
 %endif
 
 %install
+export PBR_VERSION=%{version}
 %if 0%{?with_python3}
 %py3_install
 mv %{buildroot}%{_bindir}/glance %{buildroot}%{_bindir}/glance-%{python3_version}
