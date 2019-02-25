@@ -1,0 +1,26 @@
+From 0cc3a7f959f3a811f2799986fc4fb922acb30823 Mon Sep 17 00:00:00 2001
+From: Stefan Dinescu <stefan.dinescu@windriver.com>
+Date: Fri, 22 Feb 2019 10:53:52 +0000
+Subject: [PATCH 1/1] Add metadata to flavor
+
+---
+ nova/templates/bin/_bootstrap.sh.tpl | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/nova/templates/bin/_bootstrap.sh.tpl b/nova/templates/bin/_bootstrap.sh.tpl
+index 2f1cb41..0bea507 100644
+--- a/nova/templates/bin/_bootstrap.sh.tpl
++++ b/nova/templates/bin/_bootstrap.sh.tpl
+@@ -26,7 +26,8 @@ openstack flavor show {{ .name }} || \
+  --id {{ .id }} \
+  --ram {{ .ram }} \
+  --disk {{ .disk }} \
+- --vcpus {{ .vcpus }}
++ --vcpus {{ .vcpus }} \
++ {{ if .properties -}} {{ range $key, $value := .properties }}--property {{$key}}={{$value}} {{ end }}{{ end -}}
+ {{ end }}
+ {{ end }}
+ 
+-- 
+1.8.3.1
+
