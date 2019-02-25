@@ -1,0 +1,25 @@
+From d07b22a23c5a0d907e396bca376f6ec7691f1dc0 Mon Sep 17 00:00:00 2001
+From: Stefan Dinescu <stefan.dinescu@windriver.com>
+Date: Mon, 25 Feb 2019 09:32:47 +0000
+Subject: [PATCH 1/1] Ignore null values
+
+---
+ glance/templates/bin/_bootstrap.sh.tpl | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/glance/templates/bin/_bootstrap.sh.tpl b/glance/templates/bin/_bootstrap.sh.tpl
+index 4e55a0c..4270dc1 100644
+--- a/glance/templates/bin/_bootstrap.sh.tpl
++++ b/glance/templates/bin/_bootstrap.sh.tpl
+@@ -29,7 +29,7 @@ openstack image show {{ .name  | quote }} || \
+   --min-disk {{ .min_disk }} \
+   --disk-format {{ .image_type }} \
+   --file {{ .image_file }} \
+-  {{ if .properties -}} {{ range $key, $value := .properties }}--property {{$key}}={{$value}} {{ end }}{{ end -}} \
++  {{ if .properties -}} {{ range $key, $value := .properties }}{{ if $value }}--property {{$key}}={{$value}} {{ end }}{{ end }}{{ end -}} \
+   --container-format {{ .container_format | quote }} \
+   {{ if .private -}}
+   --private
+-- 
+1.8.3.1
+
