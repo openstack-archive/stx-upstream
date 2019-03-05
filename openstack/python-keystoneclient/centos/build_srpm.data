@@ -1,1 +1,4 @@
-TIS_PATCH_VER=7
+TAR_NAME=python-keystoneclient
+SRC_DIR=$CGCS_BASE/git/python-keystoneclient
+TIS_PATCH_VER=0
+

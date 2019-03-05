@@ -6,55 +6,84 @@
 %global with_python3 1
 %endif
 
+%global common_desc \
+Client library and command line utility for interacting with OpenStack \
+Neutron's API.
+
 Name:       python-neutronclient
-Version:    6.5.0
+Version:    6.9.1
 Release:    1%{?_tis_dist}.%{tis_patch_ver}
 Summary:    Python API and CLI for OpenStack Neutron
 
 License:    ASL 2.0
-URL:        http://launchpad.net/python-neutronclient/
-Source0:    %{name}-%{version}.tar.gz
+URL:        http://launchpad.net/%{name}/
+Source0:    https://tarballs.openstack.org/%{name}/%{name}-%{upstream_version}.tar.gz
 
 BuildArch:  noarch
 
 Obsoletes:  python-%{sname}-tests <= 4.1.1-3
 
 %description
-Client library and command line utility for interacting with OpenStack
-Neutron's API.
+%{common_desc}
 
 %package -n python2-%{sname}
 Summary:    Python API and CLI for OpenStack Neutron
 %{?python_provide:%python_provide python2-neutronclient}
 
 BuildRequires: git
+BuildRequires: openstack-macros
 BuildRequires: python2-devel
-BuildRequires: python-setuptools
+BuildRequires: python2-setuptools
 BuildRequires: python2-pip
 BuildRequires: python2-wheel
-BuildRequires: python-pbr
+BuildRequires: python2-pbr
+# Required for unit tests
+BuildRequires: python2-osc-lib-tests
+BuildRequires: python2-oslotest
+BuildRequires: python2-testtools
+BuildRequires: python2-testrepository
+BuildRequires: python2-testscenarios
 
-Requires: python-babel >= 2.3.4
-Requires: python-cliff >= 2.8.0
-Requires: python-dateutil
-Requires: python-iso8601 >= 0.1.11
-Requires: python-netaddr >= 0.7.13
-Requires: python-os-client-config >= 1.28.0
-Requires: python-oslo-i18n >= 2.1.0
-Requires: python-oslo-serialization >= 1.10.0
-Requires: python-oslo-utils >= 3.20.0
-Requires: python-pbr
-Requires: python-requests >= 2.10.0
-Requires: python-simplejson >= 2.2.0
-Requires: python-six >= 1.9.0
-Requires: python-debtcollector >= 1.2.0
-Requires: python-osc-lib >= 1.7.0
-Requires: python-keystoneauth1 >= 3.1.0
-Requires: python-keystoneclient >= 1:3.8.0
+Requires: python2-babel >= 2.3.4
+Requires: python2-iso8601 >= 0.1.11
+Requires: python2-os-client-config >= 1.28.0
+Requires: python2-oslo-i18n >= 3.15.3
+Requires: python2-oslo-log >= 3.36.0
+Requires: python2-oslo-serialization >= 2.18.0
+Requires: python2-oslo-utils >= 3.33.0
+Requires: python2-pbr
+Requires: python2-requests >= 2.14.2
+Requires: python2-six >= 1.10.0
+Requires: python2-debtcollector >= 1.2.0
+Requires: python2-osc-lib >= 1.10.0
+Requires: python2-keystoneauth1 >= 3.4.0
+Requires: python2-keystoneclient >= 1:3.8.0
+Requires: python2-cliff >= 2.8.0
+%if 0%{?fedora} > 0
+Requires: python2-netaddr >= 0.7.18
+Requires: python2-simplejson >= 3.5.1
+%else
+Requires: python-netaddr >= 0.7.18
+Requires: python-simplejson >= 3.5.1
+%endif
 
 %description -n python2-%{sname}
-Client library and command line utility for interacting with OpenStack
-Neutron's API.
+%{common_desc}
+
+%package -n python2-%{sname}-tests
+Summary:    Python API and CLI for OpenStack Neutron - Unit tests
+%{?python_provide:%python_provide python2-%{sname}-tests}
+Requires: python2-%{sname} == %{version}-%{release}
+Requires: python2-osc-lib-tests
+Requires: python2-oslotest
+Requires: python2-testtools
+Requires: python2-testrepository
+Requires: python2-testscenarios
+
+%description -n python2-%{sname}-tests
+%{common_desc}
+
+This package containts the unit tests.
 
 %if 0%{?with_python3}
 %package -n python3-%{sname}
@@ -64,62 +93,73 @@ Summary:    Python API and CLI for OpenStack Neutron
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
 BuildRequires: python3-pbr
+# Required for unit tests
+BuildRequires: python3-osc-lib-tests
+BuildRequires: python3-oslotest
+BuildRequires: python3-testrepository
+BuildRequires: python3-testtools
+BuildRequires: python3-testscenarios
 
 Requires: python3-babel >= 2.3.4
 Requires: python3-cliff >= 2.8.0
 Requires: python3-iso8601 >= 0.1.11
-Requires: python3-netaddr >= 0.7.13
+Requires: python3-netaddr >= 0.7.18
 Requires: python3-os-client-config >= 1.28.0
-Requires: python3-oslo-i18n >= 2.1.0
-Requires: python3-oslo-serialization >= 1.10.0
-Requires: python3-oslo-utils >= 3.20.0
+Requires: python3-oslo-i18n >= 3.15.3
+Requires: python3-oslo-log >= 3.36.0
+Requires: python3-oslo-serialization >= 2.18.0
+Requires: python3-oslo-utils >= 3.33.0
 Requires: python3-pbr
-Requires: python3-requests >= 2.10.0
-Requires: python3-simplejson >= 2.2.0
-Requires: python3-six >= 1.9.0
+Requires: python3-requests >= 2.14.2
+Requires: python3-simplejson >= 3.5.1
+Requires: python3-six >= 1.10.0
 Requires: python3-debtcollector >= 1.2.0
-Requires: python3-osc-lib >= 1.7.0
-Requires: python3-keystoneauth1 >= 3.1.0
+Requires: python3-osc-lib >= 1.10.0
+Requires: python3-keystoneauth1 >= 3.4.0
 Requires: python3-keystoneclient >= 1:3.8.0
 
 %description -n python3-%{sname}
-Client library and command line utility for interacting with OpenStack
-Neutron's API.
+%{common_desc}
+
+
+%package -n python3-%{sname}-tests
+Summary:    Python API and CLI for OpenStack Neutron - Unit tests
+%{?python_provide:%python_provide python3-%{sname}-tests}
+Requires: python3-%{sname} == %{version}-%{release}
+Requires: python3-osc-lib-tests
+Requires: python3-oslotest
+Requires: python3-testrepository
+Requires: python3-testtools
+Requires: python3-testscenarios
+
+%description -n python3-%{sname}-tests
+%{common_desc}
+
+This package containts the unit tests.
 %endif
 
 %package doc
 Summary:          Documentation for OpenStack Neutron API Client
 
-BuildRequires:    python-dateutil
-BuildRequires:    python-sphinx
-BuildRequires:    python-oslo-sphinx
-BuildRequires:    python-openstackdocstheme
-BuildRequires:    python-reno
-BuildRequires:    python-cliff
-BuildRequires:    python-keystoneauth1
-BuildRequires:    python-keystoneclient
-BuildRequires:    python-os-client-config
-BuildRequires:    python-osc-lib
-BuildRequires:    python-oslo-serialization
-BuildRequires:    python-oslo-utils
+BuildRequires:    python2-sphinx
+BuildRequires:    python2-openstackdocstheme
+BuildRequires:    python2-reno
+BuildRequires:    python2-keystoneauth1
+BuildRequires:    python2-keystoneclient
+BuildRequires:    python2-os-client-config
+BuildRequires:    python2-osc-lib >= 1.10.0
+BuildRequires:    python2-oslo-serialization
+BuildRequires:    python2-oslo-utils
+BuildRequires:    python2-cliff
 
 %description      doc
-Client library and command line utility for interacting with OpenStack
-Neutron's API.
-
-
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
-
+%{common_desc}
 
 %prep
 %autosetup -n %{name}-%{upstream_version} -S git
 
 # Let RPM handle the dependencies
-rm -f test-requirements.txt requirements.txt
+%py_req_cleanup
 
 %build
 export PBR_VERSION=%{version}
@@ -129,47 +169,56 @@ export PBR_VERSION=%{version}
 %py3_build
 %endif
 
+# Build HTML docs
+export PYTHONPATH=.
+sphinx-build -W -b html doc/source doc/build/html
+
+# Fix hidden-file-or-dir warnings
+rm -rf doc/build/html/.doctrees doc/build/html/.buildinfo
+
 %install
 export PBR_VERSION=%{version}
 %if 0%{?with_python3}
 %py3_install
 mv %{buildroot}%{_bindir}/neutron %{buildroot}%{_bindir}/neutron-%{python3_version}
 ln -s ./neutron-%{python3_version} %{buildroot}%{_bindir}/neutron-3
-# Delete tests
-rm -fr %{buildroot}%{python3_sitelib}/neutronclient/tests
 %endif
 
 %py2_install
-mkdir -p $RPM_BUILD_ROOT/wheels
-install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 mv %{buildroot}%{_bindir}/neutron %{buildroot}%{_bindir}/neutron-%{python2_version}
 ln -s ./neutron-%{python2_version} %{buildroot}%{_bindir}/neutron-2
-
 ln -s ./neutron-2 %{buildroot}%{_bindir}/neutron
 
-mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d
-install -pm 644 tools/neutron.bash_completion \
-    %{buildroot}%{_sysconfdir}/bash_completion.d/neutron
+# STX: stage wheel files
+mkdir -p $RPM_BUILD_ROOT/wheels
+install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
-# Delete tests
-rm -fr %{buildroot}%{python2_sitelib}/neutronclient/tests
-
-%{__python2} setup.py build_sphinx -b html
-
-# prep SDK package
+# STX: prep SDK package
 mkdir -p %{buildroot}/usr/share/remote-clients/%{name}
 tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
 
+
+%check
+# (TODO) Ignore unit tests results until https://bugs.launchpad.net/python-neutronclient/+bug/1783789
+# is fixed.
+%{__python2} setup.py testr || true
+%if 0%{?with_python3}
+rm -rf .testrepository
+%{__python3} setup.py testr || true
+%endif
 
 %files -n python2-%{sname}
 %doc README.rst
 %license LICENSE
 %{python2_sitelib}/neutronclient
 %{python2_sitelib}/*.egg-info
-%{_sysconfdir}/bash_completion.d
 %{_bindir}/neutron
 %{_bindir}/neutron-2
 %{_bindir}/neutron-%{python2_version}
+%exclude %{python2_sitelib}/neutronclient/tests
+
+%files -n python2-%{sname}-tests
+%{python2_sitelib}/neutronclient/tests
 
 %if 0%{?with_python3}
 %files -n python3-%{sname}
@@ -177,14 +226,23 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --e
 %doc README.rst
 %{python3_sitelib}/%{sname}
 %{python3_sitelib}/*.egg-info
-%{_sysconfdir}/bash_completion.d
 %{_bindir}/neutron-3
 %{_bindir}/neutron-%{python3_version}
+%exclude %{python3_sitelib}/neutronclient/tests
+
+%files -n python3-%{sname}-tests
+%{python3_sitelib}/neutronclient/tests
 %endif
 
 %files doc
 %doc doc/build/html
 %license LICENSE
+
+%package          sdk
+Summary:          SDK files for %{name}
+
+%description      sdk
+Contains SDK files for %{name} package
 
 %files sdk
 /usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
@@ -198,7 +256,11 @@ Contains python wheels for %{name}
 %files wheels
 /wheels/*
 
+
 %changelog
-* Mon Aug 14 2017 Alfredo Moralejo <amoralej@redhat.com> 6.5.0-1
-- Update to 6.5.0
+* Thu Sep 20 2018 RDO <dev@lists.rdoproject.org> 6.9.1-1
+- Update to 6.9.1
+
+* Thu Aug 09 2018 RDO <dev@lists.rdoproject.org> 6.9.0-1
+- Update to 6.9.0
 

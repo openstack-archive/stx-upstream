@@ -1,5 +1,3 @@
-VERSION=7.0.1
 TAR_NAME=gnocchiclient
-COPY_LIST="$CGCS_BASE/downloads/$TAR_NAME-$VERSION.tar.gz"
-
-TIS_PATCH_VER=1
+SRC_DIR=$CGCS_BASE/git/python-gnocchiclient
+TIS_PATCH_VER=0

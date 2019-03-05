@@ -13,7 +13,6 @@ openstack-murano-ui-wheels
 openstack-murano-wheels
 openstack-neutron-wheels
 openstack-nova-wheels
-python-ceilometerclient-wheels
 python-cinderclient-wheels
 python-django-horizon-wheels
 python-django-openstack-auth-wheels

@@ -1,1 +1,4 @@
-TIS_PATCH_VER=3
+TAR_NAME=python-heatclient
+SRC_DIR=$CGCS_BASE/git/python-heatclient
+TIS_PATCH_VER=0
+

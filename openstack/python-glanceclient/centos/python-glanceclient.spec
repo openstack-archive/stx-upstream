@@ -1,31 +1,34 @@
 %{!?upstream_version: %global upstream_version %{version}%{?milestone}}
 
 %global sname glanceclient
+%global with_doc 0
 
 %if 0%{?fedora}
 %global with_python3 1
 %endif
 
+%global common_desc \
+This is a client for the OpenStack Glance API. There's a Python API (the \
+glanceclient module), and a command-line script (glance). Each implements \
+100% of the OpenStack Glance API.
+
 Name:             python-glanceclient
 Epoch:            1
-Version:          2.8.0
+Version:          2.13.1
 Release:          1%{?_tis_dist}.%{tis_patch_ver}
 Summary:          Python API and CLI for OpenStack Glance
 
 License:          ASL 2.0
 URL:              https://launchpad.net/python-glanceclient
 Source0:          https://tarballs.openstack.org/%{name}/%{name}-%{version}.tar.gz
-#WRS
-Source1:          image-backup.sh
 
 BuildArch:        noarch
 
 BuildRequires:    git
+BuildRequires:    openstack-macros
 
 %description
-This is a client for the OpenStack Glance API. There's a Python API (the
-glanceclient module), and a command-line script (glance). Each implements
-100% of the OpenStack Glance API.
+%{common_desc}
 
 %package -n python2-%{sname}
 Summary:          Python API and CLI for OpenStack Glance
@@ -34,24 +37,27 @@ Summary:          Python API and CLI for OpenStack Glance
 BuildRequires:    python2-devel
 BuildRequires:    python2-pip
 BuildRequires:    python2-wheel
-BuildRequires:    python-setuptools
-BuildRequires:    python-pbr
+BuildRequires:    python2-setuptools
+BuildRequires:    python2-pbr
 
-Requires:         python-keystoneauth1 >= 3.1.0
-Requires:         python-oslo-i18n >= 2.1.0
-Requires:         python-oslo-utils >= 3.20.0
-Requires:         python-pbr
-Requires:         python-prettytable
-Requires:         pyOpenSSL >= 0.14
-Requires:         python-requests
-Requires:         python-six >= 1.9.0
+Requires:         python2-keystoneauth1 >= 3.6.2
+Requires:         python2-oslo-i18n >= 3.15.3
+Requires:         python2-oslo-utils >= 3.33.0
+Requires:         python2-pbr
+Requires:         python2-prettytable
+Requires:         python2-pyOpenSSL >= 17.1.0
+Requires:         python2-requests
+Requires:         python2-six >= 1.10.0
+%if 0%{?fedora} || 0%{?rhel} > 7
+Requires:         python2-warlock
+Requires:         python2-wrapt
+%else
 Requires:         python-warlock
 Requires:         python-wrapt
+%endif
 
 %description -n python2-%{sname}
-This is a client for the OpenStack Glance API. There's a Python API (the
-glanceclient module), and a command-line script (glance). Each implements
-100% of the OpenStack Glance API.
+%{common_desc}
 
 %if 0%{?with_python3}
 %package -n python3-%{sname}
@@ -62,52 +68,48 @@ BuildRequires:    python3-devel
 BuildRequires:    python3-setuptools
 BuildRequires:    python3-pbr
 
-Requires:         python3-keystoneauth1 >= 3.1.0
-Requires:         python3-oslo-i18n >= 2.1.0
-Requires:         python3-oslo-utils >= 3.20.0
+Requires:         python3-keystoneauth1 >= 3.6.2
+Requires:         python3-oslo-i18n >= 3.15.3
+Requires:         python3-oslo-utils >= 3.33.0
 Requires:         python3-pbr
 Requires:         python3-prettytable
-Requires:         python3-pyOpenSSL >= 0.14
+Requires:         python3-pyOpenSSL >= 17.1.0
 Requires:         python3-requests
-Requires:         python3-six >= 1.9.0
+Requires:         python3-six >= 1.10.0
 Requires:         python3-warlock
 Requires:         python3-wrapt
 
 %description -n python3-%{sname}
-This is a client for the OpenStack Glance API. There's a Python API (the
-glanceclient module), and a command-line script (glance). Each implements
-100% of the OpenStack Glance API.
+%{common_desc}
 %endif
 
+%if 0%{?with_doc}
 %package doc
 Summary:          Documentation for OpenStack Glance API Client
 
-BuildRequires:    python-sphinx
-BuildRequires:    python-openstackdocstheme
-BuildRequires:    python-keystoneauth1
-BuildRequires:    python-oslo-utils
-BuildRequires:    python-prettytable
+BuildRequires:    python2-sphinx
+BuildRequires:    python2-openstackdocstheme
+BuildRequires:    python2-keystoneauth1
+BuildRequires:    python2-oslo-utils
+BuildRequires:    python2-prettytable
+BuildRequires:    python2-pyOpenSSL >= 17.1.0
+BuildRequires:    python2-sphinxcontrib-apidoc
+%if 0%{?fedora} || 0%{?rhel} > 7
+BuildRequires:    python2-warlock
+%else
 BuildRequires:    python-warlock
-BuildRequires:    pyOpenSSL >= 0.14
+%endif
 
 %description      doc
-This is a client for the OpenStack Glance API. There's a Python API (the
-glanceclient module), and a command-line script (glance). Each implements
-100% of the OpenStack Glance API.
+%{common_desc}
 
 This package contains auto-generated documentation.
-
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
-
+%endif
 
 %prep
 %autosetup -n %{name}-%{upstream_version} -S git
 
-rm -rf test-requirements.txt
+%py_req_cleanup
 
 %build
 export PBR_VERSION=%{version}
@@ -127,6 +129,7 @@ ln -s ./glance-%{python3_version} %{buildroot}%{_bindir}/glance-3
 rm -fr %{buildroot}%{python3_sitelib}/glanceclient/tests
 %endif
 
+
 %py2_install
 mv %{buildroot}%{_bindir}/glance %{buildroot}%{_bindir}/glance-%{python2_version}
 ln -s ./glance-%{python2_version} %{buildroot}%{_bindir}/glance-2
@@ -136,7 +139,6 @@ ln -s ./glance-2 %{buildroot}%{_bindir}/glance
 mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d
 install -pm 644 tools/glance.bash_completion \
     %{buildroot}%{_sysconfdir}/bash_completion.d/glance
-install -p -D -m 500 %{SOURCE1} %{buildroot}/sbin/image-backup
 
 mkdir -p $RPM_BUILD_ROOT/wheels
 install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
@@ -144,13 +146,15 @@ install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 # Delete tests
 rm -fr %{buildroot}%{python2_sitelib}/glanceclient/tests
 
-export PYTHONPATH="$( pwd ):$PYTHONPATH"
-sphinx-build -b html doc/source html
-
+%if 0%{?with_doc}
+# generate html docs
+sphinx-build -b html doc/source doc/build/html
+# remove the sphinx-build leftovers
+rm -rf doc/build/html/.{doctrees,buildinfo}
 # generate man page
-sphinx-build -b man doc/source man
-install -p -D -m 644 man/glance.1 %{buildroot}%{_mandir}/man1/glance.1
-
+sphinx-build -b man doc/source doc/build/man
+install -p -D -m 644 doc/build/man/glance.1 %{buildroot}%{_mandir}/man1/glance.1
+%endif
 # prep SDK package
 mkdir -p %{buildroot}/usr/share/remote-clients/%{name}
 tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
@@ -162,8 +166,9 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --e
 %{python2_sitelib}/glanceclient
 %{python2_sitelib}/*.egg-info
 %{_sysconfdir}/bash_completion.d
+%if 0%{?with_doc}
 %{_mandir}/man1/glance.1.gz
-"/sbin/image-backup"
+%endif
 %{_bindir}/glance
 %{_bindir}/glance-2
 %{_bindir}/glance-%{python2_version}
@@ -180,9 +185,17 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --e
 %{_bindir}/glance-%{python3_version}
 %endif
 
+%if 0%{?with_doc}
 %files doc
-%doc html
+%doc doc/build/html
 %license LICENSE
+%endif
+
+%package          sdk
+Summary:          SDK files for %{name}
+
+%description      sdk
+Contains SDK files for %{name} package
 
 %files sdk
 /usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
@@ -197,6 +210,12 @@ Contains python wheels for %{name}
 /wheels/*
 
 %changelog
-* Fri Aug 11 2017 Alfredo Moralejo <amoralej@redhat.com> 1:2.8.0-1
-- Update to 2.8.0
+* Wed Dec 19 2018 RDO <dev@lists.rdoproject.org> 1:2.13.1-1
+- Update to 2.13.1
+
+* Mon Nov 05 2018 RDO <dev@lists.rdoproject.org> 1:2.13.0-1
+- Update to 2.13.0
+
+* Wed Aug 08 2018 RDO <dev@lists.rdoproject.org> 1:2.12.1-1
+- Update to 2.12.1
 

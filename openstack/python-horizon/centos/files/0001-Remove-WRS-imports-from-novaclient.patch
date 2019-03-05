@@ -1,0 +1,70 @@
+diff --git a/openstack_dashboard/api/nova.py b/openstack_dashboard/api/nova.py
+index 39a7684..e6798e9 100755
+--- a/openstack_dashboard/api/nova.py
++++ b/openstack_dashboard/api/nova.py
+@@ -38,10 +38,6 @@ from novaclient.v2 import instance_action as nova_instance_action
+ from novaclient.v2 import list_extensions as nova_list_extensions
+ from novaclient.v2 import servers as nova_servers
+ 
+-# Todo (ediardo): move all wrs* and func wrappers into stx-gui
+-from novaclient.v2 import wrs_pci
+-from novaclient.v2 import wrs_providernets
+-
+ from horizon import exceptions
+ from horizon import exceptions as horizon_exceptions
+ from horizon.utils import functions as utils
+@@ -1123,54 +1119,6 @@ def requires_keypair():
+     return features.get('requires_keypair', False)
+ 
+ 
+-# WRS: Nova extension for provider network.
+-@profiler.trace
+-def provider_network_get(request, providernet_id):
+-    return wrs_providernets.ProviderNetsManager(novaclient(request)).get(
+-        providernet_id)
+-
+-
+-# WRS: Nova extension for device usage
+-@profiler.trace
+-class DeviceUsage(base.APIResourceWrapper):
+-    """Wrapper for Inventory Device Usage"""
+-    _attrs = ['device_name', 'device_id', 'vendor_id', 'class_id',
+-              'pci_vfs_configured', 'pci_vfs_used',
+-              'pci_pfs_configured', 'pci_pfs_used']
+-
+-
+-@profiler.trace
+-def get_device_usage_list(request):
+-    usages = wrs_pci.PciDevicesManager(novaclient(request)).list()
+-    return [DeviceUsage(n) for n in usages]
+-
+-
+-@profiler.trace
+-def get_device_usage(request, device_id):
+-    if device_id is None:
+-        raise nova_exceptions.ResourceNotFound
+-
+-    usage = wrs_pci.PciDevicesManager(novaclient(request)).list(
+-        device=device_id)
+-    return DeviceUsage(usage[0])
+-
+-
+-# WRS: Nova extension for detail device usage
+-@profiler.trace
+-class DetailUsage(base.APIResourceWrapper):
+-    """Wrapper for Inventory Device Usage"""
+-    _attrs = ['host',
+-              'pci_vfs_configured', 'pci_vfs_used',
+-              'pci_pfs_configured', 'pci_pfs_used']
+-
+-
+-@profiler.trace
+-def get_detail_usage(request, device_id):
+-    usages = wrs_pci.PciDevicesManager(novaclient(request)).get(
+-        device_id)
+-    return [DetailUsage(n) for n in usages]
+-
+-
+ def can_set_quotas():
+     features = getattr(settings, 'OPENSTACK_HYPERVISOR_FEATURES', {})
+     return features.get('enable_quotas', True)

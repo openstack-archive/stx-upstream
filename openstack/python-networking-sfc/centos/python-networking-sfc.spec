@@ -1,5 +1,7 @@
 %global pypi_name networking-sfc
 %global module networking_sfc
+%global with_doc 0
+
 %{!?upstream_version: %global upstream_version %{version}%{?milestone}}
 
 Name:           python-%{pypi_name}
@@ -91,10 +93,12 @@ implemented as a collection of physical network devices connected in series by
 cables.
 
 
+%if 0%{?with_doc}
 %package -n python-%{pypi_name}-doc
 Summary:        Documentation for networking-sfc
 %description -n python-%{pypi_name}-doc
 Documentation for networking-sfc
+%endif
 
 %package -n python2-%{pypi_name}-tests
 Summary:        Tests for networking-sfc
@@ -133,9 +137,11 @@ rm -rf %{module}/tests/unit/cli
 %build
 export PBR_VERSION=%{version}
 %py2_build
+%if 0%{?with_doc}
 %{__python2} setup.py build_sphinx -b html
 # remove the sphinx-build leftovers
 rm -rf doc/build/html/.{doctrees,buildinfo}
+%endif
 # generate the configuration file
 PYTHONPATH=. oslo-config-generator --config-file etc/oslo-config-generator/networking-sfc.conf
 
@@ -167,9 +173,11 @@ mv etc/networking-sfc.conf.sample %{buildroot}%{_sysconfdir}/neutron/conf.d/neut
 %config(noreplace) %attr(0640, root, neutron) %{_sysconfdir}/neutron/conf.d/neutron-server/networking-sfc.conf
 %exclude %{python2_sitelib}/%{module}/tests
 
+%if 0%{?with_doc}
 %files -n python-%{pypi_name}-doc
 %doc doc/build/html/*
 %license LICENSE
+%endif
 
 %files -n python2-%{pypi_name}-tests
 %{python2_sitelib}/%{module}/tests

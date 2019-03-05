@@ -40,7 +40,7 @@ python2-ironicclient
 # python-magnumclient
 python2-magnumclient
 python-magnumclient-doc
-python-magnumclient-tests
+# python-magnumclient-tests
 
 # openstack-magnum
 python-magnum
@@ -62,6 +62,8 @@ openstack-ceilometer-common
 openstack-ceilometer-notification
 openstack-ceilometer-ipmi
 openstack-ceilometer-polling
+# ceilometerclient is needed by horizon temporarily
+python2-ceilometerclient
 
 # openstack-cinder
 openstack-cinder
@@ -146,15 +148,6 @@ distributedcloud-dcorch
 
 # distributedcloud-client
 distributedcloud-client-dcmanagerclient
-
-# openstack-aodh
-openstack-aodh-compat
-openstack-aodh-api
-openstack-aodh-evaluator
-openstack-aodh-notifier
-openstack-aodh-listener
-openstack-aodh-expirer
-openstack-aodh-config
 
 # openstack-panko
 python-panko

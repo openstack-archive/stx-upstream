@@ -5,8 +5,12 @@
 %global with_python3 1
 %endif
 
+%global common_desc \
+Client library (cinderclient python module) and command line utility \
+(cinder) for interacting with OpenStack Cinder (Block Storage) API.
+
 Name:             python-cinderclient
-Version:          3.1.0
+Version:          4.0.1
 Release:          1%{?_tis_dist}.%{tis_patch_ver}
 Summary:          Python API and CLI for OpenStack Cinder
 
@@ -19,34 +23,39 @@ BuildArch:        noarch
 BuildRequires:    git
 
 %description
-Client library (cinderclient python module) and command line utility
-(cinder) for interacting with OpenStack Cinder (Block Storage) API.
+%{common_desc}
 
 %package -n python2-%{sname}
 Summary:          Python API and CLI for OpenStack Cinder
 %{?python_provide:%python_provide python2-%{sname}}
 
 BuildRequires:    python2-devel
-BuildRequires:    python-setuptools
+BuildRequires:    python2-setuptools
 BuildRequires:    python2-pip
 BuildRequires:    python2-wheel
-BuildRequires:    python-pbr
+BuildRequires:    python2-pbr
+%if 0%{?fedora} > 0
+BuildRequires:    python2-d2to1
+%else
 BuildRequires:    python-d2to1
+%endif
 
-Requires:         python-babel
-Requires:         python-pbr
-Requires:         python-prettytable
-Requires:         python-requests
-Requires:         python-setuptools
+Requires:         python2-babel
+Requires:         python2-pbr
+Requires:         python2-prettytable
+Requires:         python2-requests
+Requires:         python2-six
+Requires:         python2-keystoneauth1 >= 3.4.0
+Requires:         python2-oslo-i18n >= 3.15.3
+Requires:         python2-oslo-utils >= 3.33.0
+%if 0%{?fedora} > 0
+Requires:         python2-simplejson
+%else
 Requires:         python-simplejson
-Requires:         python-six
-Requires:         python-keystoneauth1 >= 2.21.0
-Requires:         python-oslo-i18n >= 3.9.0
-Requires:         python-oslo-utils >= 3.20.0
+%endif
 
 %description -n python2-%{sname}
-Client library (cinderclient python module) and command line utility
-(cinder) for interacting with OpenStack Cinder (Block Storage) API.
+%{common_desc}
 
 
 %if 0%{?with_python3}
@@ -66,13 +75,12 @@ Requires:         python3-requests
 Requires:         python3-setuptools
 Requires:         python3-simplejson
 Requires:         python3-six
-Requires:         python3-keystoneauth1 >= 2.21.0
-Requires:         python3-oslo-i18n >= 3.9.0
-Requires:         python3-oslo-utils >= 3.20.0
+Requires:         python3-keystoneauth1 >= 3.4.0
+Requires:         python3-oslo-i18n >= 3.15.3
+Requires:         python3-oslo-utils >= 3.33.0
 
 %description -n python3-%{sname}
-Client library (cinderclient python module) and command line utility
-(cinder) for interacting with OpenStack Cinder (Block Storage) API.
+%{common_desc}
 %endif
 
 
@@ -85,16 +93,10 @@ BuildRequires:    python-sphinx
 BuildRequires:    python-openstackdocstheme
 
 %description      doc
-Client library (cinderclient python module) and command line utility
-(cinder) for interacting with OpenStack Cinder (Block Storage) API.
+%{common_desc}
 
 This package contains auto-generated documentation.
 
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
 
 %prep
 %autosetup -n %{name}-%{upstream_version} -S git
@@ -113,12 +115,8 @@ export PBR_VERSION=%{version}
 %py3_build
 %endif
 
-# FIXME (amoralej): following manual edit on conf.py is required for man page
-# until https://review.openstack.org/#/c/489123 is merged
-sed -i 's/man\/cinder/user\/cinder/' doc/source/conf.py
-
-%{__python2} setup.py build_sphinx -b html
-%{__python2} setup.py build_sphinx -b man
+sphinx-build -W -b html doc/source doc/build/html
+sphinx-build -W -b man doc/source doc/build/man
 
 # Fix hidden-file-or-dir warnings
 rm -fr doc/build/html/.doctrees doc/build/html/.buildinfo
@@ -151,6 +149,7 @@ install -p -D -m 644 doc/build/man/cinder.1 %{buildroot}%{_mandir}/man1/cinder.1
 mkdir -p %{buildroot}/usr/share/remote-clients
 tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
 
+
 %files -n python2-%{sname}
 %doc README.rst
 %license LICENSE
@@ -173,6 +172,12 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='
 %files doc
 %doc doc/build/html
 
+%package          sdk
+Summary:          SDK files for %{name}
+
+%description      sdk
+Contains SDK files for %{name} package
+
 %files sdk
 /usr/share/remote-clients/%{name}-%{version}.tgz
 
@@ -186,6 +191,6 @@ Contains python wheels for %{name}
 /wheels/*
 
 %changelog
-* Fri Aug 11 2017 Alfredo Moralejo <amoralej@redhat.com> 3.1.0-1
-- Update to 3.1.0
+* Thu Aug 09 2018 RDO <dev@lists.rdoproject.org> 4.0.1-1
+- Update to 4.0.1
 

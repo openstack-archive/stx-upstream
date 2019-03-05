@@ -30,6 +30,8 @@ Source12:   horizon-region-exclusions.csv
 Source13:   guni_config.py
 Source14:   horizon-assets-compress
 
+Patch1:     0001-Remove-WRS-imports-from-novaclient.patch
+
 #
 # BuildArch needs to be located below patches in the spec file. Don't ask!
 #
@@ -247,6 +249,7 @@ Customization module for OpenStack Dashboard to provide a branded logo.
 
 %prep
 %autosetup -n horizon-%{upstream_version} -S git
+# autosetup automatically applies the patches
 
 # STX remove troublesome files introduced by tox
 rm -f openstack_dashboard/test/.secret_key_store

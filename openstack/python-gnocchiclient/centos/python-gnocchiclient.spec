@@ -14,14 +14,17 @@ This is a client library for Gnocchi built on the Gnocchi API. It \
 provides a Python API (the gnocchiclient module) and a command-line tool.
 
 Name:             python-gnocchiclient
-Version:          7.0.1
+Version:          7.0.4
 Release:          1%{?_tis_dist}.%{tis_patch_ver}
 Summary:          Python API and CLI for OpenStack Gnocchi
 
 License:          ASL 2.0
 URL:              https://github.com/openstack/%{name}
 Source0:          https://pypi.io/packages/source/g/%{pypi_name}/%{pypi_name}-%{upstream_version}.tar.gz
-
+# FIXME(jpena): remove this patch once a version > 7.0.1 is released
+%if "%{version}" == "7.0.1"
+Patch0001:        0001-Avoid-using-openstack-doc-tools.patch
+%endif
 BuildArch:        noarch
 
 
@@ -37,15 +40,15 @@ BuildRequires:    python2-devel
 BuildRequires:    python2-pbr
 BuildRequires:    python2-tools
 
-Requires:         python-cliff >= 1.16.0
-Requires:         python2-osc-lib >= 1.7.0
+Requires:         python2-cliff >= 2.10
+Requires:         python2-osc-lib >= 1.8.0
 Requires:         python2-keystoneauth1 >= 2.0.0
 Requires:         python2-six >= 1.10.0
 Requires:         python2-futurist
 Requires:         python2-ujson
 Requires:         python2-pbr
 Requires:         python2-iso8601
-Requires:         python-dateutil
+Requires:         python2-dateutil
 Requires:         python2-debtcollector
 %if 0%{?fedora} || 0%{?rhel} > 7
 Requires:         python2-monotonic
@@ -62,9 +65,7 @@ Summary:          Documentation for OpenStack Gnocchi API Client
 Group:            Documentation
 
 BuildRequires:    python2-sphinx
-BuildRequires:    python2-oslo-sphinx
-BuildRequires:    python2-openstack-doc-tools
-BuildRequires:    python-cliff
+BuildRequires:    python2-cliff >= 2.10
 BuildRequires:    python2-keystoneauth1
 BuildRequires:    python2-six
 BuildRequires:    python2-futurist
@@ -74,7 +75,7 @@ BuildRequires:    python2-sphinx_rtd_theme
 BuildRequires:    python2-babel
 # Runtime requirements needed during documentation build
 BuildRequires:    python2-osc-lib
-BuildRequires:    python-dateutil
+BuildRequires:    python2-dateutil
 
 %description      doc
 %{common_desc}
@@ -99,8 +100,8 @@ BuildRequires:    python3-pbr
 BuildRequires:    python3-setuptools
 BuildRequires:    python3-tools
 
-Requires:         python3-cliff >= 1.16.0
-Requires:         python3-osc-lib >= 1.7.0
+Requires:         python3-cliff >= 2.10
+Requires:         python3-osc-lib >= 1.8.0
 Requires:         python3-keystoneauth1 >= 2.0.0
 Requires:         python3-six >= 1.10.0
 Requires:         python3-futurist
@@ -126,14 +127,9 @@ Requires:         python3-%{pypi_name} = %{version}-%{release}
 %description
 %{common_desc}
 
-%package          sdk
-Summary:          SDK files for %{pypi_name}
-
-%description      sdk
-Contains SDK files for %{pypi_name} package
 
 %prep
-%autosetup -n %{pypi_name}-%{upstream_version} -S git
+%autosetup -p1 -n %{pypi_name}-%{upstream_version}
 
 %if 0%{?with_python3}
 rm -rf %{py3dir}
@@ -145,7 +141,7 @@ cp -a . %{py3dir}
 rm -rf gnocchiclient.egg-info
 
 # Let RPM handle the requirements
-rm -f test-requirements.txt
+rm -f {,test-}requirements.txt
 
 %build
 export PBR_VERSION=%{version}
@@ -168,8 +164,10 @@ popd
 %endif
 
 %{__python2} setup.py install --skip-build --root %{buildroot}
+
 mkdir -p $RPM_BUILD_ROOT/wheels
 install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
+
 
 # rename binaries, make compat symlinks
 install -m 755 -d %{buildroot}/%{_bindir}
@@ -185,7 +183,6 @@ done
 popd
 
 # Some env variables required to successfully build our doc
-export PATH=$PATH:%{buildroot}%{_bindir}
 export PYTHONPATH=.
 export LANG=en_US.utf8
 python setup.py build_sphinx -b html
@@ -196,6 +193,7 @@ rm -rf doc/build/html/.doctrees doc/build/html/.buildinfo
 # prep SDK package
 mkdir -p %{buildroot}/usr/share/remote-clients
 tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{pypi_name}-%{version}
+
 
 %files -n python2-%{pypi_name}
 %doc README.rst
@@ -230,6 +228,12 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --excl
 %files -n python-%{pypi_name}-doc
 %doc doc/build/html
 
+%package          sdk
+Summary:          SDK files for %{pypi_name}
+
+%description      sdk
+Contains SDK files for %{pypi_name} package
+
 %files sdk
 /usr/share/remote-clients/%{pypi_name}-%{version}.tgz
 
@@ -242,6 +246,8 @@ Contains python wheels for %{name}
 %files wheels
 /wheels/*
 
+
 %changelog
-* Tue Feb 13 2018 RDO <dev@lists.rdoproject.org> 7.0.1-1
-- Update to 7.0.1
+* Thu Aug 09 2018 RDO <dev@lists.rdoproject.org> 7.0.4-1
+- Update to 7.0.4
+
