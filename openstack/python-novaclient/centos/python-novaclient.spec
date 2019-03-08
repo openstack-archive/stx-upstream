@@ -14,7 +14,7 @@ the OpenStack Nova API.
 
 Name:             python-novaclient
 Epoch:            1
-Version:          11.0.0
+Version:          13.0.0
 Release:          1%{?_tis_dist}.%{tis_patch_ver}
 Summary:          Python API and CLI for OpenStack Nova
 License:          ASL 2.0
