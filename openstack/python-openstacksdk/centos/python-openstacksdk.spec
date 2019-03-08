@@ -20,7 +20,7 @@ A collection of libraries for building applications to work with OpenStack \
 clouds - test files
 
 Name:           python-%{pypi_name}
-Version:        0.17.2
+Version:        0.25.0
 Release:        1%{?_tis_dist}.%{tis_patch_ver}
 Summary:        An SDK for building applications to work with OpenStack
 
