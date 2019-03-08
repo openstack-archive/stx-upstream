@@ -16,7 +16,7 @@ It is a thin wrapper to the stock python-*client modules that implement the \
 actual REST API client actions.
 
 Name:             python-openstackclient
-Version:          3.16.2
+Version:          3.18.0
 Release:          1%{?_tis_dist}.%{tis_patch_ver}
 Summary:          OpenStack Command-line Client
 

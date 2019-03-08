@@ -1,3 +1,4 @@
 TAR_NAME=pankoclient
 SRC_DIR=$CGCS_BASE/git/python-pankoclient
-TIS_PATCH_VER=0
+TIS_BASE_SRCREV="0.5.0"
+TIS_PATCH_VER=GITREVCOUNT
