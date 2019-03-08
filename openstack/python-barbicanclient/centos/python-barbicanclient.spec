@@ -11,7 +11,7 @@ Python library for accessing the API (barbicanclient module), and \
 a command-line script (barbican).
 
 Name:           python-barbicanclient
-Version:        4.7.1
+Version:        4.8.1
 Release:        1%{?_tis_dist}.%{tis_patch_ver}
 Summary:        Client Library for OpenStack Barbican Key Management API
 

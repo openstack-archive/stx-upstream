@@ -17,7 +17,7 @@ command-line tool (magnum).
 %global common_desc_tests Python-magnumclient test subpackage
 
 Name:           python-%{pname}
-Version:        2.10.0
+Version:        2.12.0
 Release:        1%{?_tis_dist}.%{tis_patch_ver}
 Summary:        Client library for Magnum API
 
