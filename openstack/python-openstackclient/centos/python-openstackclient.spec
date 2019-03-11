@@ -23,7 +23,6 @@ Summary:          OpenStack Command-line Client
 License:          ASL 2.0
 URL:              http://launchpad.net/%{name}
 Source0:          https://tarballs.openstack.org/%{name}/%{name}-%{upstream_version}.tar.gz
-Patch0001:        0001-Add-network-segment-range-command-object.patch
 
 BuildArch:        noarch
 

@@ -25,6 +25,7 @@ openstack/python-heat/wrs-heat-template
 openstack/python-heatclient
 openstack/python-horizon
 openstack/python-keystone
+openstack/python-keystoneauth1
 openstack/python-keystoneclient
 openstack/python-networking-bgpvpn
 openstack/python-networking-sfc
