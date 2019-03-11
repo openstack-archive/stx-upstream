@@ -23,16 +23,16 @@ diff --git a/SPECS/openstack-panko.spec b/SPECS/openstack-panko.spec
 index d12da57..90471d9 100644
 --- a/SPECS/openstack-panko.spec
 +++ b/SPECS/openstack-panko.spec
-@@ -4,20 +4,27 @@
-
+@@ -4,7 +4,7 @@
+ 
  Name:           openstack-panko
- Version:        3.0.0
+ Version:        3.1.0
 -Release:        1%{?dist}
 +Release:        1%{?_tis_dist}.%{tis_patch_ver}
  Summary:        Panko provides Event storage and REST API
 
  License:        ASL 2.0
- URL:            http://github.com/openstack/panko
+@@ -12,12 +12,19 @@ URL:            http://github.com/openstack/panko
  Source0:        https://tarballs.openstack.org/%{pypi_name}/%{pypi_name}-%{upstream_version}.tar.gz
  Source1:        %{pypi_name}-dist.conf
  Source2:        %{pypi_name}.logrotate
@@ -72,23 +72,15 @@ index d12da57..90471d9 100644
 +install -p -D -m 640 panko/api/panko-api.py %{buildroot}%{_datadir}/panko/panko-api.py
 
  #TODO(prad): build the docs at run time, once the we get rid of postgres setup dependency
-
-@@ -201,14 +215,15 @@ exit 0
- %{_bindir}/panko-api
- %{_bindir}/panko-dbsync
- %{_bindir}/panko-expirer
-
+ 
+@@ -204,6 +218,7 @@ exit 0
+ 
  %files common
  %dir %{_sysconfdir}/panko
 +%{_datadir}/panko/panko-api.*
  %attr(-, root, panko) %{_datadir}/panko/panko-dist.conf
  %config(noreplace) %attr(-, root, panko) %{_sysconfdir}/panko/policy.json
  %config(noreplace) %attr(-, root, panko) %{_sysconfdir}/panko/panko.conf
- %config(noreplace) %attr(-, root, panko) %{_sysconfdir}/panko/api_paste.ini
- %config(noreplace) %attr(-, root, panko) %{_sysconfdir}/logrotate.d/%{name}
- %dir %attr(0755, panko, root)  %{_localstatedir}/log/panko
-
- %defattr(-, panko, panko, -)
---
+-- 
 1.8.3.1
 
