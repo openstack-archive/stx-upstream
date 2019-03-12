@@ -1,8 +1,0 @@
-0001-Update-package-versioning-for-TIS-format.patch
-0002-remove-rpm-build-time-TOX-tests.patch
-0003-meta-roll-in-TIS-patches.patch
-0004-meta-disable-token-validation-per-auth-req.patch
-0005-meta-cache-authorized-tenants-in-cookie-to-improve-performance.patch
-0006-meta-Distributed-Keystone.patch
-0007-meta-patch-for-distributed-keystone-fix.patch
-0008-Build-python-wheel.patch

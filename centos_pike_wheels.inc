@@ -15,7 +15,6 @@ openstack-neutron-wheels
 openstack-nova-wheels
 python-cinderclient-wheels
 python-django-horizon-wheels
-python-django-openstack-auth-wheels
 python-glanceclient-wheels
 python-gnocchiclient-wheels
 python-ironicclient-wheels

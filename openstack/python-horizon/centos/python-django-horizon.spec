@@ -4,7 +4,7 @@ Name:       python-django-horizon
 # Liberty semver reset
 # https://review.openstack.org/#/q/I6a35fa0dda798fad93b804d00a46af80f08d475c,n,z
 Epoch:      1
-Version:    12.0.0
+Version:    14.0.0
 Release:    2%{?_tis_dist}.%{tis_patch_ver}
 Summary:    Django application for talking to Openstack
 
@@ -30,8 +30,6 @@ Source12:   horizon-region-exclusions.csv
 Source13:   guni_config.py
 Source14:   horizon-assets-compress
 
-Patch1:     0001-Remove-WRS-imports-from-novaclient.patch
-
 #
 # BuildArch needs to be located below patches in the spec file. Don't ask!
 #
@@ -46,7 +44,7 @@ BuildRequires: cgts-client
 Requires: cgts-client
 
 Requires:   pytz
-Requires:   python-six >= 1.9.0
+Requires:   python-six >= 1.10.0
 Requires:   python-pbr
 
 BuildRequires: python2-devel
@@ -55,24 +53,31 @@ BuildRequires: python2-pip
 BuildRequires: python2-wheel
 BuildRequires: python-pbr >= 2.0.0
 BuildRequires: git
-BuildRequires: python-six >= 1.9.0
+BuildRequires: python-six >= 1.10.0
 BuildRequires: gettext
 
 # for checks:
 %if 0%{?rhel} == 0
-BuildRequires:   python-django-nose >= 1.2
-BuildRequires:   python-coverage
+BuildRequires:   python-django-nose
 BuildRequires:   python-mox3
 BuildRequires:   python-nose-exclude
 BuildRequires:   python-nose
 BuildRequires:   python-selenium
 %endif
+BuildRequires:   python-osprofiler
 BuildRequires:   python-netaddr
 BuildRequires:   python-anyjson
 BuildRequires:   python-iso8601
+BuildRequires:   python-pep8
 
 # additional provides to be consistent with other django packages
 Provides: django-horizon = %{epoch}:%{version}-%{release}
+Obsoletes: python-django-openstack-auth < 4.0.0-1
+Obsoletes: python2-django-openstack-auth < 4.0.0-1
+# (TODO) remove following provides once the requirements have been fixed
+# in all dashboard plugins
+Provides: python-django-openstack-auth = %{epoch}:%{version}-%{release}
+Provides: python2-django-openstack-auth = %{epoch}:%{version}-%{release}
 
 %description
 Horizon is a Django application for providing Openstack UI components.
@@ -89,66 +94,68 @@ Group:      Applications/System
 Requires:   httpd
 Requires:   mod_wsgi
 Requires:   %{name} = %{epoch}:%{version}-%{release}
-Requires:   python-django-openstack-auth >= 3.5.0
-Requires:   python-django-compressor >= 2.0
+Requires:   python2-django-compressor >= 2.0
 Requires:   python-django-appconf
 Requires:   python-django-babel
 Requires:   python-lesscpy
 
-Requires:   python-iso8601
-Requires:   python-glanceclient
-Requires:   python-keystoneclient >= 1:3.8.0
-Requires:   python-novaclient
-Requires:   python-neutronclient
-Requires:   python-cinderclient
-Requires:   python-swiftclient >= 3.2.0
-Requires:   python-heatclient >= 1.6.1
-Requires:   python-netaddr
-Requires:   python-osprofiler >= 1.4.0
+Requires:   openstack-dashboard-theme >= %{epoch}:%{version}-%{release}
+
+Requires:   python2-iso8601
+Requires:   python2-glanceclient >= 1:2.8.0
+Requires:   python2-keystoneclient >= 1:3.15.0
+Requires:   python2-keystoneauth1 >= 3.4.0
+Requires:   python2-novaclient >= 1:9.1.0
+Requires:   python2-neutronclient >= 6.7.0
+Requires:   python2-cinderclient >= 3.3.0
+Requires:   python2-swiftclient >= 3.2.0
+Requires:   python2-netaddr
+Requires:   python2-osprofiler >= 2.3.0
 Requires:   python-pymongo >= 3.0.2
-Requires:   python-django-pyscss >= 2.0.2
+Requires:   python2-django-pyscss >= 2.0.2
 Requires:   python-semantic_version
-Requires:   python-XStatic
+Requires:   python2-XStatic
 Requires:   python-XStatic-jQuery
-Requires:   python-XStatic-Angular >= 1:1.3.7
-Requires:   python-XStatic-Angular-Bootstrap
-Requires:   python-XStatic-Angular-Schema-Form
-Requires:   python-XStatic-D3 >= 3.5.17.0
-Requires:   python-XStatic-Font-Awesome >= 4.7.0
+Requires:   python2-XStatic-Angular >= 1:1.5.8.0
+Requires:   python2-XStatic-Angular-Bootstrap
+Requires:   python2-XStatic-Angular-Schema-Form
+Requires:   python2-XStatic-D3
+Requires:   python2-XStatic-Font-Awesome
 Requires:   python-XStatic-Hogan
 Requires:   python-XStatic-JQuery-Migrate
 Requires:   python-XStatic-JQuery-TableSorter
 Requires:   python-XStatic-JQuery-quicksearch
-Requires:   python-XStatic-JSEncrypt >= 2.3.1.1
-Requires:   python-XStatic-Jasmine >= 2.4.1.1
+Requires:   python2-XStatic-JSEncrypt
+Requires:   python2-XStatic-Jasmine
 Requires:   python-XStatic-Rickshaw
 Requires:   python-XStatic-Spin
 Requires:   python-XStatic-jquery-ui
 Requires:   python-XStatic-Bootstrap-Datepicker
-Requires:   python-XStatic-Bootstrap-SCSS >= 3.3.7.1
-Requires:   python-XStatic-termjs >= 0.0.7.0
-Requires:   python-XStatic-smart-table
+Requires:   python2-XStatic-Bootstrap-SCSS >= 3.3.7.1
+Requires:   python2-XStatic-termjs
+Requires:   python2-XStatic-smart-table
 Requires:   python-XStatic-Angular-lrdragndrop
-Requires:   python-XStatic-Angular-Gettext
-Requires:   python-XStatic-Angular-FileUpload
+Requires:   python2-XStatic-Angular-Gettext
+Requires:   python2-XStatic-Angular-FileUpload
 Requires:   python-XStatic-Magic-Search
-Requires:   python-XStatic-bootswatch
-Requires:   python-XStatic-roboto-fontface >= 0.5.0.0
-Requires:   python-XStatic-mdi
-Requires:   python-XStatic-objectpath
-Requires:   python-XStatic-tv4
+Requires:   python2-XStatic-bootswatch
+Requires:   python2-XStatic-roboto-fontface >= 0.5.0.0
+Requires:   python2-XStatic-mdi
+Requires:   python2-XStatic-objectpath
+Requires:   python2-XStatic-tv4
+Requires:   python2-django-debreach
 
-Requires:   python-scss >= 1.3.4
+Requires:   python2-scss >= 1.3.4
 Requires:   fontawesome-fonts-web >= 4.1.0
 
-Requires:   python-oslo-concurrency >= 3.8.0
-Requires:   python-oslo-config >= 2:4.0.0
-Requires:   python-oslo-i18n >= 2.1.0
-Requires:   python-oslo-serialization >= 1.10.0
-Requires:   python-oslo-utils >= 3.20.0
-Requires:   python-oslo-policy >= 1.23.0
-Requires:   python-babel
-Requires:   python-futurist
+Requires:   python2-oslo-concurrency >= 3.26.0
+Requires:   python2-oslo-config >= 2:5.2.0
+Requires:   python2-oslo-i18n >= 3.15.3
+Requires:   python2-oslo-serialization >= 2.18.0
+Requires:   python2-oslo-utils >= 3.33.0
+Requires:   python2-oslo-policy >= 1.30.0
+Requires:   python2-babel
+Requires:   python2-futurist
 Requires:   python-pint
 
 Requires:   openssl
@@ -156,51 +163,50 @@ Requires:   logrotate
 
 Requires:   PyYAML >= 3.10
 
-BuildRequires: python-django-openstack-auth >= 3.5.0
-BuildRequires: python-django-compressor >= 2.0
+BuildRequires: python2-django-compressor >= 2.0
 BuildRequires: python-django-appconf
 BuildRequires: python-lesscpy
 BuildRequires: python-semantic_version
-BuildRequires: python-django-pyscss >= 2.0.2
-BuildRequires: python-XStatic
+BuildRequires: python2-django-pyscss >= 2.0.2
+BuildRequires: python2-XStatic
 BuildRequires: python-XStatic-jQuery
-BuildRequires: python-XStatic-Angular >= 1:1.3.7
-BuildRequires: python-XStatic-Angular-Bootstrap
-BuildRequires: python-XStatic-Angular-Schema-Form
-BuildRequires: python-XStatic-D3
-BuildRequires: python-XStatic-Font-Awesome
+BuildRequires: python2-XStatic-Angular >= 1:1.5.8.0
+BuildRequires: python2-XStatic-Angular-Bootstrap
+BuildRequires: python2-XStatic-Angular-Schema-Form
+BuildRequires: python2-XStatic-D3
+BuildRequires: python2-XStatic-Font-Awesome
 BuildRequires: python-XStatic-Hogan
 BuildRequires: python-XStatic-JQuery-Migrate
 BuildRequires: python-XStatic-JQuery-TableSorter
 BuildRequires: python-XStatic-JQuery-quicksearch
-BuildRequires: python-XStatic-JSEncrypt >= 2.3.1.1
-BuildRequires: python-XStatic-Jasmine
+BuildRequires: python2-XStatic-JSEncrypt
+BuildRequires: python2-XStatic-Jasmine
 BuildRequires: python-XStatic-Rickshaw
 BuildRequires: python-XStatic-Spin
 BuildRequires: python-XStatic-jquery-ui
 BuildRequires: python-XStatic-Bootstrap-Datepicker
-BuildRequires: python-XStatic-Bootstrap-SCSS >= 3.3.7.1
-BuildRequires: python-XStatic-termjs
-BuildRequires: python-XStatic-smart-table
+BuildRequires: python2-XStatic-Bootstrap-SCSS
+BuildRequires: python2-XStatic-termjs
+BuildRequires: python2-XStatic-smart-table
 BuildRequires: python-XStatic-Angular-lrdragndrop
-BuildRequires: python-XStatic-Angular-FileUpload
+BuildRequires: python2-XStatic-Angular-FileUpload
 BuildRequires: python-XStatic-Magic-Search
-BuildRequires: python-XStatic-Angular-Gettext
-BuildRequires: python-XStatic-bootswatch
-BuildRequires: python-XStatic-roboto-fontface
-BuildRequires: python-XStatic-mdi
-BuildRequires: python-XStatic-objectpath
-BuildRequires: python-XStatic-tv4
+BuildRequires: python2-XStatic-Angular-Gettext
+BuildRequires: python2-XStatic-bootswatch
+BuildRequires: python2-XStatic-roboto-fontface
+BuildRequires: python2-XStatic-mdi
+BuildRequires: python2-XStatic-objectpath
+BuildRequires: python2-XStatic-tv4
 # bootstrap-scss requires at least python-scss >= 1.2.1
-BuildRequires: python-scss >= 1.3.4
+BuildRequires: python2-scss >= 1.3.4
 BuildRequires: fontawesome-fonts-web >= 4.1.0
-BuildRequires: python-oslo-concurrency
-BuildRequires: python-oslo-config
-BuildRequires: python-oslo-i18n
-BuildRequires: python-oslo-serialization
-BuildRequires: python-oslo-utils
-BuildRequires: python-oslo-policy
-BuildRequires: python-babel
+BuildRequires: python2-oslo-concurrency
+BuildRequires: python2-oslo-config
+BuildRequires: python2-oslo-i18n
+BuildRequires: python2-oslo-serialization
+BuildRequires: python2-oslo-utils
+BuildRequires: python2-oslo-policy
+BuildRequires: python2-babel
 BuildRequires: python-pint
 
 BuildRequires: pytz
@@ -226,14 +232,13 @@ Requires:   %{name} = %{epoch}:%{version}-%{release}
 BuildRequires: python-sphinx >= 1.1.3
 
 # Doc building basically means we have to mirror Requires:
-BuildRequires: python-openstackdocstheme
-BuildRequires: python-glanceclient
-BuildRequires: python-keystoneclient
-BuildRequires: python-novaclient >= 1:6.0.0
-BuildRequires: python-neutronclient
-BuildRequires: python-cinderclient
-BuildRequires: python-swiftclient
-BuildRequires: python-heatclient
+BuildRequires: python2-openstackdocstheme
+BuildRequires: python2-glanceclient
+BuildRequires: python2-keystoneclient
+BuildRequires: python2-novaclient >= 1:9.1.0
+BuildRequires: python2-neutronclient
+BuildRequires: python2-cinderclient
+BuildRequires: python2-swiftclient
 
 %description doc
 Documentation for the Django Horizon application for talking with Openstack
@@ -249,7 +254,6 @@ Customization module for OpenStack Dashboard to provide a branded logo.
 
 %prep
 %autosetup -n horizon-%{upstream_version} -S git
-# autosetup automatically applies the patches
 
 # STX remove troublesome files introduced by tox
 rm -f openstack_dashboard/test/.secret_key_store
@@ -368,6 +372,9 @@ mv %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/local/local_s
 #ln -s ../../../../../%{_sysconfdir}/openstack-dashboard/local_settings %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/local/local_settings.py
 
 mv %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/conf/*.json %{buildroot}%{_sysconfdir}/openstack-dashboard
+mv %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/conf/cinder_policy.d %{buildroot}%{_sysconfdir}/openstack-dashboard
+mv %{buildroot}%{_datadir}/openstack-dashboard/openstack_dashboard/conf/nova_policy.d %{buildroot}%{_sysconfdir}/openstack-dashboard
+
 
 %find_lang django --all-name
 
@@ -387,15 +394,14 @@ mkdir -p %{buildroot}%{_sharedstatedir}/openstack-dashboard
 # create /var/log/horizon and own it
 mkdir -p %{buildroot}%{_var}/log/horizon
 
-# place logrotate config
+# place logrotate config:
 mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d
 cp -a %{SOURCE5} %{buildroot}%{_sysconfdir}/logrotate.d/openstack-dashboard
 
 %check
 # don't run tests on rhel
 %if 0%{?rhel} == 0
-# since rawhide has django-1.7 now, tests fail
-#./run_tests.sh -N -P
+%{__python2} manage.py test horizon --settings=horizon.test.settings
 %endif
 
 %post -n openstack-dashboard
@@ -430,6 +436,7 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %{python_sitelib}/horizon/workflows
 %{python_sitelib}/horizon/karma.conf.js
 %{python_sitelib}/horizon/middleware
+%{python_sitelib}/openstack_auth
 %{python_sitelib}/*.egg-info
 
 %files -n openstack-dashboard -f dashboard.lang
@@ -445,7 +452,6 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %{_datadir}/openstack-dashboard/openstack_dashboard/dashboards/identity
 %{_datadir}/openstack-dashboard/openstack_dashboard/dashboards/project
 %{_datadir}/openstack-dashboard/openstack_dashboard/dashboards/settings
-# STX
 %{_datadir}/openstack-dashboard/openstack_dashboard/dashboards/__init__.py*
 %{_datadir}/openstack-dashboard/openstack_dashboard/django_pyscss_fix
 %{_datadir}/openstack-dashboard/openstack_dashboard/enabled
@@ -469,6 +475,7 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %{_datadir}/openstack-dashboard/openstack_dashboard/.eslintrc
 
 %dir %attr(0750, root, apache) %{_sysconfdir}/openstack-dashboard
+%dir %attr(0750, root, apache) %{_sysconfdir}/openstack-dashboard/cinder_policy.d/
 %dir %attr(0750, apache, apache) %{_sharedstatedir}/openstack-dashboard
 %dir %attr(0750, apache, apache) %{_var}/log/horizon
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/openstack-dashboard.conf
@@ -478,8 +485,9 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %config(noreplace) %attr(0640, root, apache) %{_sysconfdir}/openstack-dashboard/nova_policy.json
 %config(noreplace) %attr(0640, root, apache) %{_sysconfdir}/openstack-dashboard/glance_policy.json
 %config(noreplace) %attr(0640, root, apache) %{_sysconfdir}/openstack-dashboard/neutron_policy.json
-%config(noreplace) %attr(0640, root, apache) %{_sysconfdir}/openstack-dashboard/heat_policy.json
-%config(noreplace) %{_sysconfdir}/logrotate.d/openstack-dashboard
+%config(noreplace) %attr(0640, root, apache) %{_sysconfdir}/openstack-dashboard/cinder_policy.d/consistencygroup.yaml
+%config(noreplace) %attr(0640, root, apache) %{_sysconfdir}/openstack-dashboard/nova_policy.d/api-extensions.yaml
+%config(noreplace) %attr(0644, root, root) %{_sysconfdir}/logrotate.d/openstack-dashboard
 %attr(755,root,root) %dir %{_unitdir}/httpd.service.d
 %config(noreplace) %{_unitdir}/httpd.service.d/openstack-dashboard.conf
 
@@ -515,19 +523,19 @@ Contains python wheels for %{name}
 /wheels/*
 
 %changelog
-* Mon Oct 04 2017 Radomir Dopieralski <rdopiera@redhat.com> 1:12.0.0-2
-- Require at least 3.3.7.1 version of XStatic-bootstrap-SCSS package
+* Mon Dec 03 2018 RDO <dev@lists.rdoproject.org> 1:14.0.2-1
+- Update to 14.0.2
 
-* Wed Aug 30 2017 rdo-trunk <javier.pena@redhat.com> 1:12.0.0-1
-- Update to 12.0.0
+* Mon Oct 22 2018 RDO <dev@lists.rdoproject.org> 1:14.0.1-1
+- Update to 14.0.1
 
-* Mon Aug 28 2017 rdo-trunk <javier.pena@redhat.com> 1:12.0.0-0.3.0rc3
-- Update to 12.0.0.0rc3
+* Thu Aug 30 2018 RDO <dev@lists.rdoproject.org> 1:14.0.0-1
+- Update to 14.0.0
 
-* Fri Aug 25 2017 Alfredo Moralejo <amoralej@redhat.com> 1:12.0.0-0.2.0rc2
-- Update to 12.0.0.0rc2
+* Wed Aug 22 2018 RDO <dev@lists.rdoproject.org> 1:14.0.0-0.2.0rc1
+- Update to 14.0.0.0rc2
 
-* Mon Aug 21 2017 Alfredo Moralejo <amoralej@redhat.com> 1:12.0.0-0.1.0rc1
-- Update to 12.0.0.0rc1
+* Mon Aug 20 2018 RDO <dev@lists.rdoproject.org> 1:14.0.0-0.1.0rc1
+- Update to 14.0.0.0rc1
 
 
