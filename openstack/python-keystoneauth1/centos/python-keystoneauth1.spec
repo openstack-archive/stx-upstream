@@ -37,7 +37,8 @@ BuildRequires: python2-six
 BuildRequires: python2-pbr >= 2.0.0
 
 # test requires
-BuildRequires: python2-betamax >= 0.7.0
+# BuildRequires: python2-betamax >= 0.7.0
+BuildRequires: python-betamax >= 0.7.0
 BuildRequires: python2-fixtures >= 1.3.1
 BuildRequires: python2-oslotest
 BuildRequires: python2-oslo-utils
