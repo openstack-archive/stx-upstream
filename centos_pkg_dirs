@@ -1,6 +1,5 @@
 openstack/openstack-murano
 openstack/python-muranoclient
-openstack/openstack-murano-ui
 openstack/openstack-ironic
 openstack/python-ironicclient
 openstack/python-magnumclient
@@ -37,7 +36,6 @@ openstack/python-neutronclient
 openstack/python-nova
 openstack/python-novaclient
 openstack/python-openstackdocstheme
-openstack/python-oslo-concurrency
 openstack/python-oslo-service
 openstack/python-oslo-messaging
 openstack/python-pankoclient
@@ -45,7 +43,6 @@ openstack/rabbitmq-server
 openstack/rabbitmq-server-config
 openstack/python-openstackclient
 openstack/python-openstacksdk
-openstack/python-django-openstack-auth
 openstack/python-wsme
 openstack/distributedcloud
 openstack/distributedcloud-client
