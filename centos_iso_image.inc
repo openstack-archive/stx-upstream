@@ -25,10 +25,6 @@ openstack-murano-doc
 python2-muranoclient
 python-muranoclient-doc
 
-# openstack-murano-ui
-openstack-murano-ui
-openstack-murano-ui-doc
-
 # openstack-ironic
 openstack-ironic-common
 openstack-ironic-api
@@ -161,9 +157,6 @@ rabbitmq-server-config
 
 # python-openstackclient
 python2-openstackclient
-
-# python-django-openstack-auth
-python2-django-openstack-auth
 
 # python-wsme
 python2-wsme
