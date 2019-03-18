@@ -6,7 +6,8 @@ PROJECT=neutron
 # that have not yet merged upstream.
 # Once all required commits are merged, this can
 # revert back to the upstream repo.
-PROJECT_REPO=https://github.com/donpenney/neutron
+PROJECT_REPO=https://github.com/mpeters-wrs/neutron
+PROJECT_REF=stx-networking
 PIP_PACKAGES="networking-sfc pycrypto pylint tinyrpc lxml"
 DIST_PACKAGES="ethtool lshw"
 PROFILES="fluent neutron linuxbridge openvswitch"
