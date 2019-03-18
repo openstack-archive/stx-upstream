@@ -9,7 +9,6 @@ openstack-ironic-wheels
 openstack-keystone-wheels
 openstack-magnum-ui-wheels
 openstack-magnum-wheels
-openstack-murano-ui-wheels
 openstack-murano-wheels
 openstack-neutron-wheels
 openstack-nova-wheels
