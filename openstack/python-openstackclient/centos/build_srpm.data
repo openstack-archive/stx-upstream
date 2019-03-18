@@ -1,3 +1,4 @@
 TAR_NAME=python-openstackclient
 SRC_DIR="$CGCS_BASE/git/python-openstackclient"
-TIS_PATCH_VER=2
+TIS_BASE_SRCREV="3.18.0"
+TIS_PATCH_VER=GITREVCOUNT

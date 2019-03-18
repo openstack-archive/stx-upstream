@@ -11,7 +11,7 @@ This is a client library for Aodh built on the Aodh API. It \
 provides a Python API (the aodhclient module) and a command-line tool.
 
 Name:             python-aodhclient
-Version:          1.1.1
+Version:          1.2.0
 Release:          1%{?_tis_dist}.%{tis_patch_ver}
 Summary:          Python API and CLI for OpenStack Aodh
 

@@ -9,7 +9,7 @@
 %global common_desc A python and command line client library for Ironic
 
 Name:           python-ironicclient
-Version:        2.5.0
+Version:        2.7.0
 Release:        1%{?_tis_dist}.%{tis_patch_ver}
 Summary:        Python client for Ironic
 

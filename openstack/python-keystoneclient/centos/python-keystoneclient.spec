@@ -10,7 +10,7 @@ Identity API.
 
 Name:       python-keystoneclient
 Epoch:      1
-Version:    3.17.0
+Version:    3.19.0
 Release:    1%{?_tis_dist}.%{tis_patch_ver}
 Summary:    Client library for OpenStack Identity API
 License:    ASL 2.0
