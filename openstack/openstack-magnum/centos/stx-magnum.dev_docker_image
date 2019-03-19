@@ -1,0 +1,8 @@
+BUILDER=loci
+LABEL=stx-magnum
+PROJECT=magnum
+PROJECT_REPO=https://github.com/openstack/magnum.git
+PIP_PACKAGES="pylint"
+DIST_PACKAGES="which vim"
+PROFILES="magnum apache"
+

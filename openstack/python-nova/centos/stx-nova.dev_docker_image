@@ -1,0 +1,9 @@
+BUILDER=loci
+LABEL=stx-nova
+PROJECT=nova
+PROJECT_REPO=https://github.com/openstack/nova.git
+PIP_PACKAGES="pycrypto httplib2 pylint"
+DIST_PACKAGES="openssh-clients openssh-server libvirt e2fsprogs"
+PROFILES="fluent nova ceph linuxbridge openvswitch configdrive qemu apache"
+CUSTOMIZATION="yum install -y openssh-clients"
+
