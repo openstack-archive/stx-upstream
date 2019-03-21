@@ -1,0 +1,52 @@
+From aeb7907cedc1fd39b97b138f376d9884c3d491bf Mon Sep 17 00:00:00 2001
+From: Robert Church <robert.church@windriver.com>
+Date: Thu, 21 Mar 2019 14:26:31 -0400
+Subject: [PATCH] Gnocchi updates for Ceph Mimic
+
+Signed-off-by: Robert Church <robert.church@windriver.com>
+---
+ gnocchi/templates/bin/_storage-init.sh.tpl | 20 ++++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/gnocchi/templates/bin/_storage-init.sh.tpl b/gnocchi/templates/bin/_storage-init.sh.tpl
+index 6013b01..328d27b 100644
+--- a/gnocchi/templates/bin/_storage-init.sh.tpl
++++ b/gnocchi/templates/bin/_storage-init.sh.tpl
+@@ -28,22 +28,26 @@ set -ex
+ ceph -s
+ function ensure_pool () {
+   ceph osd pool stats $1 || ceph osd pool create $1 $2
+-  local test_luminous=$(ceph tell osd.* version | egrep -c "12.2|luminous" | xargs echo)
+-  if [[ ${test_luminous} -gt 0 ]]; then
++  local test_version=$(ceph tell osd.* version | egrep -c "mimic|luminous" | xargs echo)
++  if [[ ${test_version} -gt 0 ]]; then
+     ceph osd pool application enable $1 $3
+   fi
+ }
+ ensure_pool ${RBD_POOL_NAME} ${RBD_POOL_CHUNK_SIZE} "gnocchi-metrics"
+ 
+ if USERINFO=$(ceph auth get client.${RBD_POOL_USER}); then
+-  KEYSTR=$(echo $USERINFO | sed 's/.*\( key = .*\) caps mon.*/\1/')
+-  echo $KEYSTR  > ${KEYRING}
++  echo "Cephx user client.${RBD_POOL_USER} already exist."
++  echo "Update its cephx caps"
++  ceph auth caps client.${RBD_POOL_USER} \
++    mon "profile r" \
++    osd "profile rwx pool=${RBD_POOL_NAME}" \
++    mgr "allow r"
++  ceph auth get client.${RBD_POOL_USER} -o ${KEYRING}
+ else
+-  #NOTE(Portdirect): Determine proper privs to assign keyring
+   ceph auth get-or-create client.${RBD_POOL_USER} \
+-    mon "allow *" \
+-    osd "allow *" \
+-    mgr "allow *" \
++    mon "profile r" \
++    osd "profile rwx pool=${RBD_POOL_NAME}" \
++    mgr "allow r" \
+     -o ${KEYRING}
+ fi
+ 
+-- 
+2.16.5
+

@@ -33,6 +33,7 @@ Patch11: 0010-Stein-Nova-console-address-config-optionality.patch
 Patch12: 0011-Support-per-host-overrides-of-auto_bridge_add.patch
 Patch13: 0012-Nova-chart-Add-ephemeral-pool.patch
 Patch14: 0013-neutron-up-interfaces-added-via-ovs-auto_bridge_add.patch
+Patch15: 0014-Glance-and-Cinder-mimic-mods.patch
 
 BuildRequires: helm
 BuildRequires: openstack-helm-infra
@@ -57,6 +58,7 @@ Openstack Helm charts
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
 
 %build
 # initialize helm and build the toolkit

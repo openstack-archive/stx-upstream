@@ -1,0 +1,137 @@
+From c62fe0e7f580509a6387fcc1ff2ce898890a7989 Mon Sep 17 00:00:00 2001
+From: Robert Church <robert.church@windriver.com>
+Date: Thu, 21 Mar 2019 12:05:41 -0400
+Subject: [PATCH] Glance and Cinder mimic mods
+
+Change-Id: If33c7adacca34e95a76749c3ef4e82cbeb457b44
+Signed-off-by: Robert Church <robert.church@windriver.com>
+---
+ cinder/templates/bin/_backup-storage-init.sh.tpl | 18 +++++++++--------
+ cinder/templates/bin/_storage-init.sh.tpl        | 19 ++++++++++--------
+ glance/templates/bin/_storage-init.sh.tpl        | 25 +++++++++++++-----------
+ 3 files changed, 35 insertions(+), 27 deletions(-)
+
+diff --git a/cinder/templates/bin/_backup-storage-init.sh.tpl b/cinder/templates/bin/_backup-storage-init.sh.tpl
+index 40f3e50d..52c8e6bf 100644
+--- a/cinder/templates/bin/_backup-storage-init.sh.tpl
++++ b/cinder/templates/bin/_backup-storage-init.sh.tpl
+@@ -34,8 +34,8 @@ elif [ "x$STORAGE_BACKEND" == "xcinder.backup.drivers.ceph" ]; then
+   ceph -s
+   function ensure_pool () {
+     ceph osd pool stats $1 || ceph osd pool create $1 $2
+-    local test_luminous=$(ceph tell osd.* version | egrep -c "12.2|luminous" | xargs echo)
+-    if [[ ${test_luminous} -gt 0 ]]; then
++    local test_version=$(ceph tell osd.* version | egrep -c "mimic|luminous" | xargs echo)
++    if [[ ${test_version} -gt 0 ]]; then
+       ceph osd pool application enable $1 $3
+     fi
+     size_protection=$(ceph osd pool get $1 nosizechange | cut -f2 -d: | tr -d '[:space:]')
+@@ -47,14 +47,16 @@ elif [ "x$STORAGE_BACKEND" == "xcinder.backup.drivers.ceph" ]; then
+   ensure_pool ${RBD_POOL_NAME} ${RBD_POOL_CHUNK_SIZE} "cinder-backup"
+ 
+   if USERINFO=$(ceph auth get client.${RBD_POOL_USER}); then
+-    KEYSTR=$(echo $USERINFO | sed 's/.*\( key = .*\) caps mon.*/\1/')
+-    echo $KEYSTR  > ${KEYRING}
++    echo "Cephx user client.${RBD_POOL_USER} already exists"
++    echo "Update its cephx caps"
++    ceph auth caps client.${RBD_POOL_USER} \
++      mon "profile rbd" \
++      osd "profile rbd pool=${RBD_POOL_NAME}"
++    ceph auth get client.${RBD_POOL_USER} -o ${KEYRING}
+   else
+-    #NOTE(Portdirect): Determine proper privs to assign keyring
+     ceph auth get-or-create client.${RBD_POOL_USER} \
+-      mon "allow *" \
+-      osd "allow *" \
+-      mgr "allow *" \
++      mon "profile rbd" \
++      osd "profile rbd pool=${RBD_POOL_NAME}" \
+       -o ${KEYRING}
+   fi
+ 
+diff --git a/cinder/templates/bin/_storage-init.sh.tpl b/cinder/templates/bin/_storage-init.sh.tpl
+index bbce6d54..9288ec5f 100644
+--- a/cinder/templates/bin/_storage-init.sh.tpl
++++ b/cinder/templates/bin/_storage-init.sh.tpl
+@@ -31,8 +31,8 @@ if [ "x$STORAGE_BACKEND" == "xcinder.volume.drivers.rbd.RBDDriver" ]; then
+   ceph -s
+   function ensure_pool () {
+     ceph osd pool stats $1 || ceph osd pool create $1 $2
+-    local test_luminous=$(ceph tell osd.* version | egrep -c "12.2|luminous" | xargs echo)
+-    if [[ ${test_luminous} -gt 0 ]]; then
++    local test_version=$(ceph tell osd.* version | egrep -c "mimic|luminous" | xargs echo)
++    if [[ ${test_version} -gt 0 ]]; then
+       ceph osd pool application enable $1 $3
+     fi
+     size_protection=$(ceph osd pool get $1 nosizechange | cut -f2 -d: | tr -d '[:space:]')
+@@ -44,14 +44,17 @@ if [ "x$STORAGE_BACKEND" == "xcinder.volume.drivers.rbd.RBDDriver" ]; then
+   ensure_pool ${RBD_POOL_NAME} ${RBD_POOL_CHUNK_SIZE} "cinder-volume"
+ 
+   if USERINFO=$(ceph auth get client.${RBD_POOL_USER}); then
+-    KEYSTR=$(echo $USERINFO | sed 's/.*\( key = .*\) caps mon.*/\1/')
+-    echo $KEYSTR  > ${KEYRING}
++    echo "Cephx user client.${RBD_POOL_USER} already exist."
++    echo "Update its cephx caps"
++    ceph auth caps client.${RBD_POOL_USER} \
++      mon "profile rbd" \
++      osd "profile rbd"
++    ceph auth get client.${RBD_POOL_USER} -o ${KEYRING}
+   else
+-    #NOTE(Portdirect): Determine proper privs to assign keyring
++    #NOTE(JCL): Restrict Cinder permissions to what is needed. MON Read only and RBD access to Cinder pool only.
+     ceph auth get-or-create client.${RBD_POOL_USER} \
+-      mon "allow *" \
+-      osd "allow *" \
+-      mgr "allow *" \
++      mon "profile rbd" \
++      osd "profile rbd" \
+       -o ${KEYRING}
+   fi
+ 
+diff --git a/glance/templates/bin/_storage-init.sh.tpl b/glance/templates/bin/_storage-init.sh.tpl
+index e6bd188a..5a9572fa 100644
+--- a/glance/templates/bin/_storage-init.sh.tpl
++++ b/glance/templates/bin/_storage-init.sh.tpl
+@@ -42,25 +42,28 @@ elif [ "x$STORAGE_BACKEND" == "xrbd" ]; then
+   ceph -s
+   function ensure_pool () {
+     ceph osd pool stats "$1" || ceph osd pool create "$1" "$2"
+-    local test_luminous
+-    test_luminous=$(ceph tell osd.* version | egrep -c "12.2|luminous" | xargs echo)
+-    if [[ ${test_luminous} -gt 0 ]]; then
++    local test_version
++    test_version=$(ceph tell osd.* version | egrep -c "mimic|luminous" | xargs echo)
++    if [[ ${test_version} -gt 0 ]]; then
+       ceph osd pool application enable "$1" "$3"
+     fi
+-    ceph osd pool set $1 size ${RBD_POOL_REPLICATION}
+-    ceph osd pool set $1 crush_rule "${RBD_POOL_CRUSH_RULE}"
++    ceph osd pool set "$1" size "${RBD_POOL_REPLICATION}"
++    ceph osd pool set "$1" crush_rule "${RBD_POOL_CRUSH_RULE}"
+   }
+   ensure_pool "${RBD_POOL_NAME}" "${RBD_POOL_CHUNK_SIZE}" "glance-image"
+ 
+   if USERINFO=$(ceph auth get "client.${RBD_POOL_USER}"); then
+-    KEYSTR=$(echo "${USERINFO}" | sed 's/.*\( key = .*\) caps mon.*/\1/')
+-    echo "${KEYSTR}" > "${KEYRING}"
++    echo "Cephx user client.${RBD_POOL_USER} already exist."
++    echo "Update its cephx caps"
++    ceph auth caps client.${RBD_POOL_USER} \
++      mon "profile rbd" \
++      osd "profile rbd pool=${RBD_POOL_NAME}"
++    ceph auth get client.${RBD_POOL_USER} -o ${KEYRING}
+   else
+-    #NOTE(Portdirect): Determine proper privs to assign keyring
++    #NOTE(JCL): Restrict Glance user to only what is needed. MON Read only and RBD access to the Glance Pool
+     ceph auth get-or-create "client.${RBD_POOL_USER}" \
+-      mon "allow *" \
+-      osd "allow *" \
+-      mgr "allow *" \
++      mon "profile rbd" \
++      osd "profile rbd pool=${RBD_POOL_NAME}" \
+       -o "${KEYRING}"
+   fi
+ 
+-- 
+2.16.5
+
