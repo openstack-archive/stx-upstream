@@ -169,11 +169,6 @@ rm -rf doc/build/html/.doctrees doc/build/html/.buildinfo
 mkdir -p $RPM_BUILD_ROOT/wheels
 install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
-# STX: prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients
-tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{pypi_name}-%{version}
-
-
 %files -n python2-%{pypi_name}
 %doc README.rst
 %license LICENSE
@@ -210,15 +205,6 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --excl
 %files -n python-%{pypi_name}-doc
 %doc doc/build/html
 %license LICENSE
-
-%package          sdk
-Summary:          SDK files for %{pypi_name}
-
-%description      sdk
-Contains SDK files for %{pypi_name} package
-
-%files sdk
-/usr/share/remote-clients/%{pypi_name}-%{version}.tgz
 
 %package wheels
 Summary: %{name} wheels

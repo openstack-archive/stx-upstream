@@ -218,10 +218,6 @@ export PBR_VERSION=%{version}
 mkdir -p $RPM_BUILD_ROOT/wheels
 install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
-# STX: prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients
-tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{pypi_name}-%{version}
-
 %check
 %if 0%{?do_check}
 export OS_STDOUT_CAPTURE=true
@@ -265,14 +261,6 @@ stestr-3 --test-path ./openstack/tests/unit run
 %{python3_sitelib}/openstack/tests
 %endif
 
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
-
-%files sdk
-/usr/share/remote-clients/%{pypi_name}-%{version}.tgz
 
 %package wheels
 Summary: %{name} wheels
