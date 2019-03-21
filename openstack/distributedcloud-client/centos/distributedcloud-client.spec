@@ -61,12 +61,6 @@ Summary: DC Manager Client
 %description dcmanagerclient
 Distributed Cloud Manager Client
 
-%package          sdk
-Summary:          SDK files for %{pypi_name}
-
-%description      sdk
-Contains SDK files for %{pypi_name} package
-
 %prep
 %autosetup -n %{pypi_name}-%{version} -S git
 
@@ -85,19 +79,12 @@ export PBR_VERSION=%{version}
 mkdir -p $RPM_BUILD_ROOT/wheels
 install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
-# prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients
-tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. --transform="s/%{name}-%{version}/%{pypi_name}-%{version}/" %{name}-%{version}
-
 %files dcmanagerclient
 %license LICENSE
 %{python2_sitelib}/dcmanagerclient*
 %{python2_sitelib}/distributedcloud_client-*.egg-info
 %exclude %{python2_sitelib}/dcmanagerclient/tests
 %{_bindir}/dcmanager*
-
-%files sdk
-/usr/share/remote-clients/%{pypi_name}-%{version}.tgz
 
 %package wheels
 Summary: %{name} wheels

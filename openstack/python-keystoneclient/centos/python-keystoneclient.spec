@@ -213,10 +213,6 @@ rm -fr doc/build/html/.{doctrees,buildinfo}
 mkdir -p $RPM_BUILD_ROOT/wheels
 install -m 644 dist/*.whl $RPM_BUILD_ROOT/wheels/
 
-# STX: prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients
-tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
-
 %check
 stestr --test-path=./keystoneclient/tests/unit run
 %if 0%{?with_python3}
@@ -253,14 +249,6 @@ stestr-3 --test-path=./keystoneclient/tests/unit run
 %{python3_sitelib}/keystoneclient/tests
 %endif
 
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
-
-%files sdk
-/usr/share/remote-clients/%{name}-%{version}.tgz
 
 %package wheels
 Summary: %{name} wheels

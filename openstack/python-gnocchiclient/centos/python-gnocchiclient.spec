@@ -190,10 +190,6 @@ python setup.py build_sphinx -b html
 # Fix hidden-file-or-dir warnings
 rm -rf doc/build/html/.doctrees doc/build/html/.buildinfo
 
-# prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients
-tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{pypi_name}-%{version}
-
 
 %files -n python2-%{pypi_name}
 %doc README.rst
@@ -228,14 +224,6 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{pypi_name}-%{version}.tgz --excl
 %files -n python-%{pypi_name}-doc
 %doc doc/build/html
 
-%package          sdk
-Summary:          SDK files for %{pypi_name}
-
-%description      sdk
-Contains SDK files for %{pypi_name} package
-
-%files sdk
-/usr/share/remote-clients/%{pypi_name}-%{version}.tgz
 
 %package wheels
 Summary: %{name} wheels

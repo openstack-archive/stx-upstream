@@ -145,10 +145,6 @@ install -p -D -m 644 tools/cinder.bash_completion %{buildroot}%{_sysconfdir}/bas
 
 install -p -D -m 644 doc/build/man/cinder.1 %{buildroot}%{_mandir}/man1/cinder.1
 
-# prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients
-tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
-
 
 %files -n python2-%{sname}
 %doc README.rst
@@ -172,14 +168,6 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}-%{version}.tgz --exclude='
 %files doc
 %doc doc/build/html
 
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
-
-%files sdk
-/usr/share/remote-clients/%{name}-%{version}.tgz
 
 %package wheels
 Summary: %{name} wheels

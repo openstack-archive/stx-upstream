@@ -155,10 +155,6 @@ rm -rf doc/build/html/.{doctrees,buildinfo}
 sphinx-build -b man doc/source doc/build/man
 install -p -D -m 644 doc/build/man/glance.1 %{buildroot}%{_mandir}/man1/glance.1
 %endif
-# prep SDK package
-mkdir -p %{buildroot}/usr/share/remote-clients/%{name}
-tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --exclude='.gitignore' --exclude='.gitreview' -C .. %{name}-%{version}
-
 
 %files -n python2-%{sname}
 %doc README.rst
@@ -191,14 +187,6 @@ tar zcf %{buildroot}/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz --e
 %license LICENSE
 %endif
 
-%package          sdk
-Summary:          SDK files for %{name}
-
-%description      sdk
-Contains SDK files for %{name} package
-
-%files sdk
-/usr/share/remote-clients/%{name}/%{name}-%{version}.tgz
 
 %package wheels
 Summary: %{name} wheels
