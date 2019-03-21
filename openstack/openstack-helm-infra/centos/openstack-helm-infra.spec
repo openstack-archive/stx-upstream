@@ -21,6 +21,7 @@ Patch03: 0004-Allow-multiple-containers-per-daemonset-pod.patch
 Patch04: fix-type-error-to-streamline-single-replica-mariadb-.patch
 Patch05: Add-imagePullSecrets-in-service-account.patch
 Patch06: 0006-Set-Min-NGINX-handles.patch
+Patch07: 0007-Gnocchi-updates-for-Ceph-Mimic.patch
 
 BuildRequires: helm
 
@@ -35,6 +36,7 @@ Openstack Helm Infra charts
 %patch04 -p1
 %patch05 -p1
 %patch06 -p1
+%patch07 -p1
 
 %build
 # initialize helm and build the toolkit
