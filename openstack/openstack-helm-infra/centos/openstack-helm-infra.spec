@@ -1,4 +1,4 @@
-%global sha 5d356f9265b337b75f605dee839faa8cd0ed3ab2
+%global sha 4a5cac564ae6f7bd7171f811df615f0042513d56
 %global helm_folder  /usr/lib/helm
 
 Summary: Openstack-Helm-Infra charts
@@ -15,12 +15,11 @@ Source1: repositories.yaml
 
 BuildArch:     noarch
 
-Patch01: 0001-gnocchi-chart-updates.patch
-Patch02: Mariadb-Support-adoption-of-running-single-node-mari.patch
-Patch03: 0004-Allow-multiple-containers-per-daemonset-pod.patch
-Patch04: fix-type-error-to-streamline-single-replica-mariadb-.patch
-Patch05: Add-imagePullSecrets-in-service-account.patch
-Patch06: 0006-Set-Min-NGINX-handles.patch
+Patch01: 0001-Allow-multiple-containers-per-daemonset-pod.patch
+Patch02: 0002-Add-imagePullSecrets-in-service-account.patch
+Patch03: 0003-Set-Min-NGINX-handles.patch
+Patch04: 0004-Revert-Update-Helm-to-version-2.13.0.patch
+Patch05: 0005-Enable-Ceph-Jewel-support-for-gnocchi.patch
 
 BuildRequires: helm
 
@@ -34,7 +33,6 @@ Openstack Helm Infra charts
 %patch03 -p1
 %patch04 -p1
 %patch05 -p1
-%patch06 -p1
 
 %build
 # initialize helm and build the toolkit

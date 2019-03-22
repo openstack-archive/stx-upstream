@@ -1,0 +1,195 @@
+From f410107f007ffce5056c4037b54b0e691d582075 Mon Sep 17 00:00:00 2001
+From: Robert Church <robert.church@windriver.com>
+Date: Thu, 21 Mar 2019 15:54:32 -0400
+Subject: [PATCH 4/5] Revert "Update Helm to version 2.13.0"
+
+This reverts commit 31e3469d28858d7b5eb6355e88b6f49fd62032be.
+---
+ ceph-osd/templates/utils/_osd_daemonset_overrides.tpl | 12 ++++++------
+ helm-toolkit/templates/utils/_daemonset_overrides.tpl | 12 ++++++------
+ playbooks/osh-infra-airship-divingbell-check.yaml     |  1 -
+ roles/build-helm-packages/defaults/main.yml           |  2 +-
+ roles/build-images/defaults/main.yml                  |  4 ++--
+ tiller/values.yaml                                    |  2 +-
+ tools/deployment/common/005-deploy-k8s.sh             |  4 ++--
+ tools/images/kubeadm-aio/Dockerfile                   |  2 +-
+ 8 files changed, 19 insertions(+), 20 deletions(-)
+
+diff --git a/ceph-osd/templates/utils/_osd_daemonset_overrides.tpl b/ceph-osd/templates/utils/_osd_daemonset_overrides.tpl
+index ce0cfb5..5fd958f 100644
+--- a/ceph-osd/templates/utils/_osd_daemonset_overrides.tpl
++++ b/ceph-osd/templates/utils/_osd_daemonset_overrides.tpl
+@@ -54,10 +54,10 @@ limitations under the License.
+               {{/* apply overrides */}}
+               {{- $override_conf_copy := $host_data.conf }}
+               {{- $root_conf_copy := omit $context.Values.conf "overrides" }}
+-              {{- $merged_dict := mergeOverwrite $root_conf_copy $override_conf_copy }}
++              {{- $merged_dict := merge $override_conf_copy $root_conf_copy }}
+               {{- $root_conf_copy2 := dict "conf" $merged_dict }}
+               {{- $context_values := omit $context.Values "conf" }}
+-              {{- $root_conf_copy3 := mergeOverwrite $context_values $root_conf_copy2 }}
++              {{- $root_conf_copy3 := merge $context_values $root_conf_copy2 }}
+               {{- $root_conf_copy4 := dict "Values" $root_conf_copy3 }}
+               {{- $_ := set $current_dict "nodeData" $root_conf_copy4 }}
+ 
+@@ -93,10 +93,10 @@ limitations under the License.
+               {{/* apply overrides */}}
+               {{- $override_conf_copy := $label_data.conf }}
+               {{- $root_conf_copy := omit $context.Values.conf "overrides" }}
+-              {{- $merged_dict := mergeOverwrite $root_conf_copy $override_conf_copy }}
++              {{- $merged_dict := merge $override_conf_copy $root_conf_copy }}
+               {{- $root_conf_copy2 := dict "conf" $merged_dict }}
+               {{- $context_values := omit $context.Values "conf" }}
+-              {{- $root_conf_copy3 := mergeOverwrite $context_values $root_conf_copy2 }}
++              {{- $root_conf_copy3 := merge $context_values $root_conf_copy2 }}
+               {{- $root_conf_copy4 := dict "Values" $root_conf_copy3 }}
+               {{- $_ := set $context.Values.__current_label "nodeData" $root_conf_copy4 }}
+ 
+@@ -191,7 +191,7 @@ limitations under the License.
+   {{- $root_conf_copy1 := omit $context.Values.conf "overrides" }}
+   {{- $root_conf_copy2 := dict "conf" $root_conf_copy1 }}
+   {{- $context_values := omit $context.Values "conf" }}
+-  {{- $root_conf_copy3 := mergeOverwrite $context_values $root_conf_copy2 }}
++  {{- $root_conf_copy3 := merge $context_values $root_conf_copy2 }}
+   {{- $root_conf_copy4 := dict "Values" $root_conf_copy3 }}
+   {{- $_ := set $context.Values.__default "nodeData" $root_conf_copy4 }}
+ 
+@@ -203,7 +203,7 @@ limitations under the License.
+   {{- range $current_dict := $context.Values.__daemonset_list }}
+ 
+     {{- $context_novalues := omit $context "Values" }}
+-    {{- $merged_dict := mergeOverwrite $context_novalues $current_dict.nodeData }}
++    {{- $merged_dict := merge $current_dict.nodeData $context_novalues }}
+     {{- $_ := set $current_dict "nodeData" $merged_dict }}
+ 
+     {{/* name needs to be a DNS-1123 compliant name. Ensure lower case */}}
+diff --git a/helm-toolkit/templates/utils/_daemonset_overrides.tpl b/helm-toolkit/templates/utils/_daemonset_overrides.tpl
+index c02de9e..ef52592 100644
+--- a/helm-toolkit/templates/utils/_daemonset_overrides.tpl
++++ b/helm-toolkit/templates/utils/_daemonset_overrides.tpl
+@@ -48,10 +48,10 @@ limitations under the License.
+               {{/* apply overrides */}}
+               {{- $override_conf_copy := $host_data.conf }}
+               {{- $root_conf_copy := omit $context.Values.conf "overrides" }}
+-              {{- $merged_dict := mergeOverwrite $root_conf_copy $override_conf_copy }}
++              {{- $merged_dict := merge $override_conf_copy $root_conf_copy }}
+               {{- $root_conf_copy2 := dict "conf" $merged_dict }}
+               {{- $context_values := omit $context.Values "conf" }}
+-              {{- $root_conf_copy3 := mergeOverwrite $context_values $root_conf_copy2 }}
++              {{- $root_conf_copy3 := merge $context_values $root_conf_copy2 }}
+               {{- $root_conf_copy4 := dict "Values" $root_conf_copy3 }}
+               {{- $_ := set $current_dict "nodeData" $root_conf_copy4 }}
+ 
+@@ -87,10 +87,10 @@ limitations under the License.
+               {{/* apply overrides */}}
+               {{- $override_conf_copy := $label_data.conf }}
+               {{- $root_conf_copy := omit $context.Values.conf "overrides" }}
+-              {{- $merged_dict := mergeOverwrite $root_conf_copy $override_conf_copy }}
++              {{- $merged_dict := merge $override_conf_copy $root_conf_copy }}
+               {{- $root_conf_copy2 := dict "conf" $merged_dict }}
+               {{- $context_values := omit $context.Values "conf" }}
+-              {{- $root_conf_copy3 := mergeOverwrite $context_values $root_conf_copy2 }}
++              {{- $root_conf_copy3 := merge $context_values $root_conf_copy2 }}
+               {{- $root_conf_copy4 := dict "Values" $root_conf_copy3 }}
+               {{- $_ := set $context.Values.__current_label "nodeData" $root_conf_copy4 }}
+ 
+@@ -185,7 +185,7 @@ limitations under the License.
+   {{- $root_conf_copy1 := omit $context.Values.conf "overrides" }}
+   {{- $root_conf_copy2 := dict "conf" $root_conf_copy1 }}
+   {{- $context_values := omit $context.Values "conf" }}
+-  {{- $root_conf_copy3 := mergeOverwrite $context_values $root_conf_copy2 }}
++  {{- $root_conf_copy3 := merge $context_values $root_conf_copy2 }}
+   {{- $root_conf_copy4 := dict "Values" $root_conf_copy3 }}
+   {{- $_ := set $context.Values.__default "nodeData" $root_conf_copy4 }}
+ 
+@@ -196,7 +196,7 @@ limitations under the License.
+   {{- range $current_dict := $context.Values.__daemonset_list }}
+ 
+     {{- $context_novalues := omit $context "Values" }}
+-    {{- $merged_dict := mergeOverwrite $context_novalues $current_dict.nodeData }}
++    {{- $merged_dict := merge $current_dict.nodeData $context_novalues }}
+     {{- $_ := set $current_dict "nodeData" $merged_dict }}
+     {{/* Deep copy original daemonset_yaml */}}
+     {{- $_ := set $context.Values "__daemonset_yaml" ($daemonset_yaml | toYaml | fromYaml) }}
+diff --git a/playbooks/osh-infra-airship-divingbell-check.yaml b/playbooks/osh-infra-airship-divingbell-check.yaml
+index e7bdb3b..ddffbc4 100644
+--- a/playbooks/osh-infra-airship-divingbell-check.yaml
++++ b/playbooks/osh-infra-airship-divingbell-check.yaml
+@@ -20,6 +20,5 @@
+         cd airship-divingbell
+         mkdir build
+         ln -s ../openstack-helm-infra build/openstack-helm-infra
+-        export HELM_ARTIFACT_URL=https://storage.googleapis.com/kubernetes-helm/helm-v2.13.0-linux-amd64.tar.gz
+         ./tools/gate/scripts/010-build-charts.sh
+         sudo SKIP_BASE_TESTS=true ./tools/gate/scripts/020-test-divingbell.sh
+diff --git a/roles/build-helm-packages/defaults/main.yml b/roles/build-helm-packages/defaults/main.yml
+index 8bed03d..8252370 100644
+--- a/roles/build-helm-packages/defaults/main.yml
++++ b/roles/build-helm-packages/defaults/main.yml
+@@ -13,6 +13,6 @@
+ # limitations under the License.
+ 
+ version:
+-  helm: v2.13.0
++  helm: v2.12.3
+ url:
+   google_helm_repo: https://storage.googleapis.com/kubernetes-helm
+diff --git a/roles/build-images/defaults/main.yml b/roles/build-images/defaults/main.yml
+index 4d9ddb7..a2cc238 100644
+--- a/roles/build-images/defaults/main.yml
++++ b/roles/build-images/defaults/main.yml
+@@ -13,8 +13,8 @@
+ # limitations under the License.
+ 
+ version:
+-  kubernetes: v1.13.4
+-  helm: v2.13.0
++  kubernetes: v1.10.9
++  helm: v2.12.3
+   cni: v0.6.0
+ 
+ proxy:
+diff --git a/tiller/values.yaml b/tiller/values.yaml
+index d17996f..3277f86 100644
+--- a/tiller/values.yaml
++++ b/tiller/values.yaml
+@@ -26,7 +26,7 @@ release_group: null
+ 
+ images:
+   tags:
+-    tiller: gcr.io/kubernetes-helm/tiller:v2.13.0
++    tiller: gcr.io/kubernetes-helm/tiller:v2.12.3
+     dep_check: quay.io/stackanetes/kubernetes-entrypoint:v0.3.1
+     image_repo_sync: docker.io/docker:17.07.0
+   pull_policy: IfNotPresent
+diff --git a/tools/deployment/common/005-deploy-k8s.sh b/tools/deployment/common/005-deploy-k8s.sh
+index 0a514e1..0d5a6b4 100755
+--- a/tools/deployment/common/005-deploy-k8s.sh
++++ b/tools/deployment/common/005-deploy-k8s.sh
+@@ -17,8 +17,8 @@
+ 
+ set -xe
+ 
+-: ${HELM_VERSION:="v2.13.0"}
+-: ${KUBE_VERSION:="v1.13.4"}
++: ${HELM_VERSION:="v2.12.3"}
++: ${KUBE_VERSION:="v1.12.2"}
+ : ${MINIKUBE_VERSION:="v0.30.0"}
+ : ${CALICO_VERSION:="v3.3"}
+ 
+diff --git a/tools/images/kubeadm-aio/Dockerfile b/tools/images/kubeadm-aio/Dockerfile
+index 4be767c..5013e6b 100644
+--- a/tools/images/kubeadm-aio/Dockerfile
++++ b/tools/images/kubeadm-aio/Dockerfile
+@@ -43,7 +43,7 @@ ENV CNI_VERSION ${CNI_VERSION}
+ ARG CNI_REPO_URL=https://github.com/containernetworking/plugins/releases/download/$CNI_VERSION
+ ENV CNI_REPO_URL ${CNI_REPO_URL}
+ 
+-ARG HELM_VERSION="v2.13.0"
++ARG HELM_VERSION="v2.12.3"
+ ENV HELM_VERSION ${HELM_VERSION}
+ 
+ ARG CHARTS="calico,flannel,tiller,kube-dns,kubernetes-keystone-webhook"
+-- 
+2.16.5
+
