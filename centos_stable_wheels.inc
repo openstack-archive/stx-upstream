@@ -1,17 +1,6 @@
 distributedcloud-client-wheels
 distributedcloud-wheels
-gnocchi-wheels
-openstack-ceilometer-wheels
-openstack-cinder-wheels
-openstack-glance-wheels
-openstack-heat-wheels
-openstack-ironic-wheels
 openstack-keystone-wheels
-openstack-magnum-ui-wheels
-openstack-magnum-wheels
-openstack-murano-wheels
-openstack-neutron-wheels
-openstack-nova-wheels
 python-cinderclient-wheels
 python-django-horizon-wheels
 python-glanceclient-wheels
@@ -23,7 +12,5 @@ python-networking-bgpvpn-wheels
 python-networking-odl-wheels
 python-networking-sfc-wheels
 python-neutronclient-wheels
-python-neutron-dynamic-routing-wheels
-python-neutron-lib-wheels
 python-novaclient-wheels
 python-openstacksdk-wheels
