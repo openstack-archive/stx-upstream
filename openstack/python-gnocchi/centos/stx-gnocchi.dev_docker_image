@@ -1,0 +1,14 @@
+BUILDER=loci
+LABEL=stx-gnocchi
+PROJECT=gnocchi
+# Temporarily pointing to forked gnocchi repo
+# This is necessary to revert a specific commit that does
+# not support the older CEPH currently in starlingx.
+# Once the CEPH upgrade is complete, we can go back
+# to using the main repo
+PROJECT_REPO=https://github.com/donpenney/gnocchi.git
+PIP_PACKAGES="pylint SQLAlchemy SQLAlchemy-Utils oslo.db keystonemiddleware gnocchiclient pymemcache psycopg2"
+# python-rados is provided by ceph, so specify an older version to install
+DIST_PACKAGES="python-rados-10.2.5"
+PROFILES="gnocchi apache"
+

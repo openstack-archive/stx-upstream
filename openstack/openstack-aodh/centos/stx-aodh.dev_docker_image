@@ -1,0 +1,7 @@
+BUILDER=loci
+LABEL=stx-aodh
+PROJECT=aodh
+PROJECT_REPO=https://github.com/openstack/aodh.git
+PIP_PACKAGES="pylint SQLAlchemy gnocchiclient aodhclient"
+PROFILES="apache"
+

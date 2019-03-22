@@ -1,0 +1,7 @@
+BUILDER=loci
+LABEL=stx-ceilometer
+PROJECT=ceilometer
+PROJECT_REPO=https://github.com/openstack/ceilometer.git
+PIP_PACKAGES="pylint libvirt-python panko==5.0.0 gnocchiclient"
+DIST_PACKAGES="libvirt ipmitool"
+

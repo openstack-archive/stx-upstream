@@ -1,0 +1,8 @@
+BUILDER=loci
+LABEL=stx-glance
+PROJECT=glance
+PROJECT_REPO=https://github.com/openstack/glance.git
+PIP_PACKAGES="pycrypto python-swiftclient psutil pylint"
+DIST_PACKAGES="postgresql-libs"
+PROFILES="fluent glance ceph"
+

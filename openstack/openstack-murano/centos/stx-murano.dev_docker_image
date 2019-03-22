@@ -1,0 +1,7 @@
+BUILDER=loci
+LABEL=stx-murano
+PROJECT=murano
+PROJECT_REPO=https://github.com/openstack/murano.git
+PIP_PACKAGES="pylint python-glanceclient murano-pkg-check"
+PROFILES="murano apache"
+

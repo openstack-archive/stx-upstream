@@ -1,0 +1,13 @@
+BUILDER=loci
+LABEL=stx-neutron
+PROJECT=neutron
+# Temporarily pointing to forked neutron repo
+# This is necessary to pull in specific commits
+# that have not yet merged upstream.
+# Once all required commits are merged, this can
+# revert back to the upstream repo.
+PROJECT_REPO=https://github.com/donpenney/neutron
+PIP_PACKAGES="networking-sfc pycrypto pylint tinyrpc lxml"
+DIST_PACKAGES="ethtool lshw"
+PROFILES="fluent neutron linuxbridge openvswitch"
+
