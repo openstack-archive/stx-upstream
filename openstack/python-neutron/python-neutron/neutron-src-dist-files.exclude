@@ -1,5 +1,0 @@
-*.pyc
-neutron/plugins/wrs/drivers/qos.py
-neutron/plugins/wrs/drivers/type_managed_flat.py
-neutron/plugins/wrs/drivers/type_managed_vlan.py
-neutron/plugins/wrs/drivers/type_managed_vxlan.py
