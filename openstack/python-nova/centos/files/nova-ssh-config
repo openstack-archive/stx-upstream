@@ -1,4 +1,0 @@
-Host *
-    User nova_migration
-    UserKnownHostsFile /dev/null
-    IdentityFile /etc/nova/migration/identity
