@@ -1,17 +1,6 @@
 distributedcloud-client-wheels
 distributedcloud-wheels
-gnocchi-wheels
-openstack-ceilometer-wheels
-openstack-cinder-wheels
-openstack-glance-wheels
-openstack-heat-wheels
-openstack-ironic-wheels
 openstack-keystone-wheels
-openstack-magnum-ui-wheels
-openstack-magnum-wheels
-openstack-murano-wheels
-openstack-neutron-wheels
-openstack-nova-wheels
 python-cinderclient-wheels
 python-django-horizon-wheels
 python-glanceclient-wheels
