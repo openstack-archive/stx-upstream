@@ -1,7 +1,7 @@
-From 9030eb81823e46eb374b52fec2e65fff2bb2dcf9 Mon Sep 17 00:00:00 2001
+From 6befbf57da707e74d1ce706abc3dac5f02f622f7 Mon Sep 17 00:00:00 2001
 From: Gerry Kopec <Gerry.Kopec@windriver.com>
 Date: Fri, 15 Feb 2019 16:15:37 -0500
-Subject: [PATCH] Stein: Nova console address config optionality
+Subject: [PATCH 07/12] Stein: Nova console address config optionality
 
 Introduce option to nova to enable/disable the use of the vnc or spice
 server proxyclient address found by the console compute init container.
@@ -9,27 +9,30 @@ This can be used to prevent the case where the found address overrides
 what has already been defined in nova.conf by per host nova compute
 daemonset overrides.
 ---
- nova/templates/bin/_nova-compute.sh.tpl | 2 ++
+ nova/templates/bin/_nova-compute.sh.tpl | 4 +++-
  nova/values.yaml                        | 1 +
- 2 files changed, 3 insertions(+)
+ 2 files changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/nova/templates/bin/_nova-compute.sh.tpl b/nova/templates/bin/_nova-compute.sh.tpl
-index 84596a5..b3bcca7 100644
+index c80da6d6..24dc3d85 100644
 --- a/nova/templates/bin/_nova-compute.sh.tpl
 +++ b/nova/templates/bin/_nova-compute.sh.tpl
-@@ -20,5 +20,7 @@ set -ex
+@@ -20,6 +20,8 @@ set -ex
  
  exec nova-compute \
        --config-file /etc/nova/nova.conf \
 +{{- if .Values.console.address_search_enabled }}
        --config-file /tmp/pod-shared/nova-console.conf \
 +{{- end }}
-       --config-file /tmp/pod-shared/nova-libvirt.conf
+       --config-file /tmp/pod-shared/nova-libvirt.conf \
+-      --config-file /tmp/pod-shared/nova-hypervisor.conf
+\ No newline at end of file
++      --config-file /tmp/pod-shared/nova-hypervisor.conf
 diff --git a/nova/values.yaml b/nova/values.yaml
-index 9646ded..c0ec7fe 100644
+index ac6fe923..6fdf5550 100644
 --- a/nova/values.yaml
 +++ b/nova/values.yaml
-@@ -438,6 +438,7 @@ console:
+@@ -440,6 +440,7 @@ console:
      vncproxy:
        # IF blank, search default routing interface
        vncserver_proxyclient_interface:
@@ -38,5 +41,5 @@ index 9646ded..c0ec7fe 100644
  ssh:
    key_types:
 -- 
-1.8.3.1
+2.16.5
 

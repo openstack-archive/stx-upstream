@@ -1,0 +1,119 @@
+From a0cb3c69a6424aecbe4ac10d6629889033aeca2f Mon Sep 17 00:00:00 2001
+From: Angie Wang <angie.wang@windriver.com>
+Date: Wed, 6 Mar 2019 18:06:06 -0500
+Subject: [PATCH 03/12] Ceilometer chart: add the ability to publish events to
+ panko
+
+Ceilometer notification agent sends the events to panko via panko
+dispatcher/publisher which requires the db connection information
+in /etc/panko/panko.conf.
+This commit updates to mount the configuration file for panko in
+ceilometer notification pod if panko is selected for the event
+storage.
+
+Change-Id: I4ca524ed7462f945a245e9dbe1d69493dbc4211d
+Story: 2005019
+Task: 29498
+Depends-On: https://review.openstack.org/#/c/641144/
+Signed-off-by: Angie Wang <angie.wang@windriver.com>
+(cherry picked from commit 8cfd77ef3c252112b1a2e87b5115d251f2ba01f4)
+Signed-off-by: Robert Church <robert.church@windriver.com>
+---
+ ceilometer/templates/deployment-notification.yaml | 16 ++++++++++++++
+ ceilometer/values.yaml                            | 26 +++++++++++++++++++++++
+ 2 files changed, 42 insertions(+)
+
+diff --git a/ceilometer/templates/deployment-notification.yaml b/ceilometer/templates/deployment-notification.yaml
+index c6adca2f..9c64bd19 100644
+--- a/ceilometer/templates/deployment-notification.yaml
++++ b/ceilometer/templates/deployment-notification.yaml
+@@ -100,6 +100,14 @@ spec:
+               mountPath: /tmp/ceilometer-notification.sh
+               subPath: ceilometer-notification.sh
+               readOnly: true
++{{- if eq .Values.event_storage "panko" }}
++            - name: etcpanko
++              mountPath: /etc/panko
++            - name: panko-etc
++              mountPath: /etc/panko/panko.conf
++              subPath: panko.conf
++              readOnly: true
++{{- end }}
+ {{ if $mounts_ceilometer_notification.volumeMounts }}{{ toYaml $mounts_ceilometer_notification.volumeMounts | indent 12 }}{{ end }}
+       volumes:
+         - name: pod-etc-ceilometer
+@@ -114,5 +122,13 @@ spec:
+           configMap:
+             name: ceilometer-bin
+             defaultMode: 0555
++{{- if eq .Values.event_storage "panko" }}
++        - name: etcpanko
++          emptyDir: {}
++        - name: panko-etc
++          secret:
++            secretName: panko-etc
++            defaultMode: 0444
++{{- end }}
+ {{ if $mounts_ceilometer_notification.volumes }}{{ toYaml $mounts_ceilometer_notification.volumes | indent 8 }}{{ end }}
+ {{- end }}
+diff --git a/ceilometer/values.yaml b/ceilometer/values.yaml
+index e6ae7e3a..bbeae753 100644
+--- a/ceilometer/values.yaml
++++ b/ceilometer/values.yaml
+@@ -19,6 +19,10 @@
+ 
+ release_group: null
+ 
++# ceilometer, panko
++# NOTE: ceilometer storage was removed in the queens release
++event_storage: "panko"
++
+ labels:
+   api:
+     node_selector_key: openstack-control-plane
+@@ -728,6 +732,11 @@ conf:
+       - name: event_sink
+         publishers:
+           - notifier://
++          # The following publisher will enable to publish events to panko.
++          # Ocata:
++          # - direct://?dispatcher=panko
++          # Pike:
++          # - panko://
+         transformers: null
+     sources:
+       - events:
+@@ -1618,6 +1627,8 @@ dependencies:
+           service: mongodb
+         - endpoint: internal
+           service: metric
++        - endpoint: internal
++          service: event
+     tests:
+       services:
+         - endpoint: internal
+@@ -1739,6 +1750,21 @@ endpoints:
+       api:
+         default: 8041
+         public: 80
++  event:
++    name: panko
++    hosts:
++      default: panko-api
++      public: panko
++    host_fqdn_override:
++      default: null
++    path:
++      default: null
++    scheme:
++      default: 'http'
++    port:
++      api:
++        default: 8977
++        public: 80
+   alarming:
+     name: aodh
+     hosts:
+-- 
+2.16.5
+
