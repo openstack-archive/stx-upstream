@@ -25,9 +25,6 @@ python2-openstackclient
 # openstack-ras
 openstack-ras
 
-# wrs-heat-templates
-wrs-heat-templates
-
 # python-django-horizon
 python-django-horizon
 openstack-dashboard

@@ -20,7 +20,6 @@ openstack/python-glanceclient
 openstack/python-gnocchi
 openstack/python-gnocchiclient
 openstack/python-heat/openstack-heat
-openstack/python-heat/wrs-heat-template
 openstack/python-heatclient
 openstack/python-horizon
 openstack/python-keystone
