@@ -193,9 +193,6 @@ Requires:         bridge-utils
 Requires:         sg3_utils
 Requires:         sysfsutils
 Requires:         libosinfo
-# WRS
-Requires:         host-guest-comm
-Requires:         guest-scale-helper
 
 %description compute
 %{common_desc}
