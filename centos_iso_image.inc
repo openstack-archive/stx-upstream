@@ -15,12 +15,20 @@ python-ceph-compat
 ceph-manager
 
 # openstack clients
+python2-aodhclient
+python2-cinderclient
+python2-glanceclient
 python2-gnocchiclient
+python2-heatclient
 python2-ironicclient
+python2-keystoneclient
 python2-magnumclient
 python2-muranoclient
+python2-neutronclient
 python2-novaclient
 python2-openstackclient
+python2-pankoclient
+python2-swiftclient
 
 # openstack-ras
 openstack-ras
