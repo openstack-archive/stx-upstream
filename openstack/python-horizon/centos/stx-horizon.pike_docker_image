@@ -4,7 +4,7 @@ PROJECT=horizon
 PROJECT_REPO=https://github.com/starlingx-staging/stx-horizon.git
 PIP_PACKAGES="pycrypto python-ceilometerclient python-cephclient \
               sm_client cgtsclient cgcs_patch sysinv nfv_client \
-              tsconfig coverage pyudev fm_api fm_core configutilities platform_util \
+              tsconfig coverage pyudev fm_api fm_core platform_util \
               controllerconfig ldap distributedcloud_client starlingx-dashboard pylint"
 PROFILES="fluent horizon apache"
 CUSTOMIZATION="\
