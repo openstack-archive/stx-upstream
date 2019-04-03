@@ -1,7 +1,0 @@
-BUILDER=loci
-LABEL=stx-ceilometer
-PROJECT=ceilometer
-PROJECT_REPO=https://github.com/starlingx-staging/stx-ceilometer.git
-PIP_PACKAGES="pylint libvirt-python panko gnocchiclient"
-DIST_PACKAGES="libvirt ipmitool"
-
