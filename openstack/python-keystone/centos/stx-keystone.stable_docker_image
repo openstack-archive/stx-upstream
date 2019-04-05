@@ -1,0 +1,8 @@
+BUILDER=loci
+LABEL=stx-keystone
+PROJECT=keystone
+PROJECT_REPO=https://github.com/openstack/keystone.git
+PROJECT_REF=stable/stein
+PIP_PACKAGES="python-openstackclient ldap ldappool python-ldap pylint"
+PROFILES="fluent apache"
+

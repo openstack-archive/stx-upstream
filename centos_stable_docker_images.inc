@@ -1,0 +1,15 @@
+openstack/openstack-aodh
+openstack/openstack-ironic
+openstack/openstack-magnum
+openstack/openstack-murano
+openstack/openstack-panko
+openstack/python-barbican
+openstack/python-ceilometer
+openstack/python-cinder
+openstack/python-glance
+openstack/python-gnocchi
+openstack/python-heat/openstack-heat
+openstack/python-horizon
+openstack/python-keystone
+openstack/python-neutron
+openstack/python-nova

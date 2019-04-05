@@ -1,0 +1,8 @@
+BUILDER=loci
+LABEL=stx-cinder
+PROJECT=cinder
+PROJECT_REPO=https://github.com/openstack/cinder.git
+PROJECT_REF=stable/stein
+PIP_PACKAGES="pycrypto python-swiftclient pylint"
+PROFILES="fluent cinder lvm ceph qemu"
+

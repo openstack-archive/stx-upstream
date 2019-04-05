@@ -1,0 +1,8 @@
+BUILDER=loci
+LABEL=stx-ironic
+PROJECT=ironic
+PROJECT_REPO=https://github.com/openstack/ironic.git
+PROJECT_REF=stable/stein
+PIP_PACKAGES="pylint alembic pysnmp"
+PROFILES="ironic apache"
+
