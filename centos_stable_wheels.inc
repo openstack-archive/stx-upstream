@@ -1,13 +1,2 @@
 distributedcloud-client-wheels
 distributedcloud-wheels
-openstack-keystone-wheels
-python-cinderclient-wheels
-python-django-horizon-wheels
-python-glanceclient-wheels
-python-gnocchiclient-wheels
-python-ironicclient-wheels
-python-magnumclient-wheels
-python-muranoclient-wheels
-python-neutronclient-wheels
-python-novaclient-wheels
-python-openstacksdk-wheels
