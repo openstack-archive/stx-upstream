@@ -4,5 +4,6 @@ PROJECT=ironic
 PROJECT_REPO=https://github.com/openstack/ironic.git
 PROJECT_REF=stable/stein
 PIP_PACKAGES="pylint alembic pysnmp"
+DIST_PACKAGES="ipxe-bootimgs tftp-server OpenIPMI ipmitool iproute qemu-img syslinux-tftpboot iscsi-initiator-utils"
 PROFILES="ironic apache"
 
