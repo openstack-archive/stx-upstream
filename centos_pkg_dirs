@@ -16,7 +16,6 @@ openstack/python-keystoneclient
 openstack/python-neutronclient
 openstack/python-novaclient
 openstack/python-openstackdocstheme
-openstack/python-oslo-service
 openstack/python-oslo-messaging
 openstack/python-pankoclient
 openstack/rabbitmq-server

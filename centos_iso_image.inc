@@ -67,6 +67,6 @@ openstack-barbican-common
 openstack-barbican-keystone-listener
 openstack-barbican-worker
 puppet-barbican
-python-barbican
+python2-barbican
 python2-barbicanclient
-python-ldap3
+python2-ldap3

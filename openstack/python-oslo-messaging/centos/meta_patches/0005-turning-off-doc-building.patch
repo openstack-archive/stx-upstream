@@ -1,0 +1,25 @@
+From 1ca217ce27dbb37c131476d0abf32b9deefa80a4 Mon Sep 17 00:00:00 2001
+From: Tyler Smith <tyler.smith@windriver.com>
+Date: Wed, 17 Apr 2019 15:56:33 -0400
+Subject: [PATCH 1/1] turning off doc building
+
+---
+ SPECS/python-oslo-messaging.spec | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/SPECS/python-oslo-messaging.spec b/SPECS/python-oslo-messaging.spec
+index c1f7400..c2aff2c 100644
+--- a/SPECS/python-oslo-messaging.spec
++++ b/SPECS/python-oslo-messaging.spec
+@@ -2,7 +2,7 @@
+ %if 0%{?fedora} >= 24
+ %global with_python3 1
+ %endif
+-%global with_doc 1
++%global with_doc 0
+ #guard for including python-pyngus (OSP 12 does not ship python-pyngus)
+ %global rhosp 0
+ 
+-- 
+1.8.3.1
+
