@@ -1,3 +1,0 @@
-TAR_NAME="python-muranoclient"
-SRC_DIR="$CGCS_BASE/git/python-muranoclient"
-TIS_PATCH_VER=1

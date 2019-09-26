@@ -1,4 +1,0 @@
-TAR_NAME=python-barbicanclient
-SRC_DIR=$CGCS_BASE/git/python-barbicanclient
-TIS_BASE_SRCREV="4.8.1"
-TIS_PATCH_VER=GITREVCOUNT

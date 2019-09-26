@@ -1,5 +1,0 @@
-TAR_NAME=python-heatclient
-SRC_DIR=$CGCS_BASE/git/python-heatclient
-TIS_BASE_SRCREV="1.17.0"
-TIS_PATCH_VER=GITREVCOUNT
-

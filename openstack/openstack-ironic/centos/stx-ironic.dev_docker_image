@@ -1,7 +1,0 @@
-BUILDER=loci
-LABEL=stx-ironic
-PROJECT=ironic
-PROJECT_REPO=https://github.com/openstack/ironic.git
-PIP_PACKAGES="pylint alembic pysnmp"
-PROFILES="ironic apache"
-

@@ -1,4 +1,0 @@
-TAR_NAME=openstacksdk
-SRC_DIR="$CGCS_BASE/git/python-openstacksdk"
-TIS_BASE_SRCREV="0.25.0"
-TIS_PATCH_VER=GITREVCOUNT

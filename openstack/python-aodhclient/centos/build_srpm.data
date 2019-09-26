@@ -1,4 +1,0 @@
-TAR_NAME=aodhclient
-SRC_DIR=$CGCS_BASE/git/python-aodhclient
-TIS_BASE_SRCREV="1.2.0"
-TIS_PATCH_VER=GITREVCOUNT

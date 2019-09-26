@@ -1,5 +1,0 @@
-TAR_NAME="distributedcloud-client"
-SRC_DIR="$CGCS_BASE/git/distributedcloud-client"
-
-TIS_BASE_SRCREV=640ee2a980c72b6f97fdd5aef1a66196b4c09272
-TIS_PATCH_VER=GITREVCOUNT+2

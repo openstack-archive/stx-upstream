@@ -1,2 +1,0 @@
-distributedcloud-client-wheels
-distributedcloud-wheels

@@ -1,4 +1,0 @@
-TAR_NAME=python-cinderclient
-SRC_DIR=$CGCS_BASE/git/python-cinderclient
-TIS_BASE_SRCREV="4.1.0"
-TIS_PATCH_VER=GITREVCOUNT
